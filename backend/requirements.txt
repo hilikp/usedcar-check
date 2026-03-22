@@ -10,7 +10,4 @@ celery==5.4.0
 redis==5.2.1
 httpx==0.27.2
 numpy==2.2.2
-opencv-python-headless==4.11.0.86
 soundfile==0.12.1
-librosa==0.10.2.post1
-
