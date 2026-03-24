@@ -12,4 +12,4 @@ librosa==0.10.2.post1
 opencv-python-headless==4.11.0.86
 celery==5.4.0
 redis==5.2.1
-psycopg[binary]==3.2.4
+psycopg2-binary==2.9.10
