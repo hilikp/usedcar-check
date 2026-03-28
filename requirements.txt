@@ -1,5 +1,5 @@
 streamlit>=1.35.0
-numpy==2.2.2
-soundfile==0.12.1
-librosa==0.10.2.post1
-opencv-python-headless==4.11.0.86
+numpy
+soundfile
+librosa
+opencv-python-headless
