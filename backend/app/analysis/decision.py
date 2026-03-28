@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.analysis.audio_analysis import AudioFinding
+
 from app.analysis.image_quality import ImageQuality
 
 
@@ -19,7 +19,7 @@ class Decision:
 def decide(
     *,
     photo_qualities: list[ImageQuality],
-    audio_findings: list[AudioFinding],
+        audio_findings: list,
     dashboard_findings: list[dict] | None = None,
     underbody_findings: list[dict] | None = None,
     driven_km: int | None = None,
