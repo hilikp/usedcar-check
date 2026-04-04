@@ -532,8 +532,17 @@ TR = {
     }
 }
 
+_ACTIVE_LANG: str = "he"   # set before threads; fallback when session_state unavailable
+
+def _get_lang() -> str:
+    """Thread-safe lang getter — uses session_state when available, else module fallback."""
+    try:
+        return st.session_state.get("lang", _ACTIVE_LANG)
+    except Exception:
+        return _ACTIVE_LANG
+
 def t(key: str) -> str:
-    return TR[st.session_state.get("lang", "he")].get(key, key)
+    return TR[_get_lang()].get(key, key)
 
 # ─── Backend → Hebrew translation lookup (all known English strings) ──────────
 _HE_STRINGS = {
@@ -579,7 +588,7 @@ _AUDIO_LABELS_HE = {
 
 def _tr_backend(text: str) -> str:
     """Translate a known backend English string to current UI language."""
-    if st.session_state.get("lang", "he") == "he":
+    if _get_lang() == "he":
         return _HE_STRINGS.get(text, text)
     return text
 
@@ -603,7 +612,7 @@ _EN_STRINGS.update({
 def _tr_for_display(text: str) -> str:
     """Bidirectional translation for render-time: ensures text matches current UI language.
     Corrects saved results that were stored in the opposite language."""
-    lang = st.session_state.get("lang", "he")
+    lang = _get_lang()
     if lang == "he":
         return _HE_STRINGS.get(text, text)       # EN→HE if needed
     else:
@@ -611,7 +620,7 @@ def _tr_for_display(text: str) -> str:
 
 def _audio_label(lbl: str) -> str:
     """Return display label for an audio finding in current UI language."""
-    if st.session_state.get("lang", "he") == "he":
+    if _get_lang() == "he":
         return _AUDIO_LABELS_HE.get(lbl, lbl.replace("_", " ").title())
     return lbl.replace("_", " ").title()
 
@@ -965,7 +974,7 @@ def _analyze_ownership(num_owners: int, year: int) -> list[dict]:
     from datetime import date as _date
     car_age = max(1, _date.today().year - year)
     avg_yrs = car_age / max(1, num_owners)
-    lang    = st.session_state.get("lang", "he")
+    lang    = _get_lang()
     reasons = []
 
     if num_owners == 1 and car_age >= 3:
@@ -996,7 +1005,7 @@ def _analyze_ownership(num_owners: int, year: int) -> list[dict]:
 # ─── Usage-type analysis ──────────────────────────────────────────────────────
 def _analyze_usage(usage_type: int, num_owners: int) -> list[dict]:
     """Return reason dicts based on prior usage type (rental/lease/company)."""
-    lang    = st.session_state.get("lang", "he")
+    lang    = _get_lang()
     reasons = []
     if usage_type == 1:   # Rental / Lease
         if num_owners >= 3:
@@ -1249,7 +1258,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         num_owners  = int(car_details.get("prev_owners", 1))
         usage_type  = int(car_details.get("usage_type", 0))
         year        = int(car_details.get("year", 2015))
-        lang_now    = st.session_state.get("lang", "he")
+        lang_now    = _get_lang()
         own_reasons   = _analyze_ownership(num_owners, year)
         usage_reasons = _analyze_usage(usage_type, num_owners)
         extra_reasons = own_reasons + usage_reasons
@@ -1314,7 +1323,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         )
 
         # ── Comprehensive AI report (scores + translation + 10-sentence report)
-        lang = st.session_state.get("lang", "he")
+        lang = _get_lang()
         try:
             api_key = st.secrets["ANTHROPIC_API_KEY"]
         except Exception:
@@ -2012,7 +2021,12 @@ def step_audio():
                 d = st.session_state.car_details
                 car_label = f"{d.get('year','')} {d.get('manufacturer','')} {d.get('model_name','')}".strip()
                 import threading, time as _time
+                global _ACTIVE_LANG
                 _lang = st.session_state.get("lang", "he")
+                _ACTIVE_LANG = _lang   # expose to thread-safe getter
+                _photos    = list(st.session_state.get("photos", []))
+                _underbody = st.session_state.get("underbody")
+                _video     = st.session_state.get("vehicle_video")
                 _stages = [
                     (0.10, "מנתח תמונות חיצוניות של הרכב..."        if _lang=="he" else "Analysing exterior photos..."),
                     (0.22, "בודק מצב הפנים והלוח..."                if _lang=="he" else "Checking interior & dashboard..."),
@@ -2027,9 +2041,7 @@ def step_audio():
                 def _worker():
                     try:
                         _result_box[0] = run_analysis(
-                            d, st.session_state.photos, audio,
-                            st.session_state.underbody,
-                            st.session_state.get("vehicle_video"),
+                            d, _photos, audio, _underbody, _video,
                         )
                     except Exception as _e:
                         _error_box[0] = _e
