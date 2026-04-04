@@ -609,14 +609,56 @@ _EN_STRINGS.update({
         "A professional inspection is still recommended before buying.",
 })
 
+import re as _re
+# Regex patterns for dynamic Hebrew ownership/usage strings → English
+_HE_DYNAMIC_TO_EN = [
+    (_re.compile(r"בעלים יחיד במשך ([\d.]+) שנ"),
+     lambda m: f"Single owner for {m.group(1)} years — good sign for maintenance"),
+    (_re.compile(r"([\d]+) בעלים ב-([\d]+) שנ"),
+     lambda m: f"{m.group(1)} owners in {m.group(2)} years — red flag!"),
+    (_re.compile(r"החלפת בעלים תכופה.*ממוצע ([\d.]+)"),
+     lambda m: f"Frequent ownership changes — average {m.group(1)} years per owner"),
+    (_re.compile(r"היסטוריית בעלות יציבה.*ממוצע ([\d.]+)"),
+     lambda m: f"Stable ownership history — average {m.group(1)} years per owner"),
+    (_re.compile(r"רכב השכרה.*שימוש אינטנסיבי"),
+     lambda m: "Rental/lease vehicle — intensive use and higher wear"),
+    (_re.compile(r"רכב חברה.*בלאי מואץ"),
+     lambda m: "Company car — accelerated wear expected"),
+]
+# Regex patterns for dynamic English ownership/usage strings → Hebrew
+_EN_DYNAMIC_TO_HE = [
+    (_re.compile(r"Single owner for ([\d.]+) years"),
+     lambda m: f"בעלים יחיד במשך {m.group(1)} שנים — סימן חיוב לתחזוקה טובה"),
+    (_re.compile(r"([\d]+) owners in ([\d]+) years"),
+     lambda m: f"{m.group(1)} בעלים ב-{m.group(2)} שנים — דגל אדום!"),
+    (_re.compile(r"Frequent ownership.*average ([\d.]+)"),
+     lambda m: f"החלפת בעלים תכופה — ממוצע {m.group(1)} שנים לבעלים"),
+    (_re.compile(r"Stable ownership.*average ([\d.]+)"),
+     lambda m: f"היסטוריית בעלות יציבה — ממוצע {m.group(1)} שנים לבעלים"),
+]
+
 def _tr_for_display(text: str) -> str:
     """Bidirectional translation for render-time: ensures text matches current UI language.
     Corrects saved results that were stored in the opposite language."""
     lang = _get_lang()
     if lang == "he":
-        return _HE_STRINGS.get(text, text)       # EN→HE if needed
+        result = _HE_STRINGS.get(text, None)
+        if result:
+            return result
+        for pat, fn in _EN_DYNAMIC_TO_HE:
+            m = pat.search(text)
+            if m:
+                return fn(m)
+        return text
     else:
-        return _EN_STRINGS.get(text, text)        # HE→EN if needed
+        result = _EN_STRINGS.get(text, None)
+        if result:
+            return result
+        for pat, fn in _HE_DYNAMIC_TO_EN:
+            m = pat.search(text)
+            if m:
+                return fn(m)
+        return text
 
 def _audio_label(lbl: str) -> str:
     """Return display label for an audio finding in current UI language."""
@@ -2104,16 +2146,41 @@ def main_app():
     # Compact header with animated car silhouette
     st.markdown(f"""
     <div style='text-align:center;padding:1.2rem 0 0.2rem;overflow:hidden;'>
-        <div class='car-animated' style='margin-bottom:0.6rem;'>
-            <svg width="360" height="120" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.75;filter:drop-shadow(0 0 8px rgba(200,169,106,0.4));">
-                <path d="M10 28 L18 18 L30 14 L50 12 L75 12 L90 16 L105 22 L110 28 Z" stroke="#C8A96A" stroke-width="1.2" fill="rgba(200,169,106,0.04)"/>
-                <circle cx="28" cy="30" r="6" stroke="#C8A96A" stroke-width="1.2" fill="none"/>
-                <circle cx="28" cy="30" r="3" fill="rgba(200,169,106,0.15)"/>
-                <circle cx="88" cy="30" r="6" stroke="#C8A96A" stroke-width="1.2" fill="none"/>
-                <circle cx="88" cy="30" r="3" fill="rgba(200,169,106,0.15)"/>
-                <path d="M34 28 L82 28" stroke="#C8A96A" stroke-width="0.8" opacity="0.4"/>
-                <path d="M40 20 L50 14 L70 14 L82 20 Z" stroke="#C8A96A" stroke-width="0.8" fill="rgba(200,169,106,0.08)"/>
-                <path d="M4 28 L116 28" stroke="#C8A96A" stroke-width="0.5" opacity="0.2"/>
+        <div class='car-animated' style='margin-bottom:0.4rem;'>
+            <svg width="380" height="110" viewBox="0 0 190 55" fill="none" xmlns="http://www.w3.org/2000/svg"
+                 style="filter:drop-shadow(0 4px 14px rgba(200,169,106,0.45));">
+              <!-- Porsche 911 body — main silhouette -->
+              <path d="M8 38 C10 38 12 35 15 32 C18 29 22 26 28 23 C34 20 42 17 52 15 C60 13 68 12 76 12 C84 12 90 13 96 15 C102 17 108 20 114 25 C118 28 122 32 126 35 C128 37 130 38 132 38 Z"
+                    stroke="#C8A96A" stroke-width="1.3" fill="rgba(180,20,20,0.18)"/>
+              <!-- Roof / cabin -->
+              <path d="M52 15 C56 10 62 7 70 7 C78 7 85 9 90 13 C96 15 100 15 102 16 L96 15 C90 13 84 12 76 12 C68 12 60 13 52 15 Z"
+                    stroke="#C8A96A" stroke-width="1.1" fill="rgba(180,20,20,0.25)"/>
+              <!-- Windscreen -->
+              <path d="M52 15 L58 8 L70 7 L76 12" stroke="#C8A96A" stroke-width="0.9" fill="rgba(200,169,106,0.08)"/>
+              <!-- Rear window / fastback -->
+              <path d="M76 12 L86 7 L93 8 L102 16" stroke="#C8A96A" stroke-width="0.9" fill="rgba(200,169,106,0.06)"/>
+              <!-- Door line -->
+              <path d="M56 32 L100 32" stroke="#C8A96A" stroke-width="0.6" opacity="0.5"/>
+              <!-- Front bumper detail -->
+              <path d="M8 38 C7 36 8 33 10 32 L15 32" stroke="#C8A96A" stroke-width="0.8" fill="none"/>
+              <!-- Rear bumper detail -->
+              <path d="M125 33 C128 33 131 35 132 38" stroke="#C8A96A" stroke-width="0.8" fill="none"/>
+              <!-- Side air intake (911 characteristic) -->
+              <path d="M108 28 C112 27 116 28 118 30" stroke="#C8A96A" stroke-width="0.7" fill="none" opacity="0.7"/>
+              <!-- Front wheel -->
+              <circle cx="35" cy="40" r="9" stroke="#C8A96A" stroke-width="1.3" fill="rgba(30,30,30,0.6)"/>
+              <circle cx="35" cy="40" r="5.5" stroke="#C8A96A" stroke-width="0.7" fill="none"/>
+              <circle cx="35" cy="40" r="2" fill="rgba(200,169,106,0.4)"/>
+              <!-- Rear wheel -->
+              <circle cx="108" cy="40" r="9" stroke="#C8A96A" stroke-width="1.3" fill="rgba(30,30,30,0.6)"/>
+              <circle cx="108" cy="40" r="5.5" stroke="#C8A96A" stroke-width="0.7" fill="none"/>
+              <circle cx="108" cy="40" r="2" fill="rgba(200,169,106,0.4)"/>
+              <!-- Ground shadow -->
+              <ellipse cx="70" cy="51" rx="65" ry="3" fill="rgba(200,169,106,0.07)"/>
+              <!-- Headlight -->
+              <ellipse cx="12" cy="33" rx="3" ry="2" fill="rgba(200,169,106,0.3)" stroke="#C8A96A" stroke-width="0.5"/>
+              <!-- Tail light -->
+              <ellipse cx="129" cy="34" rx="3" ry="2" fill="rgba(180,20,20,0.5)" stroke="#C8A96A" stroke-width="0.5"/>
             </svg>
         </div>
         <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2rem;
