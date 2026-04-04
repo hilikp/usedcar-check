@@ -222,10 +222,10 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
 
             # Compare every adjacent pair (top-L vs top-R, top-L vs mid-L, etc.)
             pairs = [
-                (0, 1, "top-L / top-R"),
-                (2, 3, "mid-L / mid-R"),
-                (0, 2, "top-L / mid-L"),
-                (1, 3, "top-R / mid-R"),
+                (0, 1, "עליון-שמאל / עליון-ימין"),
+                (2, 3, "אמצע-שמאל / אמצע-ימין"),
+                (0, 2, "עליון-שמאל / אמצע-שמאל"),
+                (1, 3, "עליון-ימין / אמצע-ימין"),
             ]
             for i, j, pair_name in pairs:
                 if i >= len(regions) or j >= len(regions):
@@ -1305,17 +1305,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         if has_underbody_leak:
             ai_report["leak_assessment"] = "oil leak suspected"
 
-        # ── Pre-translate all known backend English strings ──────────────────
-        for r in (decision.top_reasons or []):
-            r["title"] = _tr_backend(r.get("title", ""))
-        for s in (decision.next_steps or []):
-            if isinstance(s, dict):
-                s["text"] = _tr_backend(s.get("text", ""))
-        for e in (decision.education or []):
-            if isinstance(e, dict):
-                e["title"] = _tr_backend(e.get("title", ""))
-
-        # Apply translations — write into decision object AND keep separately for render
+        # Apply Claude translations back (may still be English if Claude failed)
         tr_reasons = ai_report.get("translated_reasons", []) or []
         tr_steps   = ai_report.get("translated_steps",   []) or []
         if tr_reasons:
@@ -1326,13 +1316,22 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             for i, s in enumerate(decision.next_steps or []):
                 if i < len(tr_steps) and tr_steps[i]:
                     s["text"] = tr_steps[i]
-        # Store translated lists separately so render can use them even if apply-back misses items
-        _tr_steps_final = []
-        for i, s in enumerate(decision.next_steps or []):
-            txt = s.get("text", "") if isinstance(s, dict) else str(s)
-            if i < len(tr_steps) and tr_steps[i]:
-                txt = tr_steps[i]
-            _tr_steps_final.append({"text": txt})
+
+        # ── Final pass: _tr_backend catches any English that Claude missed ────
+        for r in (decision.top_reasons or []):
+            r["title"] = _tr_backend(r.get("title", ""))
+        for s in (decision.next_steps or []):
+            if isinstance(s, dict):
+                s["text"] = _tr_backend(s.get("text", ""))
+        for e in (decision.education or []):
+            if isinstance(e, dict):
+                e["title"] = _tr_backend(e.get("title", ""))
+
+        # Rebuild next_steps as clean dicts
+        _tr_steps_final = [
+            {"text": (s.get("text", "") if isinstance(s, dict) else str(s))}
+            for s in (decision.next_steps or [])
+        ]
         decision.next_steps = _tr_steps_final or decision.next_steps
 
         # Prepend urgent action items in the correct language for critical findings
@@ -1667,12 +1666,7 @@ def render_result(result: dict):
             </div>
             """, unsafe_allow_html=True)
 
-    edu = result.get("education", [])
-    if edu:
-        gold_divider()
-        section_label("learn_more_title")
-        for e in edu:
-            st.markdown(f"<p style='font-size:1.07rem;color:var(--muted);{rtl_css}'>◦ &nbsp;{e.get('title','')}</p>", unsafe_allow_html=True)
+    # Education section removed — no linked resources available
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
