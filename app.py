@@ -1163,6 +1163,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         num_owners  = int(car_details.get("prev_owners", 1))
         usage_type  = int(car_details.get("usage_type", 0))
         year        = int(car_details.get("year", 2015))
+        lang_now    = st.session_state.get("lang", "he")
         own_reasons   = _analyze_ownership(num_owners, year)
         usage_reasons = _analyze_usage(usage_type, num_owners)
         extra_reasons = own_reasons + usage_reasons
@@ -1171,6 +1172,50 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             if has_high and decision.recommendation == "go":
                 decision.recommendation = "inconclusive"
             decision.top_reasons = extra_reasons + decision.top_reasons
+
+        # ── Force verdict down based on hard mechanical signals ───────────────
+        _LEAK_LABELS   = {"fluid_stain", "oil_leak", "coolant_leak", "leak", "fluid"}
+        _KNOCK_LABELS  = {"rod_knock_suspected", "exhaust_leak_suspected"}
+        _WARN_LABELS   = {"valve_tick_suspected", "belt_squeal_suspected", "rough_idle_suspected"}
+
+        has_underbody_leak = any(
+            any(kw in f.get("label", "").lower() for kw in _LEAK_LABELS)
+            for f in underbody_findings
+        )
+        has_knock  = any(f.label in _KNOCK_LABELS for f in audio_findings)
+        has_warn   = any(f.label in _WARN_LABELS  for f in audio_findings)
+
+        _mech_issues = []
+        if has_underbody_leak:
+            _mech_issues.append({
+                "severity": "high",
+                "title": TR[lang_now].get("leak_oil", "Oil leak suspected") if lang_now == "he"
+                         else "Oil / fluid leak detected in underbody image",
+            })
+            if decision.recommendation in ("go", "inconclusive"):
+                decision.recommendation = "no_go"
+            decision.confidence = "high"
+
+        if has_knock:
+            _mech_issues.append({
+                "severity": "high",
+                "title": "חשד לדפיקות מנוע — נדרשת בדיקה דחופה" if lang_now == "he"
+                         else "Engine knock detected — urgent inspection required",
+            })
+            if decision.recommendation == "go":
+                decision.recommendation = "no_go"
+
+        if has_warn and not has_knock:
+            _mech_issues.append({
+                "severity": "medium",
+                "title": "רעש חריג זוהה בהקלטת המנוע — מומלץ לבדוק" if lang_now == "he"
+                         else "Abnormal engine noise detected — inspection recommended",
+            })
+            if decision.recommendation == "go":
+                decision.recommendation = "inconclusive"
+
+        if _mech_issues:
+            decision.top_reasons = _mech_issues + (decision.top_reasons or [])
 
         # ── Paint consistency (OpenCV LAB histogram comparison) ───────────────
         paint_data = _analyze_paint_consistency(photo_paths + video_frame_paths)
@@ -1196,17 +1241,45 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             paint_data=paint_data,
         )
 
-        # Apply translations back to decision reasons/steps
-        tr_reasons = ai_report.get("translated_reasons", [])
-        tr_steps   = ai_report.get("translated_steps",   [])
+        # Apply translations — write into decision object AND keep separately for render
+        tr_reasons = ai_report.get("translated_reasons", []) or []
+        tr_steps   = ai_report.get("translated_steps",   []) or []
         if tr_reasons:
-            for i, r in enumerate(decision.top_reasons):
+            for i, r in enumerate(decision.top_reasons or []):
                 if i < len(tr_reasons) and tr_reasons[i]:
                     r["title"] = tr_reasons[i]
         if tr_steps:
             for i, s in enumerate(decision.next_steps or []):
                 if i < len(tr_steps) and tr_steps[i]:
                     s["text"] = tr_steps[i]
+        # Store translated lists separately so render can use them even if apply-back misses items
+        _tr_steps_final = []
+        for i, s in enumerate(decision.next_steps or []):
+            txt = s.get("text", "") if isinstance(s, dict) else str(s)
+            if i < len(tr_steps) and tr_steps[i]:
+                txt = tr_steps[i]
+            _tr_steps_final.append({"text": txt})
+        decision.next_steps = _tr_steps_final or decision.next_steps
+
+        # Prepend urgent action items in the correct language for critical findings
+        _urgent_steps = []
+        if has_underbody_leak:
+            _urgent_steps.append({"text":
+                "דליפת שמן/נוזל זוהתה — יש לבדוק במוסך מורשה לפני כל שיקול של רכישה." if lang_now == "he"
+                else "Fluid leak detected — have the vehicle inspected by a certified mechanic before any purchase decision."
+            })
+        if has_knock:
+            _urgent_steps.append({"text":
+                "זוהו סימנים לדפיקות מנוע — נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות." if lang_now == "he"
+                else "Engine knock detected — compression test and bearing inspection required urgently."
+            })
+        if has_warn and not has_knock:
+            _urgent_steps.append({"text":
+                "זוהה רעש חריג במנוע — מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה." if lang_now == "he"
+                else "Abnormal engine noise detected — have valves and drive belts checked before purchase."
+            })
+        if _urgent_steps:
+            decision.next_steps = _urgent_steps + (decision.next_steps or [])
 
         # Serialise audio findings for display
         audio_findings_raw = [
