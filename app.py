@@ -583,6 +583,32 @@ def _tr_backend(text: str) -> str:
         return _HE_STRINGS.get(text, text)
     return text
 
+# Reverse lookup: Hebrew → English (for render-time correction of saved results)
+_EN_STRINGS = {v: k for k, v in _HE_STRINGS.items()}
+# Add hardcoded Hebrew strings used in _mech_issues / _urgent_steps
+_EN_STRINGS.update({
+    "חשד לדליפת שמן":                       "Oil / fluid leak detected in underbody image",
+    "דפיקות מנוע — נדרשת בדיקה דחופה":      "Engine knock detected — urgent inspection required",
+    "רעש חריג זוהה בהקלטת המנוע — מומלץ לבדוק": "Abnormal engine noise detected — inspection recommended",
+    "דליפת שמן/נוזל זוהתה — יש לבדוק במוסך מורשה לפני כל שיקול של רכישה.":
+        "Fluid leak detected — have the vehicle inspected by a certified mechanic before any purchase decision.",
+    "זוהו סימנים לדפיקות מנוע — נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות.":
+        "Engine knock detected — compression test and bearing inspection required urgently.",
+    "זוהה רעש חריג במנוע — מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה.":
+        "Abnormal engine noise detected — have valves and drive belts checked before purchase.",
+    "עדיין מומלץ לבצע בדיקה מקצועית לפני הרכישה.":
+        "A professional inspection is still recommended before buying.",
+})
+
+def _tr_for_display(text: str) -> str:
+    """Bidirectional translation for render-time: ensures text matches current UI language.
+    Corrects saved results that were stored in the opposite language."""
+    lang = st.session_state.get("lang", "he")
+    if lang == "he":
+        return _HE_STRINGS.get(text, text)       # EN→HE if needed
+    else:
+        return _EN_STRINGS.get(text, text)        # HE→EN if needed
+
 def _audio_label(lbl: str) -> str:
     """Return display label for an audio finding in current UI language."""
     if st.session_state.get("lang", "he") == "he":
@@ -1616,7 +1642,7 @@ def render_result(result: dict):
             <div style='background:var(--elevated);border-left:3px solid {bc};
                         padding:0.75rem 1rem;margin:0.4rem 0;border-radius:0 4px 4px 0;{rtl_css}'>
                 <span style='color:{bc};margin-{"left" if is_rtl else "right"}:0.5rem;'>{ic}</span>
-                <span style='font-size:1.24rem;'>{r.get("title","")}</span>
+                <span style='font-size:1.24rem;'>{_tr_for_display(r.get("title",""))}</span>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1662,7 +1688,7 @@ def render_result(result: dict):
                 <div style='min-width:24px;height:24px;border-radius:50%;background:rgba(200,169,106,0.15);
                             border:1px solid var(--gold-dark);display:flex;align-items:center;
                             justify-content:center;font-size:0.85rem;color:var(--gold);flex-shrink:0;'>{i}</div>
-                <div style='font-size:1.24rem;color:var(--text);padding-top:0.2rem;'>{s.get("text","")}</div>
+                <div style='font-size:1.24rem;color:var(--text);padding-top:0.2rem;'>{_tr_for_display(s.get("text",""))}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1985,39 +2011,78 @@ def step_audio():
             else:
                 d = st.session_state.car_details
                 car_label = f"{d.get('year','')} {d.get('manufacturer','')} {d.get('model_name','')}".strip()
-                with st.spinner(t("analysing")):
+                import threading, time as _time
+                _lang = st.session_state.get("lang", "he")
+                _stages = [
+                    (0.10, "מנתח תמונות חיצוניות של הרכב..."        if _lang=="he" else "Analysing exterior photos..."),
+                    (0.22, "בודק מצב הפנים והלוח..."                if _lang=="he" else "Checking interior & dashboard..."),
+                    (0.36, "מעבד הקלטת קול המנוע..."                if _lang=="he" else "Processing engine audio..."),
+                    (0.50, "מנתח עקביות צבע לוחות הרכב..."          if _lang=="he" else "Analysing paint panel consistency..."),
+                    (0.63, "מאחזר נתוני ריקול ובטיחות (NHTSA)..."   if _lang=="he" else "Fetching safety & recall data (NHTSA)..."),
+                    (0.78, "מייצר דוח מקצועי מבוסס AI..."           if _lang=="he" else "Generating AI professional report..."),
+                    (0.92, "מסיים ומאמת תוצאות..."                  if _lang=="he" else "Finalising and validating results..."),
+                ]
+                _result_box  = [None]
+                _error_box   = [None]
+                def _worker():
                     try:
-                        decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data = run_analysis(
+                        _result_box[0] = run_analysis(
                             d, st.session_state.photos, audio,
                             st.session_state.underbody,
                             st.session_state.get("vehicle_video"),
                         )
-                        result = {
-                            "recommendation":      decision.recommendation,
-                            "confidence":          decision.confidence,
-                            "top_reasons":         decision.top_reasons,
-                            "breakdown":           decision.breakdown,
-                            "education":           decision.education,
-                            "next_steps":          decision.next_steps,
-                            "audio_duration_seconds": audio_dur,
-                            "car_details":         d,
-                            "car_label":           car_label,
-                            "exterior_score":      ai_report.get("exterior_score"),
-                            "interior_score":      ai_report.get("interior_score"),
-                            "leak_assessment":     ai_report.get("leak_assessment", "none detected"),
-                            "detailed_report":     ai_report.get("report", ""),
-                            "nhtsa_data":          nhtsa_data,
-                            "audio_metrics":       audio_metrics,
-                            "audio_findings_raw":  audio_findings_raw,
-                            "paint_data":          paint_data,
-                            "paint_findings":      ai_report.get("paint_findings", []),
-                        }
-                        check_id = save_check(st.session_state.email, result)
-                        result["check_id"]      = check_id
-                        st.session_state.result = result
-                        st.session_state.step   = 4; st.rerun()
-                    except Exception as e:
-                        st.error(f"{t('analysis_failed')}: {e}")
+                    except Exception as _e:
+                        _error_box[0] = _e
+                _thread = threading.Thread(target=_worker, daemon=True)
+                _thread.start()
+                _prog_bar  = st.progress(0.0)
+                _prog_text = st.empty()
+                _stage_i, _elapsed = 0, 0.0
+                _total_fake = 13.0
+                while _thread.is_alive():
+                    _time.sleep(0.4)
+                    _elapsed += 0.4
+                    _pct = min(0.93, _elapsed / _total_fake)
+                    _prog_bar.progress(_pct)
+                    for _si, (_thresh, _msg) in enumerate(_stages):
+                        if _pct >= _thresh:
+                            _stage_i = _si
+                    _prog_text.markdown(
+                        f"<p style='font-size:1.05rem;color:var(--gold);{rtl_css if _lang==\"he\" else \"\"}'>"
+                        f"⚙️ &nbsp;{_stages[_stage_i][1]}</p>",
+                        unsafe_allow_html=True,
+                    )
+                _thread.join()
+                _prog_bar.progress(1.0)
+                _prog_text.empty()
+                if _error_box[0]:
+                    st.error(f"{t('analysis_failed')}: {_error_box[0]}")
+                else:
+                    decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data = _result_box[0]
+                    result = {
+                        "recommendation":      decision.recommendation,
+                        "confidence":          decision.confidence,
+                        "top_reasons":         decision.top_reasons,
+                        "breakdown":           decision.breakdown,
+                        "education":           decision.education,
+                        "next_steps":          decision.next_steps,
+                        "audio_duration_seconds": audio_dur,
+                        "car_details":         d,
+                        "car_label":           car_label,
+                        "exterior_score":      ai_report.get("exterior_score"),
+                        "interior_score":      ai_report.get("interior_score"),
+                        "leak_assessment":     ai_report.get("leak_assessment", "none detected"),
+                        "detailed_report":     ai_report.get("report", ""),
+                        "nhtsa_data":          nhtsa_data,
+                        "audio_metrics":       audio_metrics,
+                        "audio_findings_raw":  audio_findings_raw,
+                        "paint_data":          paint_data,
+                        "paint_findings":      ai_report.get("paint_findings", []),
+                    }
+                    check_id = save_check(st.session_state.email, result)
+                    result["check_id"]      = check_id
+                    st.session_state.result = result
+                    st.session_state.step   = 4; st.rerun()
 
 # ─── Main app ─────────────────────────────────────────────────────────────────
 def main_app():
