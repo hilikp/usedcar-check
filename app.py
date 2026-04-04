@@ -363,15 +363,15 @@ TR = {
         "analysis_failed":  "הניתוח נכשל",
         "confidence_label": "מהימנות האבחון",
         "conf_ctx_go":      "מערכת מזהה סיכוי {} שהרכב במצב תקין",
-        "conf_ctx_nogo":    "מערכת מזהה סיכוי {} לבעיות משמעותיות",
-        "conf_ctx_inc":     "נדרש מידע נוסף — רמת ודאות {}",
+        "conf_ctx_nogo":    "זוהו בעיות — רמת ודאות {}. מומלץ לבדוק לפני רכישה",
+        "conf_ctx_inc":     "נדרש מידע נוסף לאבחון מלא — רמת ודאות {}",
         "audio_analysed":   "שמע: {:.1f} שניות נותחו",
         "findings_title":   "ממצאי הבדיקה",
         "next_steps_title": "צעדים מומלצים",
         "learn_more_title": "קרא עוד",
         "go":               "מתאים",
-        "no_go":            "לא מתאים",
-        "inconclusive":     "לא ברור",
+        "no_go":            "זוהו בעיות",
+        "inconclusive":     "מידע חסר",
         "high":             "גבוה",
         "medium":           "בינוני",
         "low":              "נמוך",
@@ -470,15 +470,15 @@ TR = {
         "analysis_failed":  "Analysis failed",
         "confidence_label": "Diagnostic Reliability",
         "conf_ctx_go":      "System detects {} chance the vehicle is in good condition",
-        "conf_ctx_nogo":    "System detects {} likelihood of significant issues",
-        "conf_ctx_inc":     "More data needed — certainty level {}",
+        "conf_ctx_nogo":    "Issues detected — {} confidence. Inspection recommended before purchase",
+        "conf_ctx_inc":     "More data needed for a full diagnosis — certainty level {}",
         "audio_analysed":   "Audio: {:.1f}s analysed",
         "findings_title":   "Assessment Findings",
         "next_steps_title": "Recommended Next Steps",
         "learn_more_title": "Learn More",
         "go":               "GO",
-        "no_go":            "NO GO",
-        "inconclusive":     "INCONCLUSIVE",
+        "no_go":            "RISK DETECTED",
+        "inconclusive":     "INSUFFICIENT DATA",
         "high":             "HIGH",
         "medium":           "MEDIUM",
         "low":              "LOW",
@@ -1350,8 +1350,9 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
                 "title": "רעש חריג זוהה בהקלטת המנוע — מומלץ לבדוק" if lang_now == "he"
                          else "Abnormal engine noise detected — inspection recommended",
             })
-            if decision.recommendation == "go":
-                decision.recommendation = "inconclusive"
+            # Engine noise is a real finding — flag it as a risk, not "unclear"
+            if decision.recommendation in ("go", "inconclusive"):
+                decision.recommendation = "no_go"
 
         if _mech_issues:
             decision.top_reasons = _mech_issues + (decision.top_reasons or [])
