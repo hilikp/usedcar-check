@@ -2047,8 +2047,9 @@ def step_audio():
                     for _si, (_thresh, _msg) in enumerate(_stages):
                         if _pct >= _thresh:
                             _stage_i = _si
+                    _rtl = rtl_css if _lang == "he" else ""
                     _prog_text.markdown(
-                        f"<p style='font-size:1.05rem;color:var(--gold);{rtl_css if _lang==\"he\" else \"\"}'>"
+                        f"<p style='font-size:1.05rem;color:var(--gold);{_rtl}'>"
                         f"⚙️ &nbsp;{_stages[_stage_i][1]}</p>",
                         unsafe_allow_html=True,
                     )
