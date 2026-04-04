@@ -361,7 +361,10 @@ TR = {
         "analyse_btn":      "נתח רכב  ←",
         "analysing":        "מנתח — זה עשוי לקחת רגע ...",
         "analysis_failed":  "הניתוח נכשל",
-        "confidence_label": "רמת ביטחון",
+        "confidence_label": "מהימנות האבחון",
+        "conf_ctx_go":      "מערכת מזהה סיכוי {} שהרכב במצב תקין",
+        "conf_ctx_nogo":    "מערכת מזהה סיכוי {} לבעיות משמעותיות",
+        "conf_ctx_inc":     "נדרש מידע נוסף — רמת ודאות {}",
         "audio_analysed":   "שמע: {:.1f} שניות נותחו",
         "findings_title":   "ממצאי הבדיקה",
         "next_steps_title": "צעדים מומלצים",
@@ -465,7 +468,10 @@ TR = {
         "analyse_btn":      "Analyse Vehicle  →",
         "analysing":        "Analysing — this may take a moment …",
         "analysis_failed":  "Analysis failed",
-        "confidence_label": "Confidence",
+        "confidence_label": "Diagnostic Reliability",
+        "conf_ctx_go":      "System detects {} chance the vehicle is in good condition",
+        "conf_ctx_nogo":    "System detects {} likelihood of significant issues",
+        "conf_ctx_inc":     "More data needed — certainty level {}",
         "audio_analysed":   "Audio: {:.1f}s analysed",
         "findings_title":   "Assessment Findings",
         "next_steps_title": "Recommended Next Steps",
@@ -528,6 +534,60 @@ TR = {
 
 def t(key: str) -> str:
     return TR[st.session_state.get("lang", "he")].get(key, key)
+
+# ─── Backend → Hebrew translation lookup (all known English strings) ──────────
+_HE_STRINGS = {
+    # Backend decide() reasons
+    "Some photos were too blurry or poorly lit to assess":
+        "חלק מהתמונות היו מטושטשות מדי או עם תאורה ירודה לאבחון",
+    "Engine audio suggests an unstable/rough pattern":
+        "קול המנוע מצביע על דפוס לא יציב / גס",
+    "High driven KM means engine wear risk is naturally higher":
+        "קילומטראז' גבוה — שחיקת מנוע גבוהה יותר באופן טבעי",
+    "Dashboard warning indicator may be present":
+        "ייתכן שנוכח נורת אזהרה בלוח המחוונים",
+    "Underbody image shows possible fluid-stain pattern":
+        "תמונת תחתית הרכב מראה דפוס אפשרי של דליפת נוזל",
+    "No clear red flags detected in this quick check":
+        "לא זוהו דגלים אדומים ברורים בבדיקה המהירה",
+    # Backend next_steps
+    "Retake at least 2 photos in brighter light and keep the phone steady.":
+        "צלם מחדש לפחות 2 תמונות באור טוב יותר עם מצלמה יציבה.",
+    "Check warning lights with OBD scan before any purchase decision.":
+        "בדוק נורות אזהרה עם סורק OBD לפני כל החלטת רכישה.",
+    "If you proceed, ask for an inspection focused on engine idle quality and scan for codes.":
+        "אם תמשיך, בקש בדיקה הממוקדת באיכות סרק המנוע וסריקת קודים.",
+    "A professional inspection is still recommended before buying.":
+        "עדיין מומלץ לבצע בדיקה מקצועית לפני הרכישה.",
+    # Backend education
+    "What a rough idle can indicate":
+        "מה יכולה להצביע ריצת סרק גסה",
+    "Best photo angles for a used-car check":
+        "זוויות צילום מומלצות לבדיקת רכב משומש",
+}
+
+# Audio finding label → Hebrew display text
+_AUDIO_LABELS_HE = {
+    "rod_knock_suspected":    "חשד לדפיקות מנוע (מוטות/בוכנות)",
+    "valve_tick_suspected":   "חשד לרעש שסתומים / תפטירים",
+    "belt_squeal_suspected":  "חשד לחריקת רצועה",
+    "exhaust_leak_suspected": "חשד לדליפת פליטה",
+    "rough_idle_suspected":   "חשד לסרק לא יציב",
+    "engine_sounds_normal":   "קול המנוע תקין",
+    "unknown":                "ממצא לא מזוהה",
+}
+
+def _tr_backend(text: str) -> str:
+    """Translate a known backend English string to current UI language."""
+    if st.session_state.get("lang", "he") == "he":
+        return _HE_STRINGS.get(text, text)
+    return text
+
+def _audio_label(lbl: str) -> str:
+    """Return display label for an audio finding in current UI language."""
+    if st.session_state.get("lang", "he") == "he":
+        return _AUDIO_LABELS_HE.get(lbl, lbl.replace("_", " ").title())
+    return lbl.replace("_", " ").title()
 
 # ─── Car makes & models ───────────────────────────────────────────────────────
 CAR_MAKES_MODELS: dict[str, list[str]] = {
@@ -1241,6 +1301,20 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             paint_data=paint_data,
         )
 
+        # ── Override leak_assessment if underbody leak was physically detected ─
+        if has_underbody_leak:
+            ai_report["leak_assessment"] = "oil leak suspected"
+
+        # ── Pre-translate all known backend English strings ──────────────────
+        for r in (decision.top_reasons or []):
+            r["title"] = _tr_backend(r.get("title", ""))
+        for s in (decision.next_steps or []):
+            if isinstance(s, dict):
+                s["text"] = _tr_backend(s.get("text", ""))
+        for e in (decision.education or []):
+            if isinstance(e, dict):
+                e["title"] = _tr_backend(e.get("title", ""))
+
         # Apply translations — write into decision object AND keep separately for render
         tr_reasons = ai_report.get("translated_reasons", []) or []
         tr_steps   = ai_report.get("translated_steps",   []) or []
@@ -1317,10 +1391,23 @@ def render_result(result: dict):
     """, unsafe_allow_html=True)
 
     # ── Confidence + Audio meta ───────────────────────────────────────────────
+    _conf_levels = {"high": {"he": "גבוה", "en": "High"},
+                    "medium": {"he": "בינוני", "en": "Medium"},
+                    "low": {"he": "נמוך", "en": "Low"}}
+    _lang_now = st.session_state.get("lang", "he")
+    _conf_word = _conf_levels.get(conf, {}).get(_lang_now, conf.upper())
+    if rec == "go":
+        _ctx_key = "conf_ctx_go"
+    elif rec == "no_go":
+        _ctx_key = "conf_ctx_nogo"
+    else:
+        _ctx_key = "conf_ctx_inc"
+    _conf_sentence = t(_ctx_key).format(_conf_word)
+
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(f"<span style='font-size:1.11rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;'>{t('confidence_label')}</span>", unsafe_allow_html=True)
-        badge(conf.upper(), conf)
+        st.markdown(f"<span style='font-size:1.11rem;color:var(--muted);letter-spacing:0.08em;'>{t('confidence_label')}</span>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:1.05rem;color:var(--gold);margin:0.2rem 0 0;{rtl_css}'>{_conf_sentence}</p>", unsafe_allow_html=True)
     with col2:
         dur = result.get("audio_duration_seconds")
         if dur:
@@ -1551,7 +1638,7 @@ def render_result(result: dict):
         for f in audio_raw:
             lbl       = f.get("label", "unknown")
             icon, clr = _finding_style.get(lbl, ("◦", "#9A9080"))
-            title     = lbl.replace("_", " ").title()
+            title     = _audio_label(lbl)
             details   = f.get("details", {})
             det_str   = "  ·  ".join(
                 f"{k}: {v:.3f}" if isinstance(v, float) else f"{k}: {v}"
