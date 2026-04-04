@@ -1312,12 +1312,13 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             decision.top_reasons = extra_reasons + decision.top_reasons
 
         # ── Force verdict down based on hard mechanical signals ───────────────
-        _LEAK_LABELS   = {"fluid_stain", "oil_leak", "coolant_leak", "leak", "fluid"}
+        # Match the exact label emitted by analyze_underbody_image
+        _LEAK_LABELS   = {"possible_underbody_fluid_stain", "oil_leak", "coolant_leak"}
         _KNOCK_LABELS  = {"rod_knock_suspected", "exhaust_leak_suspected"}
         _WARN_LABELS   = {"valve_tick_suspected", "belt_squeal_suspected", "rough_idle_suspected"}
 
         has_underbody_leak = any(
-            any(kw in f.get("label", "").lower() for kw in _LEAK_LABELS)
+            f.get("label", "").lower() in _LEAK_LABELS
             for f in underbody_findings
         )
         has_knock  = any(f.label in _KNOCK_LABELS for f in audio_findings)
