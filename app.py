@@ -396,17 +396,26 @@ TR = {
         "complaints_title": "תלונות מוכרות",
         "total_complaints": "סך תלונות NHTSA",
         "nhtsa_source":     "מקור: NHTSA — מינהל בטיחות הרכב האמריקאי",
-        "audio_diagnosis":  "אבחון קולי — פירוט",
-        "vehicle_video":    "סרטון הרכב (אופציונלי)",
-        "video_hint":       "הוסף סרטון עד דקה אחת. הAI יזהה שריטות, נזקי גוף, שינויי צבע ודליפות.",
-        "exterior_score":   "ציון חיצוני",
-        "interior_score":   "ציון פנים",
-        "leak_none":        "לא זוהו דליפות",
-        "leak_oil":         "חשד לדליפת שמן",
-        "leak_water":       "חשד לדליפת מים / קירור",
-        "leaks_title":      "בדיקת דליפות",
-        "detailed_report":  "דוח מפורט",
-        "scores_title":     "ציוני מצב",
+        "audio_diagnosis":       "אבחון קולי — פירוט",
+        "vehicle_video":         "סרטון הרכב (אופציונלי)",
+        "video_hint":            "הוסף סרטון עד דקה אחת. הAI יזהה שריטות, נזקי גוף, שינויי צבע ודליפות.",
+        "interior_photos_title": "תמונות פנים הרכב",
+        "interior_photos_hint":  "2–4 תמונות: מושבים, לוח מחוונים, תקרה, רצפה",
+        "interior_photos_count": "תמונות פנים נבחרו",
+        "exterior_score":        "ציון חיצוני",
+        "interior_score":        "ציון פנים",
+        "leak_none":             "לא זוהו דליפות",
+        "leak_oil":              "חשד לדליפת שמן",
+        "leak_water":            "חשד לדליפת מים / קירור",
+        "leaks_title":           "בדיקת דליפות",
+        "detailed_report":       "דוח מפורט",
+        "scores_title":          "ציוני מצב",
+        "sec_visual":            "חזות ומעטפת",
+        "sec_mechanical":        "בדיקה מכאנית",
+        "sec_conclusion":        "סיכום",
+        "conc_external_label":   "מצב חיצוני",
+        "conc_internal_label":   "מצב פנים",
+        "conc_mechanical_label": "מצב מכאני",
         "of_10":            "/ 10",
         "paint_title":      "ניתוח צבע ועבר תאונה",
         "paint_consistent": "הצבע אחיד — לא נמצאו חשדות לצביעה מחדש",
@@ -503,14 +512,23 @@ TR = {
         "complaints_title": "Reported Complaints",
         "total_complaints": "Total NHTSA Complaints",
         "nhtsa_source":     "Source: NHTSA — US National Highway Traffic Safety Administration",
-        "audio_diagnosis":  "Audio Diagnosis — Detail",
-        "vehicle_video":    "Vehicle Video (optional)",
-        "video_hint":       "Upload up to 1 minute of video. AI will detect scratches, body damage, color changes and leaks.",
-        "exterior_score":   "Exterior Score",
-        "interior_score":   "Interior Score",
-        "leak_none":        "No leaks detected",
-        "leak_oil":         "Oil leak suspected",
-        "leak_water":       "Water / coolant leak suspected",
+        "audio_diagnosis":       "Audio Diagnosis — Detail",
+        "vehicle_video":         "Vehicle Video (optional)",
+        "video_hint":            "Upload up to 1 minute of video. AI will detect scratches, body damage, color changes and leaks.",
+        "interior_photos_title": "Interior Photos",
+        "interior_photos_hint":  "2–4 photos: seats, dashboard, ceiling, floor",
+        "interior_photos_count": "interior photo(s) selected",
+        "exterior_score":        "Exterior Score",
+        "interior_score":        "Interior Score",
+        "leak_none":             "No leaks detected",
+        "leak_oil":              "Oil leak suspected",
+        "leak_water":            "Water / coolant leak suspected",
+        "sec_visual":            "Visual Assessment",
+        "sec_mechanical":        "Mechanical Check",
+        "sec_conclusion":        "Summary",
+        "conc_external_label":   "Exterior",
+        "conc_internal_label":   "Interior",
+        "conc_mechanical_label": "Mechanical",
         "leaks_title":      "Leak Assessment",
         "detailed_report":  "Detailed Report",
         "scores_title":     "Condition Scores",
@@ -742,8 +760,9 @@ for key, default in {
     "email":         "",
     "step":          1,
     "car_details":   {},
-    "photos":        [],
-    "underbody":     None,
+    "photos":           [],
+    "interior_photos":  [],
+    "underbody":        None,
     "vehicle_video": None,
     "audio":         None,
     "result":        None,
@@ -1104,26 +1123,35 @@ def _generate_comprehensive_report(
     nhtsa_data: dict | None = None,
     audio_metrics: dict | None = None,
     paint_data: dict | None = None,
+    interior_paths: list[str] | None = None,
 ) -> dict:
     """
     Single Claude Sonnet call that:
-      • Writes a 10-sentence detailed assessment in Hebrew or English
+      • Writes a structured assessment split into exterior, interior, mechanical
       • Scores exterior 1–10 and interior 1–10
       • Detects fluid leaks
       • Translates all backend findings titles to the target language
     Returns dict with keys: report, exterior_score, interior_score,
-                            leak_assessment, translated_reasons, translated_steps
+                            leak_assessment, conclusion_external,
+                            conclusion_internal, conclusion_mechanical,
+                            translated_reasons, translated_steps
     """
     import anthropic, base64, json, re
 
     client = anthropic.Anthropic(api_key=api_key)
     lang_name = "Hebrew" if lang == "he" else "English"
 
-    # Combine photos + video frames, sample up to 8 for the API call
-    all_paths = photo_paths + video_frame_paths
-    sample    = all_paths[:8]
+    # Combine photos + interior + video frames, sample up to 10 for the API call
+    # Label interior photos separately so Claude knows context
+    exterior_sample  = photo_paths[:5]
+    interior_sample  = (interior_paths or [])[:3]
+    video_sample     = video_frame_paths[:2]
+    all_paths        = exterior_sample + interior_sample + video_sample
+    n_exterior       = len(exterior_sample)
+    n_interior       = len(interior_sample)
+
     img_blocks = []
-    for p in sample:
+    for idx, p in enumerate(all_paths):
         try:
             ext = Path(p).suffix.lower().lstrip(".")
             media = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
@@ -1198,9 +1226,15 @@ def _generate_comprehensive_report(
             f"Only flag an issue if suspicion is MEDIUM or HIGH AND you can visually confirm it.\n"
         )
 
+    photo_ctx = f"Images provided: {n_exterior} exterior photo(s)"
+    if n_interior:
+        photo_ctx += f" + {n_interior} interior photo(s)"
+    if video_sample:
+        photo_ctx += f" + {len(video_sample)} video frame(s)"
+
     prompt = f"""CRITICAL: This response must be written ENTIRELY in {lang_name}. Every word in every JSON string field must be in {lang_name}. Using any English words in the output is an error — even for technical terms, translate them.
 
-You are a professional used-car inspector. You have {len(img_blocks)} image(s) of this vehicle plus the automated system's preliminary findings.
+You are a professional used-car inspector. {photo_ctx}. The first {n_exterior} image(s) are EXTERIOR photos; the next {n_interior} image(s) are INTERIOR photos.
 
 Vehicle: {car_details.get("year","")} {car_details.get("manufacturer","")} {car_details.get("model_name","")} {car_details.get("trim","")}
 Odometer: {car_details.get("odometer","?")} km | Prior owners: {car_details.get("prev_owners",1)} | Usage: {["Private","Rental/Lease","Company Car","Unknown"][min(car_details.get("usage_type",0),3)]}
@@ -1211,10 +1245,13 @@ Automated next steps (English): {"; ".join(existing_steps) or "none"}
 {nhtsa_block}{audio_block}{paint_block}
 Your task — respond ONLY in {lang_name} — produce this exact JSON (no extra text):
 {{
-  "report": "<exactly 10 sentences covering: overall condition, body/panel damage visible, paint quality & colour consistency, glass & lights condition, wheel & tyre condition, engine bay cleanliness, interior condition, dashboard & controls, underbody if visible, and a final buying-advice sentence>",
+  "report": "<4–6 sentences: overall condition summary covering body, paint, interior and any concerns>",
   "exterior_score": <integer 1-10, where 10=showroom perfect, 1=severely damaged>,
   "interior_score": <integer 1-10, where 10=pristine, 1=heavily worn/damaged>,
   "leak_assessment": "<one of: none detected | oil leak suspected | water/coolant leak suspected | multiple leaks suspected>",
+  "conclusion_external": "<1–2 sentences on exterior: body condition, paint consistency, any accident/repair signs, overall preservation>",
+  "conclusion_internal": "<1–2 sentences on interior: cleanliness, seat wear, dashboard condition, general upkeep — use interior photos if provided>",
+  "conclusion_mechanical": "<1–2 sentences on mechanical concerns visible in images (engine bay, underbody if shown) — do NOT repeat audio findings here>",
   "translated_reasons": ["<MUST be in {lang_name} — translate each automated finding, preserving meaning, same count>"],
   "translated_steps": ["<MUST be in {lang_name} — translate each next step, do not leave any in English>"],
   "paint_findings": [
@@ -1223,7 +1260,7 @@ Your task — respond ONLY in {lang_name} — produce this exact JSON (no extra 
 }}
 
 Base exterior_score and interior_score ONLY on what you can visually observe in the images. Be honest and specific.
-FINAL REMINDER: Every string in the JSON — report, leak_assessment, translated_reasons, translated_steps, paint_findings — must be in {lang_name} only."""
+FINAL REMINDER: Every string in the JSON — report, conclusion_external, conclusion_internal, conclusion_mechanical, leak_assessment, translated_reasons, translated_steps, paint_findings — must be in {lang_name} only."""
 
     content = img_blocks + [{"type": "text", "text": prompt}]
     try:
@@ -1249,7 +1286,7 @@ FINAL REMINDER: Every string in the JSON — report, leak_assessment, translated
     }
 
 # ─── Analysis runner ──────────────────────────────────────────────────────────
-def run_analysis(car_details, photo_files, audio_file, underbody_file=None, video_file=None) -> tuple:
+def run_analysis(car_details, photo_files, audio_file, underbody_file=None, video_file=None, interior_files=None) -> tuple:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         photo_paths = []
@@ -1258,6 +1295,13 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             p = tmp / f"photo_{i}{ext}"
             p.write_bytes(f.getvalue())
             photo_paths.append(str(p))
+        # Interior photos saved separately so Claude knows context
+        interior_paths = []
+        for i, f in enumerate(interior_files or []):
+            ext = Path(f.name).suffix or ".jpg"
+            p = tmp / f"interior_{i}{ext}"
+            p.write_bytes(f.getvalue())
+            interior_paths.append(str(p))
         underbody_path = None
         if underbody_file:
             ext = Path(underbody_file.name).suffix or ".jpg"
@@ -1278,8 +1322,8 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             vp.write_bytes(video_file.getvalue())
             video_frame_paths = _extract_video_frames(str(vp), tmp)
 
-        # All photo paths including video frames (for backend quality assessment)
-        all_visual_paths = photo_paths + video_frame_paths
+        # All photo paths including interior + video frames (for backend quality assessment)
+        all_visual_paths = photo_paths + interior_paths + video_frame_paths
 
         photo_qualities    = [assess_image_quality(p) for p in all_visual_paths]
         dashboard_findings = detect_dashboard_warnings(all_visual_paths)
@@ -1355,7 +1399,13 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
                 decision.recommendation = "no_go"
 
         if _mech_issues:
-            decision.top_reasons = _mech_issues + (decision.top_reasons or [])
+            # Filter out the "no red flags" fallback — real findings are present
+            _filtered_reasons = [
+                r for r in (decision.top_reasons or [])
+                if not any(kw in r.get("title", "").lower()
+                           for kw in ("red flag", "דגלים אדומים", "no clear", "לא זוהו דגלים"))
+            ]
+            decision.top_reasons = _mech_issues + _filtered_reasons
 
         # ── Paint consistency (OpenCV LAB histogram comparison) ───────────────
         paint_data = _analyze_paint_consistency(photo_paths + video_frame_paths)
@@ -1375,10 +1425,11 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             import os
             api_key = os.getenv("ANTHROPIC_API_KEY", "")
         ai_report = _generate_comprehensive_report(
-            car_details, decision, all_visual_paths, [], lang, api_key,
+            car_details, decision, photo_paths + video_frame_paths, [], lang, api_key,
             nhtsa_data=nhtsa_data,
             audio_metrics=audio_metrics,
             paint_data=paint_data,
+            interior_paths=interior_paths,
         )
 
         # ── Override leak_assessment if underbody leak was physically detected ─
@@ -1494,7 +1545,22 @@ def render_result(result: dict):
 
     gold_divider()
 
-    # ── Condition Scores (exterior + interior) ────────────────────────────────
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 1 — Visual Assessment (chassis, paint, appearance)
+    # ═══════════════════════════════════════════════════════════════════════════
+    def _section_header(icon: str, key: str, color: str = "var(--gold)"):
+        st.markdown(
+            f"<div style='display:flex;align-items:center;gap:0.6rem;margin:1.2rem 0 0.6rem;{rtl_css}'>"
+            f"<span style='font-size:1.4rem;'>{icon}</span>"
+            f"<span style='font-family:Cormorant Garamond,serif;font-size:1.45rem;font-weight:600;"
+            f"letter-spacing:0.12em;text-transform:uppercase;color:{color};'>{t(key)}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    _section_header("🏛", "sec_visual")
+
+    # ── Scores ────────────────────────────────────────────────────────────────
     ext_score = result.get("exterior_score")
     int_score = result.get("interior_score")
     if ext_score is not None or int_score is not None:
@@ -1521,9 +1587,8 @@ def render_result(result: dict):
                 """, unsafe_allow_html=True)
         _score_bar(sc1, "exterior_score", ext_score)
         _score_bar(sc2, "interior_score", int_score)
-        gold_divider()
 
-    # ── Leak assessment ───────────────────────────────────────────────────────
+    # ── Visual leak assessment (from AI image inspection) ─────────────────────
     leak_raw = (result.get("leak_assessment") or "none detected").lower()
     if "oil" in leak_raw:
         leak_label, leak_color = t("leak_oil"),   "#B04040"
@@ -1538,14 +1603,12 @@ def render_result(result: dict):
         leak_label, leak_color = t("leak_none"),  "#4A7A4A"
         leak_icon = "🟢"
     st.markdown(f"""
-    <div style='display:flex;align-items:center;gap:0.7rem;margin:0.2rem 0 0.8rem;{rtl_css}'>
+    <div style='display:flex;align-items:center;gap:0.7rem;margin:0.8rem 0 0.4rem;{rtl_css}'>
         <span style='font-size:1.07rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;'>{t("leaks_title")}:</span>
         <span style='font-size:1.1rem;'>{leak_icon}</span>
         <span style='font-size:1.17rem;color:{leak_color};font-weight:500;'>{leak_label}</span>
     </div>
     """, unsafe_allow_html=True)
-
-    gold_divider()
 
     # ── Paint Analysis & Accident Indicator ──────────────────────────────────
     paint_data     = result.get("paint_data") or {}
@@ -1607,116 +1670,56 @@ def render_result(result: dict):
 
     gold_divider()
 
-    # ── Recalls & Known Issues (NHTSA) ───────────────────────────────────────
-    nhtsa = result.get("nhtsa_data") or {}
-    recall_count     = nhtsa.get("recall_count", 0)
-    total_complaints = nhtsa.get("total_complaints", 0)
-    if recall_count > 0 or total_complaints > 0:
-        section_label("recalls_title")
-        if recall_count > 0:
-            st.markdown(
-                f"<div style='margin:0.3rem 0 0.6rem;{rtl_css}'>"
-                f"<span style='color:#B04040;font-size:1.17rem;font-weight:600;'>"
-                f"⚠ {t('open_recalls')}: {recall_count}</span></div>",
-                unsafe_allow_html=True,
-            )
-            for r in nhtsa.get("recalls", [])[:5]:
-                comp    = r.get("component", "")
-                summary = r.get("summary", "")[:200]
-                conseq  = r.get("consequence", "")[:120]
-                st.markdown(
-                    f"<div style='background:var(--elevated);border-left:3px solid #B04040;"
-                    f"padding:0.65rem 1rem;margin:0.3rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
-                    f"<span style='color:#B04040;font-size:1rem;font-weight:600;'>{comp}</span>"
-                    f"<div style='font-size:1.07rem;margin-top:0.2rem;'>{summary}</div>"
-                    + (f"<div style='font-size:0.95rem;color:var(--muted);margin-top:0.15rem;'>{conseq}</div>" if conseq else "")
-                    + "</div>",
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.markdown(
-                f"<p style='color:#4A7A4A;font-size:1.1rem;{rtl_css}'>✓ {t('no_recalls_found')}</p>",
-                unsafe_allow_html=True,
-            )
-        if total_complaints > 0:
-            st.markdown(
-                f"<p style='font-size:1.04rem;color:var(--muted);margin-top:0.6rem;{rtl_css}'>"
-                f"{t('total_complaints')}: <strong style='color:var(--gold);'>{total_complaints}</strong></p>",
-                unsafe_allow_html=True,
-            )
-            top_comps = sorted(
-                (nhtsa.get("complaint_components") or {}).items(),
-                key=lambda x: x[1], reverse=True
-            )[:6]
-            max_count = top_comps[0][1] if top_comps else 1
-            for comp, count in top_comps:
-                pct = int(count / max_count * 100)
-                st.markdown(
-                    f"<div style='display:flex;align-items:center;gap:0.8rem;margin:0.25rem 0;{rtl_css}'>"
-                    f"<span style='font-size:1rem;color:var(--muted);min-width:10rem;white-space:nowrap;"
-                    f"overflow:hidden;text-overflow:ellipsis;'>{comp}</span>"
-                    f"<div style='flex:1;height:7px;background:var(--elevated);border-radius:4px;'>"
-                    f"<div style='width:{pct}%;height:100%;background:var(--gold-dark);border-radius:4px;'></div></div>"
-                    f"<span style='font-size:1rem;color:var(--muted);min-width:2rem;text-align:right;'>{count}</span></div>",
-                    unsafe_allow_html=True,
-                )
-        st.markdown(
-            f"<p style='font-size:0.95rem;color:var(--muted);margin-top:0.5rem;{rtl_css}'>◦ {t('nhtsa_source')}</p>",
-            unsafe_allow_html=True,
-        )
-        gold_divider()
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 2 — Mechanical Check (audio + underbody leaks + recalls)
+    # ═══════════════════════════════════════════════════════════════════════════
+    _section_header("🔧", "sec_mechanical")
 
-    # ── Detailed 10-sentence AI report ───────────────────────────────────────
-    report_text = result.get("detailed_report", "")
-    if report_text:
-        section_label("detailed_report")
-        # Split into sentences for better readability
-        import re as _re
-        sentences = [s.strip() for s in _re.split(r'(?<=[.!?])\s+', report_text) if s.strip()]
-        for sentence in sentences:
-            st.markdown(f"""
-            <div style='border-left:2px solid rgba(200,169,106,0.3);padding:0.4rem 0.9rem;
-                        margin:0.3rem 0;{rtl_css}'>
-                <span style='font-size:1.17rem;color:var(--text);line-height:1.6;'>{sentence}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        gold_divider()
-
-    # ── Assessment Findings ───────────────────────────────────────────────────
+    # ── Mechanical findings from top_reasons (audio / underbody / dashboard) ──
+    sev_colors = {"high": "#B04040", "medium": "#C8A96A", "low": "#4A7A4A"}
+    sev_icons  = {"high": "⚠", "medium": "◉", "low": "◎"}
+    mech_evidence_types = {"audio", "underbody", "dashboard"}
     reasons = result.get("top_reasons", [])
-    if reasons:
-        section_label("findings_title")
-        sev_colors = {"high": "#B04040", "medium": "#C8A96A", "low": "#4A7A4A"}
-        sev_icons  = {"high": "⚠", "medium": "◉", "low": "◎"}
-        for r in reasons:
+    mech_reasons  = [r for r in reasons if r.get("evidence", {}).get("type") in mech_evidence_types
+                     or r.get("severity") in ("high", "medium")]
+    # Fall back to showing all if none classified
+    if not mech_reasons:
+        mech_reasons = reasons
+
+    if mech_reasons:
+        for r in mech_reasons:
             sev = r.get("severity", "low")
             bc  = sev_colors.get(sev, "#9A9080")
             ic  = sev_icons.get(sev, "◦")
-            st.markdown(f"""
-            <div style='background:var(--elevated);border-left:3px solid {bc};
-                        padding:0.75rem 1rem;margin:0.4rem 0;border-radius:0 4px 4px 0;{rtl_css}'>
-                <span style='color:{bc};margin-{"left" if is_rtl else "right"}:0.5rem;'>{ic}</span>
-                <span style='font-size:1.24rem;'>{_tr_for_display(r.get("title",""))}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='background:var(--elevated);border-left:3px solid {bc};"
+                f"padding:0.75rem 1rem;margin:0.4rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
+                f"<span style='color:{bc};margin-{'left' if is_rtl else 'right'}:0.5rem;'>{ic}</span>"
+                f"<span style='font-size:1.24rem;'>{_tr_for_display(r.get('title',''))}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
     # ── Audio Diagnosis Detail ────────────────────────────────────────────────
     audio_raw = result.get("audio_findings_raw", [])
     if audio_raw:
-        gold_divider()
-        section_label("audio_diagnosis")
+        st.markdown(
+            f"<p style='font-size:1.07rem;color:var(--muted);letter-spacing:0.08em;margin-top:0.8rem;{rtl_css}'>"
+            f"{t('audio_diagnosis')}</p>",
+            unsafe_allow_html=True,
+        )
         _finding_style = {
-            "rod_knock_suspected":   ("🔴", "#B04040"),
-            "valve_tick_suspected":  ("🟠", "#C8803A"),
-            "belt_squeal_suspected": ("🟠", "#C8803A"),
-            "exhaust_leak_suspected":("🟠", "#C8803A"),
-            "rough_idle_suspected":  ("🟡", "#C8A96A"),
-            "engine_sounds_normal":  ("🟢", "#4A7A4A"),
-            "unknown":               ("⚪", "#9A9080"),
+            "rod_knock_suspected":    ("🔴", "#B04040"),
+            "valve_tick_suspected":   ("🟠", "#C8803A"),
+            "belt_squeal_suspected":  ("🟠", "#C8803A"),
+            "exhaust_leak_suspected": ("🟠", "#C8803A"),
+            "rough_idle_suspected":   ("🟡", "#C8A96A"),
+            "engine_sounds_normal":   ("🟢", "#4A7A4A"),
+            "unknown":                ("⚪", "#9A9080"),
         }
         for f in audio_raw:
             lbl       = f.get("label", "unknown")
-            icon, clr = _finding_style.get(lbl, ("◦", "#9A9080"))
+            icon_a, clr = _finding_style.get(lbl, ("◦", "#9A9080"))
             title     = _audio_label(lbl)
             details   = f.get("details", {})
             det_str   = "  ·  ".join(
@@ -1726,12 +1729,92 @@ def render_result(result: dict):
             st.markdown(
                 f"<div style='background:var(--elevated);border-left:3px solid {clr};"
                 f"padding:0.6rem 1rem;margin:0.3rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
-                f"<span style='font-size:1.15rem;'>{icon}&nbsp; {title}</span>"
+                f"<span style='font-size:1.15rem;'>{icon_a}&nbsp; {title}</span>"
                 + (f"<div style='font-size:0.95rem;color:var(--muted);margin-top:0.15rem;'>{det_str}</div>" if det_str else "")
                 + "</div>",
                 unsafe_allow_html=True,
             )
 
+    # ── NHTSA Recalls (inside mechanical section) ─────────────────────────────
+    nhtsa = result.get("nhtsa_data") or {}
+    recall_count     = nhtsa.get("recall_count", 0)
+    total_complaints = nhtsa.get("total_complaints", 0)
+    if recall_count > 0 or total_complaints > 0:
+        st.markdown(
+            f"<p style='font-size:1.07rem;color:var(--muted);letter-spacing:0.08em;margin-top:0.8rem;{rtl_css}'>"
+            f"{t('recalls_title')}</p>",
+            unsafe_allow_html=True,
+        )
+        if recall_count > 0:
+            st.markdown(
+                f"<div style='margin:0.3rem 0 0.4rem;{rtl_css}'>"
+                f"<span style='color:#B04040;font-size:1.1rem;font-weight:600;'>⚠ {t('open_recalls')}: {recall_count}</span></div>",
+                unsafe_allow_html=True,
+            )
+            for r in nhtsa.get("recalls", [])[:5]:
+                comp    = r.get("component", "")
+                summary = r.get("summary", "")[:200]
+                st.markdown(
+                    f"<div style='background:var(--elevated);border-left:3px solid #B04040;"
+                    f"padding:0.5rem 1rem;margin:0.2rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
+                    f"<span style='color:#B04040;font-size:0.97rem;font-weight:600;'>{comp}</span>"
+                    f"<div style='font-size:1rem;margin-top:0.15rem;'>{summary}</div></div>",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                f"<p style='color:#4A7A4A;font-size:1.05rem;{rtl_css}'>✓ {t('no_recalls_found')}</p>",
+                unsafe_allow_html=True,
+            )
+        st.markdown(
+            f"<p style='font-size:0.9rem;color:var(--muted);margin-top:0.3rem;{rtl_css}'>◦ {t('nhtsa_source')}</p>",
+            unsafe_allow_html=True,
+        )
+
+    gold_divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 3 — Summary & Conclusion (3-part verdict)
+    # ═══════════════════════════════════════════════════════════════════════════
+    _section_header("📋", "sec_conclusion")
+
+    def _conclusion_row(icon: str, label_key: str, text: str, border_color: str = "var(--gold-dark)"):
+        if not text:
+            return
+        st.markdown(
+            f"<div style='display:flex;align-items:flex-start;gap:0.8rem;margin:0.5rem 0;{rtl_css}'>"
+            f"<div style='min-width:28px;font-size:1.3rem;padding-top:0.1rem;'>{icon}</div>"
+            f"<div style='flex:1;background:var(--elevated);border-left:3px solid {border_color};"
+            f"border-radius:0 6px 6px 0;padding:0.6rem 1rem;'>"
+            f"<div style='font-size:0.97rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;"
+            f"margin-bottom:0.25rem;'>{t(label_key)}</div>"
+            f"<div style='font-size:1.17rem;line-height:1.55;'>{text}</div>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    conc_ext  = result.get("conclusion_external", "")
+    conc_int  = result.get("conclusion_internal", "")
+    conc_mech = result.get("conclusion_mechanical", "")
+
+    _conclusion_row("🏠", "conc_external_label",   conc_ext,  "#4A7A4A" if ext_score and ext_score >= 7 else "#C8A96A")
+    _conclusion_row("🪑", "conc_internal_label",   conc_int,  "#4A7A4A" if int_score and int_score >= 7 else "#C8A96A")
+    _conclusion_row("⚙️", "conc_mechanical_label", conc_mech, color)  # color = verdict color
+
+    # Fallback: show detailed report in expander if no conclusions
+    report_text = result.get("detailed_report", "")
+    if report_text and not (conc_ext or conc_int or conc_mech):
+        with st.expander(t("detailed_report")):
+            import re as _re
+            sentences = [s.strip() for s in _re.split(r'(?<=[.!?])\s+', report_text) if s.strip()]
+            for sentence in sentences:
+                st.markdown(
+                    f"<div style='border-left:2px solid rgba(200,169,106,0.3);padding:0.4rem 0.9rem;margin:0.3rem 0;{rtl_css}'>"
+                    f"<span style='font-size:1.1rem;line-height:1.6;'>{sentence}</span></div>",
+                    unsafe_allow_html=True,
+                )
+
+    # ── Recommended Next Steps ────────────────────────────────────────────────
     steps = result.get("next_steps", [])
     if steps:
         gold_divider()
@@ -2016,23 +2099,49 @@ def step_vehicle_details():
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
+    # ── Exterior photos ───────────────────────────────────────────────────────
     section_label("vehicle_photos")
-    st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('photos_hint')}</p>", unsafe_allow_html=True)
-    photos = st.file_uploader(t("vehicle_photos"), type=["jpg","jpeg","png","webp"], accept_multiple_files=True, label_visibility="collapsed")
+    st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>"
+                f"{'העלה 3–8 תמונות חיצוניות: כל הצדדים, תא המנוע, גלגלים. ודא תאורה טובה.' if is_rtl else 'Upload 3–8 exterior photos: all sides, engine bay, wheels. Ensure good lighting.'}"
+                f"</p>", unsafe_allow_html=True)
+    photos = st.file_uploader(t("vehicle_photos"), type=["jpg","jpeg","png","webp"],
+                              accept_multiple_files=True, label_visibility="collapsed",
+                              key="exterior_upload")
+    if photos:
+        color = "#4A7A4A" if 3 <= len(photos) <= 8 else "#B04040"
+        st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>📸 {len(photos)} {t('photos_count')}</p>", unsafe_allow_html=True)
+
     gold_divider()
+
+    # ── Interior photos ───────────────────────────────────────────────────────
+    section_label("interior_photos_title")
+    st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('interior_photos_hint')}</p>", unsafe_allow_html=True)
+    interior_photos = st.file_uploader(t("interior_photos_title"), type=["jpg","jpeg","png","webp"],
+                                       accept_multiple_files=True, label_visibility="collapsed",
+                                       key="interior_upload")
+    if interior_photos:
+        color = "#4A7A4A" if 1 <= len(interior_photos) <= 6 else "#C8A96A"
+        st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>🪑 {len(interior_photos)} {t('interior_photos_count')}</p>", unsafe_allow_html=True)
+
+    gold_divider()
+
+    # ── Underbody ─────────────────────────────────────────────────────────────
     section_label("underbody_title")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('underbody_hint')}</p>", unsafe_allow_html=True)
-    underbody = st.file_uploader(t("underbody_title"), type=["jpg","jpeg","png"], label_visibility="collapsed", key="underbody_upload")
-    if photos:
-        color = "#4A7A4A" if 4 <= len(photos) <= 10 else "#B04040"
-        st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>📸 {len(photos)} {t('photos_count')}</p>", unsafe_allow_html=True)
+    underbody = st.file_uploader(t("underbody_title"), type=["jpg","jpeg","png"],
+                                 label_visibility="collapsed", key="underbody_upload")
+
     gold_divider()
+
+    # ── Video ─────────────────────────────────────────────────────────────────
     section_label("vehicle_video")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('video_hint')}</p>", unsafe_allow_html=True)
-    vehicle_video = st.file_uploader(t("vehicle_video"), type=["mp4","mov","avi","mkv","webm"], label_visibility="collapsed", key="vehicle_video_upload")
+    vehicle_video = st.file_uploader(t("vehicle_video"), type=["mp4","mov","avi","mkv","webm"],
+                                     label_visibility="collapsed", key="vehicle_video_upload")
     if vehicle_video:
         size_mb = len(vehicle_video.getvalue()) / (1024 * 1024)
         st.markdown(f"<p style='font-size:1.01rem;color:#4A7A4A;margin-top:0.3rem;'>🎬 {vehicle_video.name} ({size_mb:.1f} MB)</p>", unsafe_allow_html=True)
+
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -2040,13 +2149,16 @@ def step_photos():
             st.session_state.step = 1; st.rerun()
     with col2:
         if st.button(t("continue_btn"), key="photos_continue"):
-            if not photos or len(photos) < 4: st.error(t("photos_min_error"))
-            elif len(photos) > 10:            st.error(t("photos_max_error"))
+            if not photos or len(photos) < 3:
+                st.error("אנא העלה לפחות 3 תמונות חיצוניות." if is_rtl else "Please upload at least 3 exterior photos.")
+            elif len(photos) > 8:
+                st.error("מקסימום 8 תמונות חיצוניות." if is_rtl else "Maximum 8 exterior photos.")
             else:
-                st.session_state.photos        = photos
-                st.session_state.underbody     = underbody
-                st.session_state.vehicle_video = vehicle_video
-                st.session_state.step          = 3; st.rerun()
+                st.session_state.photos          = photos
+                st.session_state.interior_photos = interior_photos or []
+                st.session_state.underbody       = underbody
+                st.session_state.vehicle_video   = vehicle_video
+                st.session_state.step            = 3; st.rerun()
 
 # ─── Step 3 — Audio ───────────────────────────────────────────────────────────
 def step_audio():
@@ -2070,6 +2182,7 @@ def step_audio():
                 _lang = st.session_state.get("lang", "he")
                 _ACTIVE_LANG = _lang   # expose to thread-safe getter
                 _photos    = list(st.session_state.get("photos", []))
+                _interior  = list(st.session_state.get("interior_photos", []))
                 _underbody = st.session_state.get("underbody")
                 _video     = st.session_state.get("vehicle_video")
                 _stages = [
@@ -2086,7 +2199,7 @@ def step_audio():
                 def _worker():
                     try:
                         _result_box[0] = run_analysis(
-                            d, _photos, audio, _underbody, _video,
+                            d, _photos, audio, _underbody, _video, _interior,
                         )
                     except Exception as _e:
                         _error_box[0] = _e
@@ -2134,8 +2247,11 @@ def step_audio():
                         "nhtsa_data":          nhtsa_data,
                         "audio_metrics":       audio_metrics,
                         "audio_findings_raw":  audio_findings_raw,
-                        "paint_data":          paint_data,
-                        "paint_findings":      ai_report.get("paint_findings", []),
+                        "paint_data":              paint_data,
+                        "paint_findings":          ai_report.get("paint_findings", []),
+                        "conclusion_external":     ai_report.get("conclusion_external", ""),
+                        "conclusion_internal":     ai_report.get("conclusion_internal", ""),
+                        "conclusion_mechanical":   ai_report.get("conclusion_mechanical", ""),
                     }
                     check_id = save_check(st.session_state.email, result)
                     result["check_id"]      = check_id
