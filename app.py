@@ -2264,11 +2264,12 @@ def render_result(result: dict):
     _mdl     = car_d.get("model_name", "")
     _search  = f"{_yr} {_mk} {_mdl}".strip()
 
-    # Construct Yad2 URL with year filter
-    _yad2_base = "https://www.yad2.co.il/vehicles/private-cars"
-    _yad2_url  = f"{_yad2_base}?yearFrom={_yr}&yearTo={_yr}" if _yr else _yad2_base
     import urllib.parse as _up
-    _google_url = "https://www.google.com/search?q=" + _up.quote(f'site:yad2.co.il {_search}')
+    # Deep-link to the Yad2 pricelist page (not the vehicle search listings)
+    _pricelist_base = "https://www.yad2.co.il/price-list"
+    _mfr_id = (_yad2pd or {}).get("mfr_id")
+    _yad2_url = f"{_pricelist_base}?manufacturer={_mfr_id}" if _mfr_id else _pricelist_base
+    _google_url = "https://www.google.com/search?q=" + _up.quote(f'site:yad2.co.il מחירון {_search}')
 
     _yad2pd = result.get("yad2_price_data")
 
@@ -2765,6 +2766,7 @@ def _fetch_yad2_price(manufacturer_en: str, model_name: str, year: int) -> dict 
             "currency":      "ILS",
             "source":        "yad2",
             "exact_match":   False,
+            "mfr_id":        mfr_id,
         }
 
     min_p = best.get("minPrice") or 0
@@ -2787,6 +2789,7 @@ def _fetch_yad2_price(manufacturer_en: str, model_name: str, year: int) -> dict 
         "currency":      "ILS",
         "source":        "yad2",
         "exact_match":   True,
+        "mfr_id":        mfr_id,
     }
 
 
