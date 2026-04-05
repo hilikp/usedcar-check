@@ -318,8 +318,8 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "לקנות או לא לקנות.... תגלה תוך דקות",
-        "app_subtitle_main":"הערכה מהירה מבוססת AI",
+        "app_subtitle":     "האמת על הרכב — לפני שהוא שלך",
+        "app_subtitle_main":"ניתוח חכם. החלטה בטוחה.",
         "email_label":      "כתובת אימייל",
         "password_label":   "קוד גישה",
         "enter_btn":        "כניסה",
@@ -439,8 +439,8 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "GO or NO-GO — Know Before You Buy 🚗",
-        "app_subtitle_main":"AI-Powered Quick Assessment",
+        "app_subtitle":     "The full picture — before you commit",
+        "app_subtitle_main":"Smart Analysis. Confident Decision.",
         "email_label":      "Email Address",
         "password_label":   "Access Code",
         "enter_btn":        "Enter",
@@ -749,7 +749,7 @@ MAKES_LIST = [""] + sorted(
 ) + ["Other"]
 
 # ─── Constants ────────────────────────────────────────────────────────────────
-APP_PASSWORD = "VW2026"
+# Password removed — access is open, email-only
 DATA_DIR     = _ROOT / "data"
 USERS_FILE   = DATA_DIR / "users.json"
 CHECKS_DIR   = DATA_DIR / "checks"
@@ -1294,6 +1294,149 @@ FINAL REMINDER: Every string in the JSON — report, conclusion_external, conclu
         "translated_reasons": existing_reasons,
         "translated_steps":   existing_steps,
     }
+
+# ─── Result email sender ──────────────────────────────────────────────────────
+def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
+    """
+    Send the analysis summary to the user's email via Gmail SMTP.
+    Requires GMAIL_USER and GMAIL_APP_PASSWORD in st.secrets.
+    Returns True on success, False on failure (silently — never block the user).
+    """
+    import smtplib, html as _html
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    try:
+        gmail_user = st.secrets.get("GMAIL_USER", "")
+        gmail_pwd  = st.secrets.get("GMAIL_APP_PASSWORD", "")
+        if not gmail_user or not gmail_pwd:
+            return False  # credentials not configured yet
+    except Exception:
+        return False
+
+    # ── Build content ─────────────────────────────────────────────────────────
+    is_he     = (lang == "he")
+    rec       = result.get("recommendation", "inconclusive")
+    car_label = result.get("car_label", "")
+    date      = result.get("created_at", "")[:10]
+    ext_score = result.get("exterior_score")
+    int_score = result.get("interior_score")
+
+    rec_labels = {
+        "go":           ("מתאים",       "GO",               "#4A7A4A"),
+        "no_go":        ("זוהו בעיות",  "RISK DETECTED",    "#B04040"),
+        "inconclusive": ("מידע חסר",    "INSUFFICIENT DATA","#C8A96A"),
+    }
+    rec_he, rec_en, rec_color = rec_labels.get(rec, ("?", "?", "#9A9080"))
+    rec_label = rec_he if is_he else rec_en
+
+    # Action recommendation
+    paint_susp   = (result.get("paint_data") or {}).get("suspicion", "none")
+    leak_raw     = (result.get("leak_assessment") or "none detected").lower()
+    audio_labels = {f.get("label","") for f in (result.get("audio_findings_raw") or [])}
+    bad_audio    = {"rod_knock_suspected","valve_tick_suspected","belt_squeal_suspected",
+                    "exhaust_leak_suspected","rough_idle_suspected"}
+    has_paint    = paint_susp in ("medium","high")
+    has_leak     = leak_raw != "none detected"
+    has_audio    = bool(audio_labels & bad_audio)
+
+    if has_leak:
+        action_he = "זוהתה דליפת נוזל — יש לבדוק במוסך מורשה לפני כל שיקול רכישה."
+        action_en = "Fluid leak detected — inspect at a certified garage before any purchase decision."
+    elif has_paint and has_audio:
+        action_he = "זוהו מספר גורמי סיכון: בעיות צבע ורעשי מנוע. לא מומלץ לרכוש."
+        action_en = "Multiple risk factors: paint/body issues and engine noise. We recommend avoiding this vehicle."
+    elif has_audio:
+        action_he = "זוהה סיכון קולי במנוע. חובה לבדיקה מוסמכת לפני רכישה."
+        action_en = "Engine noise risk detected. Must go to a certified inspection center before purchase."
+    else:
+        action_he = "הרכב נראה תקין — ייתכן שמדובר ברכישה טובה. חובה לבדיקה מוסמכת לפני חתימה."
+        action_en = "Vehicle looks clean — could be a good buy. An official certified inspection is mandatory before signing."
+
+    action_text = action_he if is_he else action_en
+
+    # Top findings
+    reasons_html = ""
+    for r in (result.get("top_reasons") or [])[:6]:
+        sev = r.get("severity","low")
+        dot = {"high":"🔴","medium":"🟡","low":"🟢"}.get(sev,"◦")
+        title = _html.escape(r.get("title",""))
+        reasons_html += f"<tr><td style='padding:4px 8px;'>{dot}</td><td style='padding:4px 8px;font-size:14px;'>{title}</td></tr>"
+
+    score_row = ""
+    if ext_score is not None:
+        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#C8A96A;'>{ext_score}/10</div><div style='font-size:11px;color:#888;'>{'חיצוני' if is_he else 'Exterior'}</div></td>"
+    if int_score is not None:
+        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#C8A96A;'>{int_score}/10</div><div style='font-size:11px;color:#888;'>{'פנים' if is_he else 'Interior'}</div></td>"
+
+    conc_ext  = _html.escape(result.get("conclusion_external",""))
+    conc_int  = _html.escape(result.get("conclusion_internal",""))
+    conc_mech = _html.escape(result.get("conclusion_mechanical",""))
+
+    dir_attr = 'dir="rtl"' if is_he else 'dir="ltr"'
+
+    subject = f"{'בדיקת רכב' if is_he else 'Car Check'} — {car_label} — {rec_label}"
+    html_body = f"""<!DOCTYPE html>
+<html {dir_attr}>
+<head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#111;font-family:Georgia,serif;color:#E8E0D0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#111;">
+<tr><td align="center" style="padding:32px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#1A1A1A;border-radius:10px;border:1px solid #333;">
+
+<!-- Header -->
+<tr><td style="background:#141414;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #C8A96A44;">
+  <div style="font-size:11px;letter-spacing:4px;color:#C8A96A;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
+  <div style="font-size:26px;font-weight:700;color:#C8A96A;">{_html.escape(car_label)}</div>
+  <div style="font-size:12px;color:#666;margin-top:4px;">{date}</div>
+</td></tr>
+
+<!-- Verdict -->
+<tr><td style="padding:28px 32px;text-align:center;border-bottom:1px solid #2A2A2A;">
+  <div style="display:inline-block;background:{rec_color}22;border:2px solid {rec_color};border-radius:8px;padding:14px 36px;">
+    <div style="font-size:28px;font-weight:700;color:{rec_color};letter-spacing:2px;">{rec_label}</div>
+  </div>
+  <div style="margin-top:16px;font-size:15px;color:#B8A880;font-style:italic;">{action_text}</div>
+</td></tr>
+
+{"" if not score_row else f"<tr><td style='padding:20px 32px;border-bottom:1px solid #2A2A2A;'><table width='100%' cellpadding='0' cellspacing='0'><tr>{score_row}</tr></table></td></tr>"}
+
+{"" if not reasons_html else f"<tr><td style='padding:20px 32px;border-bottom:1px solid #2A2A2A;'><div style='font-size:11px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:10px;'>{'ממצאים' if is_he else 'Findings'}</div><table width='100%' cellpadding='0' cellspacing='0'>{reasons_html}</table></td></tr>"}
+
+{"" if not (conc_ext or conc_int or conc_mech) else f"""
+<tr><td style='padding:20px 32px;border-bottom:1px solid #2A2A2A;'>
+  <div style='font-size:11px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:10px;'>{'סיכום' if is_he else 'Summary'}</div>
+  {"" if not conc_ext else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#C8A96A;'>{'חיצוני' if is_he else 'Exterior'}: </span><span style='font-size:14px;'>{conc_ext}</span></div>"}
+  {"" if not conc_int else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#C8A96A;'>{'פנים' if is_he else 'Interior'}: </span><span style='font-size:14px;'>{conc_int}</span></div>"}
+  {"" if not conc_mech else f"<div><span style='font-size:12px;color:#C8A96A;'>{'מכאני' if is_he else 'Mechanical'}: </span><span style='font-size:14px;'>{conc_mech}</span></div>"}
+</td></tr>"""}
+
+<!-- Footer -->
+<tr><td style="padding:20px 32px;text-align:center;border-radius:0 0 10px 10px;">
+  <div style="font-size:11px;color:#555;line-height:1.7;">
+    {'הדוח מיועד לסיוע בקבלת החלטה בלבד ואינו תחליף לבדיקה מקצועית מוסמכת.' if is_he else 'This report is for decision support only and is not a substitute for a certified professional inspection.'}
+  </div>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = f"{'בדיקת רכב' if is_he else 'UsedCar Check'} <{gmail_user}>"
+        msg["To"]      = to_email
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(gmail_user, gmail_pwd)
+            smtp.sendmail(gmail_user, to_email, msg.as_string())
+        return True
+    except Exception:
+        return False
+
 
 # ─── Analysis runner ──────────────────────────────────────────────────────────
 def run_analysis(car_details, photo_files, audio_file, underbody_file=None, video_file=None, interior_files=None) -> tuple:
@@ -1931,14 +2074,14 @@ def login_screen():
         text-align: center;
         position: relative;
     ">
-        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:4rem;
+        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:5.5rem;
                     letter-spacing:0.22em;color:#C8A96A;text-transform:uppercase;
-                    text-shadow:0 2px 30px rgba(0,0,0,0.9);'>
+                    text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.05;'>
             {t("app_title")}
         </div>
         <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#C8A96A,transparent);
                     margin:1.2rem auto;'></div>
-        <div style='font-size:1.37rem;letter-spacing:0.1em;color:rgba(240,235,224,0.75);'>
+        <div style='font-size:1.7rem;letter-spacing:0.1em;color:rgba(240,235,224,0.85);font-style:italic;'>
             {t("app_subtitle")}
         </div>
     </div>
@@ -1986,15 +2129,10 @@ def login_screen():
         st.markdown(f"<p style='font-size:1rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>{t('email_label')}</p>", unsafe_allow_html=True)
         email = st.text_input("", placeholder="your@email.com", key="login_email", label_visibility="collapsed")
 
-        st.markdown(f"<p style='font-size:1rem;color:var(--muted);margin:0.6rem 0 0.2rem;{rtl_css}'>{t('password_label')}</p>", unsafe_allow_html=True)
-        password = st.text_input("", type="password", placeholder="· · · · · · · ·", key="login_pass", label_visibility="collapsed")
-
         st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
 
         if st.button(t("enter_btn"), use_container_width=True):
-            if password != APP_PASSWORD:
-                st.error(t("invalid_code"))
-            elif not email or "@" not in email:
+            if not email or "@" not in email or "." not in email.split("@")[-1]:
                 st.error(t("invalid_email"))
             else:
                 get_or_create_user(email.lower().strip())
@@ -2317,6 +2455,12 @@ def step_audio():
                     }
                     check_id = save_check(st.session_state.email, result)
                     result["check_id"]      = check_id
+                    result["created_at"]    = result.get("created_at", "")
+                    # Send results to user's email (silently — never block on failure)
+                    _send_result_email(
+                        st.session_state.email, result,
+                        st.session_state.get("lang", "he")
+                    )
                     st.session_state.result = result
                     st.session_state.step   = 4; st.rerun()
 
@@ -2331,11 +2475,11 @@ def main_app():
             <img src='data:image/png;base64,{_PORSCHE_B64}'
                  style='height:110px;width:auto;filter:drop-shadow(0 4px 14px rgba(200,169,106,0.45));'/>
         </div>
-        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2rem;
-                    letter-spacing:0.18em;color:var(--gold);text-transform:uppercase;'>
+        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2.9rem;
+                    letter-spacing:0.18em;color:var(--gold);text-transform:uppercase;line-height:1.1;'>
             {t("app_title")}
         </div>
-        <div style='font-size:1.56rem;letter-spacing:0.08em;color:var(--muted);margin-top:0.3rem;'>
+        <div style='font-size:1.85rem;letter-spacing:0.08em;color:var(--muted);margin-top:0.4rem;font-style:italic;'>
             {t("app_subtitle_main")}
         </div>
     </div>
