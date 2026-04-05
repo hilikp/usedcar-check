@@ -343,6 +343,21 @@ TR = {
         "yad2_price_model":  "דגם:",
         "yad2_price_note":   "מחיר בסיס לפי מחירון יד2 — לא כולל התאמה לקילומטראז'",
         "yad2_price_na":     "מחירון לא זמין לרכב זה",
+        "registry_title":        "נתוני רישוי רשמיים",
+        "registry_source":       "מקור: משרד התחבורה הישראלי",
+        "ownership_type":        "סוג בעלות",
+        "ownership_private":     "פרטי",
+        "ownership_lease":       "ליסינג",
+        "ownership_rental":      "השכרה",
+        "ownership_govt":        "ממשלתי",
+        "ownership_company":     "עסקי / חברה",
+        "ownership_warn":        "⚠️ הרכב רשום כ-{type} — אמת מול המוכר לפני רכישה",
+        "first_road_reg":        "עלייה לכביש",
+        "last_inspection":       "טסט אחרון",
+        "reg_valid_until":       "רישיון בתוקף עד",
+        "car_color":             "צבע",
+        "fuel_type":             "סוג דלק",
+        "no_plate_data":         "לא בוצעה בדיקת לוחית — הזן לוחית רישוי בפרטי הרכב לאימות בעלות",
         "new_check":        "＋  בדיקה חדשה",
         "past_checks":      "בדיקות קודמות",
         "sign_out":         "יציאה",
@@ -483,6 +498,21 @@ TR = {
         "yad2_price_model": "Model:",
         "yad2_price_note":  "Base price from Yad2 pricelist — not adjusted for mileage",
         "yad2_price_na":    "Pricelist not available for this vehicle",
+        "registry_title":        "Official Registry Data",
+        "registry_source":       "Source: Israeli Ministry of Transport",
+        "ownership_type":        "Ownership Type",
+        "ownership_private":     "Private",
+        "ownership_lease":       "Leasing",
+        "ownership_rental":      "Rental",
+        "ownership_govt":        "Government",
+        "ownership_company":     "Business / Company",
+        "ownership_warn":        "⚠️ This vehicle is registered as {type} — verify with the seller before purchase",
+        "first_road_reg":        "First on Road",
+        "last_inspection":       "Last Inspection",
+        "reg_valid_until":       "License Valid Until",
+        "car_color":             "Color",
+        "fuel_type":             "Fuel Type",
+        "no_plate_data":         "No plate lookup performed — enter a license plate number to verify ownership",
         "new_check":        "＋  New Check",
         "past_checks":      "Past Checks",
         "sign_out":         "Sign Out",
@@ -1848,6 +1878,101 @@ def render_result(result: dict):
     gold_divider()
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # REGISTRY DATA CARD — Ministry of Transport official data
+    # ═══════════════════════════════════════════════════════════════════════════
+    gold_divider()
+    _reg = result.get("plate_registry")
+    if _reg and _reg.get("plate"):
+        _own_key  = _reg.get("ownership_key", "private")
+        _baalut   = _reg.get("baalut_he", "")
+
+        # Ownership type display + risk colour
+        _own_labels = {
+            "private": t("ownership_private"),
+            "lease":   t("ownership_lease"),
+            "rental":  t("ownership_rental"),
+            "govt":    t("ownership_govt"),
+            "company": t("ownership_company"),
+            "other":   _baalut or "—",
+        }
+        _own_colors = {
+            "private": ("#4A7A4A", "rgba(74,122,74,0.12)"),
+            "lease":   ("#C8A96A", "rgba(200,169,106,0.12)"),
+            "rental":  ("#B04040", "rgba(176,64,64,0.12)"),
+            "govt":    ("#C8A96A", "rgba(200,169,106,0.12)"),
+            "company": ("#C8A96A", "rgba(200,169,106,0.12)"),
+            "other":   ("#C8A96A", "rgba(200,169,106,0.12)"),
+        }
+        _own_text  = _own_labels.get(_own_key, _baalut or "—")
+        _own_fc, _own_bg = _own_colors.get(_own_key, ("#C8A96A", "rgba(200,169,106,0.12)"))
+
+        # Warning if not private
+        _own_warn_html = ""
+        if _own_key != "private":
+            _own_warn_html = (
+                f"<div style='background:rgba(176,64,64,0.10);border:1px solid #B04040;"
+                f"border-radius:6px;padding:0.6rem 1rem;margin-top:0.7rem;font-size:1.05rem;"
+                f"color:#e87a7a;line-height:1.5;{rtl_css}'>"
+                f"{t('ownership_warn').format(type=_own_text)}</div>"
+            )
+
+        # Helper: format a date string YYYY-MM-DD → DD/MM/YYYY
+        def _fmt_date(s):
+            if not s: return "—"
+            p = str(s).split("-")
+            if len(p) == 3: return f"{p[2]}/{p[1]}/{p[0]}"
+            if len(p) == 2: return f"{p[1]}/{p[0]}"
+            return s
+
+        _first_road_fmt = _fmt_date(_reg.get("first_road", ""))
+        _last_test_fmt  = _fmt_date(_reg.get("last_test", ""))
+        _valid_fmt      = _fmt_date(_reg.get("valid_until", ""))
+        _color_he       = _reg.get("color_he", "") or "—"
+        _fuel_he        = _reg.get("fuel_he",  "") or "—"
+        _trim_val       = _reg.get("trim",     "") or ""
+
+        def _reg_row(label, value, highlight=False):
+            _vc = "var(--gold)" if highlight else "var(--text)"
+            return (
+                f"<div style='display:flex;justify-content:space-between;align-items:baseline;"
+                f"padding:0.32rem 0;border-bottom:1px solid rgba(255,255,255,0.05);{rtl_css}'>"
+                f"<span style='color:var(--muted);font-size:0.97rem;'>{label}</span>"
+                f"<span style='color:{_vc};font-size:1rem;font-weight:500;'>{value}</span>"
+                f"</div>"
+            )
+
+        _rows_html = (
+            _reg_row(t("ownership_type"),
+                     f"<span style='color:{_own_fc};font-weight:700;'>{_own_text}</span>")
+            + _reg_row(t("first_road_reg"),  _first_road_fmt)
+            + _reg_row(t("last_inspection"), _last_test_fmt)
+            + _reg_row(t("reg_valid_until"), _valid_fmt)
+            + _reg_row(t("car_color"),       _color_he)
+            + _reg_row(t("fuel_type"),       _fuel_he)
+            + (_reg_row("Trim", _trim_val) if _trim_val else "")
+        )
+
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.05);border:1px solid rgba(200,169,106,0.22);"
+            f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+            f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
+            f"margin-bottom:0.6rem;'>🏛 {t('registry_title')}</div>"
+            f"{_rows_html}"
+            f"{_own_warn_html}"
+            f"<div style='font-size:0.85rem;color:var(--muted);margin-top:0.6rem;'>◦ {t('registry_source')}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"<div style='background:rgba(44,44,44,0.25);border:1px dashed rgba(200,169,106,0.2);"
+            f"border-radius:8px;padding:0.8rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+            f"<span style='font-size:0.97rem;color:var(--muted);'>🏛 {t('no_plate_data')}</span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # SECTION 1 — Visual Assessment (chassis, paint, appearance)
     # ═══════════════════════════════════════════════════════════════════════════
     def _section_header(icon: str, key: str, color: str = "var(--gold)"):
@@ -2455,12 +2580,39 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
                 en_make = _HE_MAKE_MAP.get(" ".join(_words[:-1]))
             if en_make is None:
                 en_make = _HE_MAKE_MAP.get(_words[0], he_make)
+
+        # ── Extra registry fields ──────────────────────────────────────────────
+        baalut_raw    = (match.get("baalut") or "").strip()
+        color_he      = (match.get("tzeva_rechev") or "").strip()
+        fuel_he       = (match.get("sug_delek_nm") or "").strip()
+        last_test_raw = (match.get("mivchan_acharon_dt") or "")[:10]  # YYYY-MM-DD
+        valid_until   = (match.get("tokef_dt") or "")[:10]
+        first_road    = (match.get("moed_aliya_lakvish") or "")       # "2011-1"
+        trim          = (match.get("ramat_gimur") or "").strip()
+
+        # Normalise baalut to a canonical English key
+        _baalut_map = {
+            "פרטי": "private", "ליסינג": "lease", "השכרה": "rental",
+            "ממשלתי": "govt", "עסקי": "company", "חברה": "company",
+            "מסחרי": "company",
+        }
+        ownership_key = _baalut_map.get(baalut_raw, "private" if not baalut_raw else "other")
+
         return {
-            "manufacturer": en_make,
-            "model_name":   he_model,
-            "year":         year,
-            "plate":        plate,
-            "_he_make":     he_make,
+            "manufacturer":    en_make,
+            "model_name":      he_model,
+            "year":            year,
+            "plate":           plate,
+            "_he_make":        he_make,
+            # Registry extras (stored for display + scoring)
+            "_baalut_he":      baalut_raw,
+            "_ownership_key":  ownership_key,
+            "_color_he":       color_he,
+            "_fuel_he":        fuel_he,
+            "_last_test":      last_test_raw,
+            "_valid_until":    valid_until,
+            "_first_road":     first_road,
+            "_trim":           trim,
         }
     except Exception:
         return None
@@ -2921,6 +3073,17 @@ def step_audio():
                         "conclusion_internal":     ai_report.get("conclusion_internal", ""),
                         "conclusion_mechanical":   ai_report.get("conclusion_mechanical", ""),
                         "yad2_price_data":         yad2_price_data,
+                        "plate_registry": {
+                            "ownership_key":  d.get("_ownership_key", ""),
+                            "baalut_he":      d.get("_baalut_he", ""),
+                            "color_he":       d.get("_color_he", ""),
+                            "fuel_he":        d.get("_fuel_he", ""),
+                            "last_test":      d.get("_last_test", ""),
+                            "valid_until":    d.get("_valid_until", ""),
+                            "first_road":     d.get("_first_road", ""),
+                            "trim":           d.get("_trim", ""),
+                            "plate":          d.get("plate", ""),
+                        } if d.get("plate") else None,
                     }
                     check_id = save_check(st.session_state.email, result)
                     result["check_id"]      = check_id
