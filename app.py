@@ -2588,7 +2588,7 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
         last_test_raw = (match.get("mivchan_acharon_dt") or "")[:10]  # YYYY-MM-DD
         valid_until   = (match.get("tokef_dt") or "")[:10]
         first_road    = (match.get("moed_aliya_lakvish") or "")       # "2011-1"
-        trim          = (match.get("ramat_gimur") or "").strip()
+        trim_val      = (match.get("ramat_gimur") or "").strip()
 
         # Normalise baalut to a canonical English key
         _baalut_map = {
@@ -2598,13 +2598,19 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
         }
         ownership_key = _baalut_map.get(baalut_raw, "private" if not baalut_raw else "other")
 
+        # Map ownership → usage_type index (0=private,1=rental/lease,2=company,3=unknown)
+        _usage_map = {"private": 0, "lease": 1, "rental": 1, "govt": 2, "company": 2, "other": 3}
+        usage_type_from_plate = _usage_map.get(ownership_key, 0)
+
         return {
             "manufacturer":    en_make,
             "model_name":      he_model,
             "year":            year,
             "plate":           plate,
+            "trim":            trim_val,           # fills the Trim field directly
+            "usage_type":      usage_type_from_plate,  # pre-selects usage dropdown
             "_he_make":        he_make,
-            # Registry extras (stored for display + scoring)
+            # Registry extras (kept through continue → results)
             "_baalut_he":      baalut_raw,
             "_ownership_key":  ownership_key,
             "_color_he":       color_he,
@@ -2612,7 +2618,6 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
             "_last_test":      last_test_raw,
             "_valid_until":    valid_until,
             "_first_road":     first_road,
-            "_trim":           trim,
         }
     except Exception:
         return None
@@ -2889,7 +2894,9 @@ def step_vehicle_details():
 
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     if st.button(t("continue_btn")):
-        st.session_state.car_details = {
+        # Start from existing dict so registry fields (underscore-prefixed) are preserved
+        new_details = {k: v for k, v in d.items() if k.startswith("_")}
+        new_details.update({
             "manufacturer": manufacturer,
             "model_name":   model_name,
             "year":         int(year),
@@ -2898,7 +2905,8 @@ def step_vehicle_details():
             "usage_type":   int(usage_type),
             "prev_owners":  int(prev_owners),
             "plate":        st.session_state.get("plate_number", d.get("plate", "")),
-        }
+        })
+        st.session_state.car_details = new_details
         st.session_state.step = 2
         st.rerun()
 
