@@ -829,7 +829,7 @@ st.set_page_config(
     page_title="UsedCar Check",
     page_icon="◈",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",   # collapses automatically on mobile
 )
 
 # ─── Session state init ───────────────────────────────────────────────────────
@@ -1032,46 +1032,70 @@ p[data-testid="InputInstructions"],
 }}
 
 /* ── Mobile responsive ─────────────────────────────────────────────────────── */
-@media (max-width: 640px) {{
-    /* Tighten outer padding */
-    .block-container {{
-        padding-left: 0.6rem !important;
-        padding-right: 0.6rem !important;
+@media (max-width: 768px) {{
+
+    /* ── Prevent any horizontal overflow ── */
+    html, body, .stApp {{ overflow-x: hidden !important; }}
+
+    /* ── Force sidebar CLOSED on mobile (backup for initial_sidebar_state=auto) ── */
+    section[data-testid="stSidebar"] {{
+        transform: translateX(-110%) !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        position: fixed !important;
+    }}
+    /* Show the collapse/expand toggle arrow so sidebar is still reachable */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {{
+        display: flex !important;
+        visibility: visible !important;
+    }}
+
+    /* ── Main content fills full width ── */
+    .stMain, section.stMain, [data-testid="stMain"] {{
+        margin-left: 0 !important;
+        width: 100% !important;
+    }}
+    .block-container, .stMainBlockContainer {{
+        padding: 0.5rem 0.75rem !important;
         max-width: 100% !important;
     }}
 
-    /* Hero section */
-    .hero-title  {{ font-size: 1.75rem !important; letter-spacing: 0.1em !important; }}
-    .hero-subtitle {{ font-size: 1.15rem !important; }}
-    .hero-img    {{ height: 72px !important; }}
+    /* ── Stack form columns on mobile (but NOT step indicator — stays a row) ── */
+    [data-testid="stHorizontalBlock"]:not(.step-row) > [data-testid="stColumn"] {{
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }}
 
-    /* Verdict box */
-    .verdict-icon  {{ font-size: 1.6rem !important; }}
-    .verdict-label {{ font-size: 2.1rem !important; letter-spacing: 0.1em !important; }}
-    .verdict-car   {{ font-size: 0.95rem !important; }}
+    /* ── Hero section ── */
+    .hero-title    {{ font-size: 1.7rem !important; letter-spacing: 0.08em !important; }}
+    .hero-subtitle {{ font-size: 1.1rem !important; }}
+    .hero-img      {{ height: 65px !important; }}
 
-    /* Action / registry / score cards — tighter padding, wrapping text */
+    /* ── Verdict box ── */
+    .verdict-icon  {{ font-size: 1.5rem !important; }}
+    .verdict-label {{ font-size: 2rem !important; letter-spacing: 0.08em !important; }}
+    .verdict-car   {{ font-size: 0.9rem !important; letter-spacing: 0.06em !important; }}
+
+    /* ── Cards: tighter padding, wrap text ── */
     .mobile-card {{
-        padding: 0.75rem 0.9rem !important;
+        padding: 0.7rem 0.85rem !important;
         word-break: break-word !important;
     }}
 
-    /* Hide the vertical spacer used to align the plate button on desktop
-       (columns stack on mobile so the spacer just creates empty space) */
+    /* ── Hide the desktop plate-button alignment spacer ── */
     .plate-btn-spacer {{ display: none !important; }}
 
-    /* Step indicator — smaller labels so 4 fit on one row */
-    .step-icon {{ width: 32px !important; height: 32px !important; font-size: 0.95rem !important; }}
+    /* ── Step indicator ── */
+    .step-icon {{ width: 30px !important; height: 30px !important; font-size: 0.85rem !important; }}
 
-    /* Streamlit native elements */
+    /* ── Buttons ── */
     .stButton > button {{
-        font-size: 0.95rem !important;
-        padding: 0.5rem 0.8rem !important;
+        font-size: 0.92rem !important;
+        padding: 0.5rem 0.7rem !important;
     }}
-    [data-testid="stSidebar"] {{ min-width: 240px !important; }}
-
-    /* Score bar text */
-    .score-num {{ font-size: 1.1rem !important; }}
 }}
 </style>
 """, unsafe_allow_html=True)
