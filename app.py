@@ -385,6 +385,10 @@ TR = {
         "own_red_flag":     "{owners} בעלים ב-{age} שנים בלבד — החלפות תכופות: דגל אדום",
         "own_concern":      "ממוצע {avg:.1f} שנים לבעלים — קצר מהמצופה",
         "own_stable":       "היסטוריית בעלות יציבה — ממוצע {avg:.1f} שנים לבעלים",
+        "km_very_low":      "קילומטראז' נמוך מאוד ({km:,} ק\"מ) — שחיקה מינימלית צפויה",
+        "km_low":           "קילומטראז' נמוך ({km:,} ק\"מ) — מצב מנוע ורכיבים טוב יותר בממוצע",
+        "km_high":          "קילומטראז' גבוה ({km:,} ק\"מ) — שחיקת מנוע גבוהה יותר באופן טבעי",
+        "km_very_high":     "קילומטראז' גבוה מאוד ({km:,} ק\"מ) — בלאי משמעותי: מומלץ לבדוק בדחיפות",
         "usage_type":       "סוג שימוש קודם",
         "usage_type_opts":  ["פרטי", "השכרה / ליסינג", "רכב חברה", "לא ידוע"],
         "usage_rental":     "רכב השכרה/ליסינג — שימוש אינטנסיבי ושחיקה מהירה יותר",
@@ -506,6 +510,10 @@ TR = {
         "own_red_flag":     "{owners} owners in just {age} years — frequent changes are a red flag",
         "own_concern":      "Average {avg:.1f} years per owner — shorter than expected",
         "own_stable":       "Stable ownership history — average {avg:.1f} years per owner",
+        "km_very_low":      "Very low mileage ({km:,} km) — minimal wear expected",
+        "km_low":           "Low mileage ({km:,} km) — engine and components likely in better than average condition",
+        "km_high":          "High mileage ({km:,} km) — naturally higher engine wear",
+        "km_very_high":     "Very high mileage ({km:,} km) — significant wear: urgent inspection strongly advised",
         "usage_type":       "Prior Usage Type",
         "usage_type_opts":  ["Private", "Rental / Lease", "Company Car", "Unknown"],
         "usage_rental":     "Rental/lease vehicle — typically higher wear and intensive use",
@@ -1097,6 +1105,45 @@ def _analyze_usage(usage_type: int, num_owners: int) -> list[dict]:
         })
     return reasons
 
+# ─── Mileage analysis ────────────────────────────────────────────────────────
+def _analyze_mileage(km: int) -> tuple[list[dict], str | None]:
+    """
+    Return (reason_list, confidence_override).
+    confidence_override is 'high' for very positive signals, 'low' for danger,
+    or None to leave the backend value unchanged.
+    """
+    lang = _get_lang()
+    reasons: list[dict] = []
+    confidence_override = None
+
+    if km < 30_000:
+        reasons.append({
+            "severity": "low",
+            "title": TR[lang]["km_very_low"].format(km=km),
+            "_positive": True,
+        })
+        confidence_override = "high"          # very low km is a strong positive
+    elif km < 80_000:
+        reasons.append({
+            "severity": "low",
+            "title": TR[lang]["km_low"].format(km=km),
+            "_positive": True,
+        })
+    elif km >= 250_000:
+        reasons.append({
+            "severity": "high",
+            "title": TR[lang]["km_very_high"].format(km=km),
+        })
+        confidence_override = "low"           # extreme mileage is a strong negative
+    elif km >= 150_000:
+        reasons.append({
+            "severity": "medium",
+            "title": TR[lang]["km_high"].format(km=km),
+        })
+
+    return reasons, confidence_override
+
+
 # ─── Video frame extraction ───────────────────────────────────────────────────
 def _extract_video_frames(video_path: str, tmp_dir: Path, max_frames: int = 15) -> list[str]:
     """Extract frames from a video at regular intervals using OpenCV."""
@@ -1494,19 +1541,32 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             driven_km=car_details.get("odometer"),
         )
 
-        # ── Ownership & usage analysis — inject into decision ─────────────────
+        # ── Ownership, mileage & usage analysis — inject into decision ──────────
         num_owners  = int(car_details.get("prev_owners", 1))
         usage_type  = int(car_details.get("usage_type", 0))
         year        = int(car_details.get("year", 2015))
+        odometer_km = int(car_details.get("odometer") or 0)
         lang_now    = _get_lang()
-        own_reasons   = _analyze_ownership(num_owners, year)
-        usage_reasons = _analyze_usage(usage_type, num_owners)
-        extra_reasons = own_reasons + usage_reasons
+
+        own_reasons    = _analyze_ownership(num_owners, year)
+        usage_reasons  = _analyze_usage(usage_type, num_owners)
+        km_reasons, km_conf = _analyze_mileage(odometer_km)
+
+        extra_reasons = own_reasons + usage_reasons + km_reasons
         if extra_reasons:
             has_high = any(r.get("severity") == "high" for r in extra_reasons)
             if has_high and decision.recommendation == "go":
                 decision.recommendation = "inconclusive"
             decision.top_reasons = extra_reasons + decision.top_reasons
+
+        # Apply mileage confidence override only when verdict is GO
+        # (negative km override only applied if no harder signal already present)
+        if km_conf == "high" and decision.recommendation == "go":
+            # Boost confidence for very low-km single-owner cars
+            if num_owners == 1:
+                decision.confidence = "high"
+        elif km_conf == "low" and decision.recommendation in ("go", "inconclusive"):
+            decision.confidence = "low"
 
         # ── Force verdict down based on hard mechanical signals ───────────────
         # Match the exact label emitted by analyze_underbody_image
@@ -2408,22 +2468,37 @@ def step_audio():
                 _prog_bar  = st.progress(0.0)
                 _prog_text = st.empty()
                 _stage_i, _elapsed = 0, 0.0
-                _total_fake = 13.0
+                _MIN_SECS  = 15.0   # always show progress for at least this long
+                _rtl = rtl_css if _lang == "he" else ""
+
+                def _render_stage(elapsed: float):
+                    """Update bar + stage label for the given elapsed time."""
+                    pct = min(0.95, elapsed / _MIN_SECS)
+                    _prog_bar.progress(pct)
+                    si = 0
+                    for _si2, (_thresh, _) in enumerate(_stages):
+                        if pct >= _thresh:
+                            si = _si2
+                    _prog_text.markdown(
+                        f"<p style='font-size:1.05rem;color:var(--gold);{_rtl}'>"
+                        f"⚙️ &nbsp;{_stages[si][1]}</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                # Phase 1 — tick while analysis is running
                 while _thread.is_alive():
                     _time.sleep(0.4)
                     _elapsed += 0.4
-                    _pct = min(0.93, _elapsed / _total_fake)
-                    _prog_bar.progress(_pct)
-                    for _si, (_thresh, _msg) in enumerate(_stages):
-                        if _pct >= _thresh:
-                            _stage_i = _si
-                    _rtl = rtl_css if _lang == "he" else ""
-                    _prog_text.markdown(
-                        f"<p style='font-size:1.05rem;color:var(--gold);{_rtl}'>"
-                        f"⚙️ &nbsp;{_stages[_stage_i][1]}</p>",
-                        unsafe_allow_html=True,
-                    )
+                    _render_stage(_elapsed)
+
                 _thread.join()
+
+                # Phase 2 — analysis finished but minimum time not yet reached
+                while _elapsed < _MIN_SECS:
+                    _time.sleep(0.4)
+                    _elapsed += 0.4
+                    _render_stage(_elapsed)
+
                 _prog_bar.progress(1.0)
                 _prog_text.empty()
                 if _error_box[0]:
