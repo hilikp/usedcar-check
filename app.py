@@ -2384,10 +2384,25 @@ def render_sidebar():
 # ─── Ministry of Transport plate lookup ──────────────────────────────────────
 # Hebrew make names as returned by data.gov.il → English keys in CAR_MAKES_MODELS
 _HE_MAKE_MAP: dict[str, str] = {
+    # ── Base names ──────────────────────────────────────────────────────────────
     "טויוטה": "Toyota", "הונדה": "Honda", "מזדה": "Mazda", "ניסאן": "Nissan",
     "יונדאי": "Hyundai", "קיה": "Kia", "סובארו": "Subaru", "מיצובישי": "Mitsubishi",
     "פולקסווגן": "Volkswagen", "אאודי": "Audi", "בי.מ.וו": "BMW", "ב.מ.וו": "BMW",
     "מרצדס": "Mercedes-Benz", "מרצדס בנץ": "Mercedes-Benz", "פורד": "Ford",
+    # ── Country-suffixed variants (Ministry of Transport format) ────────────────
+    "סקודה צ'כיה": "Škoda", "סקודה": "Škoda", "שקודה": "Škoda",
+    "טויוטה יפן": "Toyota", "הונדה יפן": "Honda", "מזדה יפן": "Mazda",
+    "ניסאן יפן": "Nissan", "מיצובישי יפן": "Mitsubishi", "סובארו יפן": "Subaru",
+    "יונדאי קוריאה": "Hyundai", "קיה קוריאה": "Kia",
+    "פולקסווגן גרמניה": "Volkswagen", "אאודי גרמניה": "Audi",
+    "מרצדס גרמניה": "Mercedes-Benz", "מרצדס בנץ גרמניה": "Mercedes-Benz",
+    "בי.מ.וו גרמניה": "BMW", "ב.מ.וו גרמניה": "BMW", "אופל גרמניה": "Opel",
+    "פורד אמריקה": "Ford", "פורד ארה\"ב": "Ford",
+    "וולוו שבדיה": "Volvo", "וולוו": "Volvo",
+    "רנו צרפת": "Renault", "סיטרואן צרפת": "Citroën", "פיג'ו צרפת": "Peugeot",
+    "פיאט איטליה": "Fiat", "אלפא רומאו איטליה": "Alfa Romeo",
+    "ג'יפ אמריקה": "Jeep", "ג'יפ": "Jeep",
+    "שברולט אמריקה": "Chevrolet", "דאצ'יה רומניה": "Dacia",
     "שברולט": "Chevrolet", "אופל": "Opel", "פיאט": "Fiat", "פיג'ו": "Peugeot",
     "רנו": "Renault", "סיטרואן": "Citroën", "שקודה": "Škoda", "סיאט": "Seat",
     "וולוו": "Volvo", "ג'יפ": "Jeep", "סוזוקי": "Suzuki", "מיני": "MINI",
@@ -2432,7 +2447,14 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
         except Exception:
             year = None
 
-        en_make = _HE_MAKE_MAP.get(he_make, he_make)  # fallback: keep Hebrew if unmapped
+        # Try full name first; if unmapped, strip trailing country word and retry
+        en_make = _HE_MAKE_MAP.get(he_make)
+        if en_make is None:
+            _words = he_make.split()
+            if len(_words) > 1:
+                en_make = _HE_MAKE_MAP.get(" ".join(_words[:-1]))
+            if en_make is None:
+                en_make = _HE_MAKE_MAP.get(_words[0], he_make)
         return {
             "manufacturer": en_make,
             "model_name":   he_model,
@@ -2641,10 +2663,18 @@ def step_vehicle_details():
             # Merge into car_details — keep existing values that API doesn't cover
             d.update({k: v for k, v in _pdata.items() if v})
             st.session_state.car_details = d
-            st.success(t("plate_found") + f"  —  {_pdata.get('_he_make','')} {_pdata.get('model_name','')} {_pdata.get('year','')}")
+            # Store a flash message that survives the rerun
+            st.session_state["_plate_msg"] = (
+                t("plate_found")
+                + f"  —  {_pdata.get('_he_make','')} {_pdata.get('model_name','')} {_pdata.get('year','')}"
+            )
             st.rerun()
         else:
             st.warning(t("plate_not_found"))
+
+    # Show flash message set by previous run (survives rerun)
+    if st.session_state.get("_plate_msg"):
+        st.success(st.session_state.pop("_plate_msg"))
 
     gold_divider()
 
