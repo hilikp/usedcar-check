@@ -417,7 +417,7 @@ TR = {
         "conc_internal_label":   "מצב פנים",
         "conc_mechanical_label": "מצב מכאני",
         "of_10":            "/ 10",
-        "paint_title":      "ניתוח צבע ועבר תאונה",
+        "paint_title":      "ניתוח צבע והיסטוריית תאונות/תיקונים",
         "paint_consistent": "הצבע אחיד — לא נמצאו חשדות לצביעה מחדש",
         "paint_suspect":    "חשד לצביעה מחדש — {count} פאנל(ים) חריגים",
         "paint_panel":      "פאנל",
@@ -431,6 +431,11 @@ TR = {
         "paint_severity_medium": "🟡 חשד בינוני לצביעה מחדש",
         "paint_severity_low":    "🟢 עקביות צבע תקינה",
         "paint_note":       "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין פאנלים + בדיקה ויזואלית של AI",
+        "action_label":     "המלצת פעולה",
+        "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית — לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
+        "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות — ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
+        "action_red":       "זוהו מספר גורמי סיכון: בעיות צבע/גוף ורעשי מנוע חריגים. לא מומלץ לרכוש רכב זה. אין כדאיות לבדיקה טכנית עד שהבעיות הוויזואליות יובהרו ויטופלו.",
+        "action_leak":      "זוהתה דליפת נוזל — זהו סימן אזהרה חמור. יש לבדוק במוסך מורשה לפני כל שיקול רכישה. אל תרכוש ללא בדיקה מקיפה.",
     },
     "en": {
         "app_title":        "UsedCar Check",
@@ -533,7 +538,7 @@ TR = {
         "detailed_report":  "Detailed Report",
         "scores_title":     "Condition Scores",
         "of_10":            "/ 10",
-        "paint_title":      "Paint Analysis & Accident History",
+        "paint_title":      "Paint Analysis & Accident / Repair History",
         "paint_consistent": "Paint is consistent — no repaint indicators found",
         "paint_suspect":    "Repaint suspected — {count} anomalous panel(s)",
         "paint_panel":      "Panel",
@@ -547,6 +552,11 @@ TR = {
         "paint_severity_medium": "🟡 Moderate repaint suspicion",
         "paint_severity_low":    "🟢 Paint consistency normal",
         "paint_note":       "Based on LAB color histogram comparison between panels + AI visual inspection",
+        "action_label":     "Action Recommendation",
+        "action_green":     "The vehicle looks clean visually — no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
+        "action_yellow":    "Engine noise risk detected. No paint or leak issues found — the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
+        "action_red":       "Multiple risk factors detected: paint/body issues and abnormal engine sounds. We recommend avoiding this vehicle. There is no point taking it to a test center until the visual issues are fully investigated.",
+        "action_leak":      "Fluid leak detected — this is a serious warning sign. Have the vehicle inspected at a certified garage before any purchase consideration. Do not buy without a full mechanical check.",
     }
 }
 
@@ -1542,6 +1552,58 @@ def render_result(result: dict):
         dur = result.get("audio_duration_seconds")
         if dur:
             st.markdown(f"<span style='font-size:1.11rem;color:var(--muted);'>🎙 {t('audio_analysed').format(dur)}</span>", unsafe_allow_html=True)
+
+    gold_divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ACTION RECOMMENDATION BOX — derived from combined signals
+    # ═══════════════════════════════════════════════════════════════════════════
+    _paint_susp  = (result.get("paint_data") or {}).get("suspicion", "none")
+    _leak_raw    = (result.get("leak_assessment") or "none detected").lower()
+    _audio_labels = {f.get("label","") for f in (result.get("audio_findings_raw") or [])}
+    _bad_audio   = {"rod_knock_suspected", "valve_tick_suspected",
+                    "belt_squeal_suspected", "exhaust_leak_suspected", "rough_idle_suspected"}
+    _severe_audio = {"rod_knock_suspected"}
+
+    _has_paint_issue = _paint_susp in ("medium", "high")
+    _has_leak        = _leak_raw != "none detected"
+    _has_any_audio   = bool(_audio_labels & _bad_audio)
+    _has_severe_audio = bool(_audio_labels & _severe_audio)
+
+    # Determine tier
+    if _has_leak:
+        _action_key  = "action_leak"
+        _action_bg   = "rgba(176,64,64,0.13)"
+        _action_border = "#B04040"
+        _action_icon = "⛔"
+    elif _has_paint_issue and _has_any_audio:
+        # Multiple risk factors — avoid
+        _action_key  = "action_red"
+        _action_bg   = "rgba(176,64,64,0.13)"
+        _action_border = "#B04040"
+        _action_icon = "🚫"
+    elif _has_any_audio and not _has_paint_issue:
+        # Engine risk only — caution, must test
+        _action_key  = "action_yellow"
+        _action_bg   = "rgba(200,169,106,0.12)"
+        _action_border = "#C8A96A"
+        _action_icon = "⚠️"
+    else:
+        # All clear visually — potential good buy, still must test
+        _action_key  = "action_green"
+        _action_bg   = "rgba(74,122,74,0.13)"
+        _action_border = "#4A7A4A"
+        _action_icon = "✅"
+
+    st.markdown(
+        f"<div style='background:{_action_bg};border:1.5px solid {_action_border};"
+        f"border-radius:8px;padding:1.1rem 1.4rem;margin:0.4rem 0 1.2rem;{rtl_css}'>"
+        f"<div style='font-size:1rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;"
+        f"margin-bottom:0.4rem;'>{_action_icon}&nbsp; {t('action_label')}</div>"
+        f"<div style='font-size:1.2rem;line-height:1.65;font-weight:500;color:var(--text);'>"
+        f"{t(_action_key)}</div></div>",
+        unsafe_allow_html=True,
+    )
 
     gold_divider()
 
