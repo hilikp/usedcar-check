@@ -328,6 +328,16 @@ TR = {
         "disclaimer_accept":"בהזנת האימייל שלך אתה מאשר/ת את תנאי השימוש של האתר.",
         "invalid_code":     "קוד גישה שגוי.",
         "invalid_email":    "אנא הזן כתובת אימייל תקינה.",
+        "plate_label":      "מספר לוחית רישוי",
+        "plate_hint":       "הזן מספר רישוי לטעינה אוטומטית של פרטי הרכב ממשרד התחבורה",
+        "plate_lookup_btn": "טעינה אוטומטית",
+        "plate_found":      "✓ פרטי הרכב נטענו ממשרד התחבורה",
+        "plate_not_found":  "לא נמצאו נתונים — מלא ידנית",
+        "plate_optional":   "אופציונלי — או מלא ידנית למטה",
+        "yad2_ref_label":   "השוואת מחירים בשוק",
+        "yad2_ref_hint":    "בדוק מה רכבים דומים נמכרים היום ביד2",
+        "yad2_ref_btn":     "פתח ביד2 ←",
+        "yad2_search_hint": "חפש ביד2:",
         "new_check":        "＋  בדיקה חדשה",
         "past_checks":      "בדיקות קודמות",
         "sign_out":         "יציאה",
@@ -453,6 +463,16 @@ TR = {
         "disclaimer_accept":"By entering your email you accept the website's terms of use.",
         "invalid_code":     "Invalid access code.",
         "invalid_email":    "Please enter a valid email address.",
+        "plate_label":      "License Plate",
+        "plate_hint":       "Enter plate number to auto-fill details from the Transport Ministry",
+        "plate_lookup_btn": "Auto-Fill",
+        "plate_found":      "✓ Vehicle details loaded from Transport Authority",
+        "plate_not_found":  "Plate not found — please fill in manually",
+        "plate_optional":   "Optional — or fill in manually below",
+        "yad2_ref_label":   "Market Price Reference",
+        "yad2_ref_hint":    "See what similar cars are selling for on Yad2",
+        "yad2_ref_btn":     "Open on Yad2 →",
+        "yad2_search_hint": "Search on Yad2:",
         "new_check":        "＋  New Check",
         "past_checks":      "Past Checks",
         "sign_out":         "Sign Out",
@@ -2094,7 +2114,44 @@ def render_result(result: dict):
             </div>
             """, unsafe_allow_html=True)
 
-    # Education section removed — no linked resources available
+    # ── Yad2 Market Price Reference ───────────────────────────────────────────
+    gold_divider()
+    car_d    = result.get("car_details", {})
+    _yr      = car_d.get("year", "")
+    _mk      = car_d.get("manufacturer", "")
+    _mdl     = car_d.get("model_name", "")
+    _search  = f"{_yr} {_mk} {_mdl}".strip()
+
+    # Construct Yad2 URL with year filter (safest stable param)
+    _yad2_base = "https://www.yad2.co.il/vehicles/private-cars"
+    _yad2_url  = f"{_yad2_base}?yearFrom={_yr}&yearTo={_yr}" if _yr else _yad2_base
+    # Also provide a Google search scoped to Yad2 for exact model match
+    import urllib.parse as _up
+    _google_url = "https://www.google.com/search?q=" + _up.quote(f'site:yad2.co.il {_search}')
+
+    st.markdown(
+        f"<div style='background:rgba(200,169,106,0.06);border:1px solid rgba(200,169,106,0.25);"
+        f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+        f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
+        f"margin-bottom:0.5rem;'>💰 {t('yad2_ref_label')}</div>"
+        f"<div style='font-size:1.07rem;color:var(--muted);margin-bottom:0.7rem;'>{t('yad2_ref_hint')}</div>"
+        f"<div style='font-size:1.05rem;color:var(--muted);margin-bottom:0.6rem;'>"
+        f"<span style='color:var(--gold);'>{t('yad2_search_hint')}</span> "
+        f"<strong style='color:var(--text);'>{_search}</strong></div>"
+        f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;'>"
+        f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
+        f"style='display:inline-block;background:rgba(200,169,106,0.12);color:var(--gold);"
+        f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.45rem 1.1rem;"
+        f"font-size:1rem;text-decoration:none;letter-spacing:0.05em;'>"
+        f"🔍 {t('yad2_ref_btn')}</a>"
+        f"<a href='{_google_url}' target='_blank' rel='noopener' "
+        f"style='display:inline-block;background:transparent;color:var(--muted);"
+        f"border:1px solid var(--border);border-radius:5px;padding:0.45rem 1.1rem;"
+        f"font-size:1rem;text-decoration:none;'>"
+        f"🌐 {'חיפוש Google' if is_rtl else 'Google Search'}</a>"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
@@ -2281,10 +2338,105 @@ def render_sidebar():
                 del st.session_state[k]
             st.rerun()
 
+# ─── Ministry of Transport plate lookup ──────────────────────────────────────
+# Hebrew make names as returned by data.gov.il → English keys in CAR_MAKES_MODELS
+_HE_MAKE_MAP: dict[str, str] = {
+    "טויוטה": "Toyota", "הונדה": "Honda", "מזדה": "Mazda", "ניסאן": "Nissan",
+    "יונדאי": "Hyundai", "קיה": "Kia", "סובארו": "Subaru", "מיצובישי": "Mitsubishi",
+    "פולקסווגן": "Volkswagen", "אאודי": "Audi", "בי.מ.וו": "BMW", "ב.מ.וו": "BMW",
+    "מרצדס": "Mercedes-Benz", "מרצדס בנץ": "Mercedes-Benz", "פורד": "Ford",
+    "שברולט": "Chevrolet", "אופל": "Opel", "פיאט": "Fiat", "פיג'ו": "Peugeot",
+    "רנו": "Renault", "סיטרואן": "Citroën", "שקודה": "Škoda", "סיאט": "Seat",
+    "וולוו": "Volvo", "ג'יפ": "Jeep", "סוזוקי": "Suzuki", "מיני": "MINI",
+    "פורשה": "Porsche", "לנד רובר": "Land Rover", "ג'אגואר": "Jaguar",
+    "לקסוס": "Lexus", "אינפיניטי": "Infiniti", "טסלה": "Tesla",
+    "סיאט": "Seat", "דאצ'יה": "Dacia", "סקודה": "Škoda", "קאדילק": "Cadillac",
+    "ב.מ.וו.": "BMW", "אי.מ.ג'י": "MG", "מ.ג.": "MG",
+}
+
+def _fetch_vehicle_by_plate(plate: str) -> dict | None:
+    """
+    Query the Israeli Ministry of Transport open data API.
+    Returns a dict with year, manufacturer (English), model_name on success,
+    or None if not found / API unavailable.
+    """
+    import requests as _req
+    plate = plate.strip().replace("-", "").replace(" ", "")
+    if not plate:
+        return None
+    try:
+        url = (
+            "https://data.gov.il/api/3/action/datastore_search"
+            "?resource_id=053cea08-09bc-40ec-8f7a-156f0677aff3"
+            f"&q={plate}&limit=5"
+        )
+        resp = _req.get(url, timeout=6)
+        data = resp.json()
+        records = data.get("result", {}).get("records", [])
+        # Find exact plate match (q= does substring; verify exact)
+        match = next(
+            (r for r in records if str(r.get("mispar_rechev", "")).strip() == plate),
+            records[0] if records else None,
+        )
+        if not match:
+            return None
+
+        he_make   = (match.get("tozeret_nm") or "").strip()
+        he_model  = (match.get("kinuy_mishari") or match.get("degem_nm") or "").strip()
+        year_raw  = match.get("shnat_yitzur") or match.get("shnat_yitzur_dt", "")
+        try:
+            year = int(str(year_raw)[:4])
+        except Exception:
+            year = None
+
+        en_make = _HE_MAKE_MAP.get(he_make, he_make)  # fallback: keep Hebrew if unmapped
+        return {
+            "manufacturer": en_make,
+            "model_name":   he_model,
+            "year":         year,
+            "plate":        plate,
+            "_he_make":     he_make,
+        }
+    except Exception:
+        return None
+
+
 # ─── Step 1 — Vehicle Details ─────────────────────────────────────────────────
 def step_vehicle_details():
     section_label("vehicle_details")
     d = st.session_state.car_details
+
+    # ── Plate number auto-fill ────────────────────────────────────────────────
+    st.markdown(
+        f"<p style='font-size:1.15rem;font-weight:600;color:var(--gold);letter-spacing:0.08em;"
+        f"margin-bottom:0.1rem;{rtl_css}'>{t('plate_label')}</p>"
+        f"<p style='font-size:1rem;color:var(--muted);margin:0 0 0.4rem;{rtl_css}'>"
+        f"{t('plate_hint')}</p>",
+        unsafe_allow_html=True,
+    )
+    pcol1, pcol2 = st.columns([3, 1])
+    with pcol1:
+        plate_input = st.text_input(
+            "", value=d.get("plate", ""),
+            placeholder="12-345-67" if is_rtl else "12-345-67",
+            key="plate_number", label_visibility="collapsed",
+        )
+    with pcol2:
+        plate_btn = st.button(t("plate_lookup_btn"), use_container_width=True)
+
+    if plate_btn and plate_input.strip():
+        with st.spinner("" if is_rtl else ""):
+            _pdata = _fetch_vehicle_by_plate(plate_input.strip())
+        if _pdata:
+            # Merge into car_details — keep existing values that API doesn't cover
+            d.update({k: v for k, v in _pdata.items() if v})
+            st.session_state.car_details = d
+            st.success(t("plate_found") + f"  —  {_pdata.get('_he_make','')} {_pdata.get('model_name','')} {_pdata.get('year','')}")
+            st.rerun()
+        else:
+            st.warning(t("plate_not_found"))
+
+    gold_divider()
 
     # ── Make dropdown ─────────────────────────────────────────────────────────
     saved_make  = d.get("manufacturer", "")
@@ -2353,6 +2505,7 @@ def step_vehicle_details():
             "odometer":     int(odometer),
             "usage_type":   int(usage_type),
             "prev_owners":  int(prev_owners),
+            "plate":        st.session_state.get("plate_number", d.get("plate", "")),
         }
         st.session_state.step = 2
         st.rerun()
