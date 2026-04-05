@@ -2265,13 +2265,13 @@ def render_result(result: dict):
     _search  = f"{_yr} {_mk} {_mdl}".strip()
 
     import urllib.parse as _up
+    _yad2pd = result.get("yad2_price_data")
+
     # Deep-link to the Yad2 pricelist page (not the vehicle search listings)
     _pricelist_base = "https://www.yad2.co.il/price-list"
     _mfr_id = (_yad2pd or {}).get("mfr_id")
     _yad2_url = f"{_pricelist_base}?manufacturer={_mfr_id}" if _mfr_id else _pricelist_base
     _google_url = "https://www.google.com/search?q=" + _up.quote(f'site:yad2.co.il מחירון {_search}')
-
-    _yad2pd = result.get("yad2_price_data")
 
     if _yad2pd and _yad2pd.get("min_price") and _yad2pd.get("max_price"):
         _min_p = f"₪{_yad2pd['min_price']:,.0f}"
