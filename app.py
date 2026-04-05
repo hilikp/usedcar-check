@@ -334,10 +334,15 @@ TR = {
         "plate_found":      "✓ פרטי הרכב נטענו ממשרד התחבורה",
         "plate_not_found":  "לא נמצאו נתונים — מלא ידנית",
         "plate_optional":   "אופציונלי — או מלא ידנית למטה",
-        "yad2_ref_label":   "השוואת מחירים בשוק",
-        "yad2_ref_hint":    "בדוק מה רכבים דומים נמכרים היום ביד2",
-        "yad2_ref_btn":     "פתח ביד2 ←",
-        "yad2_search_hint": "חפש ביד2:",
+        "yad2_ref_label":     "השוואת מחירים בשוק",
+        "yad2_ref_hint":     "בדוק מה רכבים דומים נמכרים היום ביד2",
+        "yad2_ref_btn":      "פתח ביד2 ←",
+        "yad2_search_hint":  "חפש ביד2:",
+        "yad2_price_label":  "מחירון יד2",
+        "yad2_price_range":  "טווח מחיר שוק",
+        "yad2_price_model":  "דגם:",
+        "yad2_price_note":   "מחיר בסיס לפי מחירון יד2 — לא כולל התאמה לקילומטראז'",
+        "yad2_price_na":     "מחירון לא זמין לרכב זה",
         "new_check":        "＋  בדיקה חדשה",
         "past_checks":      "בדיקות קודמות",
         "sign_out":         "יציאה",
@@ -469,10 +474,15 @@ TR = {
         "plate_found":      "✓ Vehicle details loaded from Transport Authority",
         "plate_not_found":  "Plate not found — please fill in manually",
         "plate_optional":   "Optional — or fill in manually below",
-        "yad2_ref_label":   "Market Price Reference",
+        "yad2_ref_label":    "Market Price Reference",
         "yad2_ref_hint":    "See what similar cars are selling for on Yad2",
         "yad2_ref_btn":     "Open on Yad2 →",
         "yad2_search_hint": "Search on Yad2:",
+        "yad2_price_label": "Yad2 Pricelist",
+        "yad2_price_range": "Market Price Range",
+        "yad2_price_model": "Model:",
+        "yad2_price_note":  "Base price from Yad2 pricelist — not adjusted for mileage",
+        "yad2_price_na":    "Pricelist not available for this vehicle",
         "new_check":        "＋  New Check",
         "past_checks":      "Past Checks",
         "sign_out":         "Sign Out",
@@ -1650,6 +1660,13 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             int(car_details.get("year", 0)),
         )
 
+        # ── Yad2 pricelist ────────────────────────────────────────────────────
+        yad2_price_data = _fetch_yad2_price(
+            car_details.get("manufacturer", ""),
+            car_details.get("model_name",   ""),
+            int(car_details.get("year", 0)),
+        )
+
         # ── Comprehensive AI report (scores + translation + 10-sentence report)
         lang = _get_lang()
         try:
@@ -1724,7 +1741,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             for f in audio_findings
         ]
 
-        return decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data
+        return decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data
 
 # ─── Result renderer ──────────────────────────────────────────────────────────
 def render_result(result: dict):
@@ -2122,36 +2139,62 @@ def render_result(result: dict):
     _mdl     = car_d.get("model_name", "")
     _search  = f"{_yr} {_mk} {_mdl}".strip()
 
-    # Construct Yad2 URL with year filter (safest stable param)
+    # Construct Yad2 URL with year filter
     _yad2_base = "https://www.yad2.co.il/vehicles/private-cars"
     _yad2_url  = f"{_yad2_base}?yearFrom={_yr}&yearTo={_yr}" if _yr else _yad2_base
-    # Also provide a Google search scoped to Yad2 for exact model match
     import urllib.parse as _up
     _google_url = "https://www.google.com/search?q=" + _up.quote(f'site:yad2.co.il {_search}')
 
-    st.markdown(
-        f"<div style='background:rgba(200,169,106,0.06);border:1px solid rgba(200,169,106,0.25);"
-        f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
-        f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
-        f"margin-bottom:0.5rem;'>💰 {t('yad2_ref_label')}</div>"
-        f"<div style='font-size:1.07rem;color:var(--muted);margin-bottom:0.7rem;'>{t('yad2_ref_hint')}</div>"
-        f"<div style='font-size:1.05rem;color:var(--muted);margin-bottom:0.6rem;'>"
-        f"<span style='color:var(--gold);'>{t('yad2_search_hint')}</span> "
-        f"<strong style='color:var(--text);'>{_search}</strong></div>"
-        f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;'>"
-        f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
-        f"style='display:inline-block;background:rgba(200,169,106,0.12);color:var(--gold);"
-        f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.45rem 1.1rem;"
-        f"font-size:1rem;text-decoration:none;letter-spacing:0.05em;'>"
-        f"🔍 {t('yad2_ref_btn')}</a>"
-        f"<a href='{_google_url}' target='_blank' rel='noopener' "
-        f"style='display:inline-block;background:transparent;color:var(--muted);"
-        f"border:1px solid var(--border);border-radius:5px;padding:0.45rem 1.1rem;"
-        f"font-size:1rem;text-decoration:none;'>"
-        f"🌐 {'חיפוש Google' if is_rtl else 'Google Search'}</a>"
-        f"</div></div>",
-        unsafe_allow_html=True,
-    )
+    _yad2pd = result.get("yad2_price_data")
+
+    if _yad2pd and _yad2pd.get("min_price") and _yad2pd.get("max_price"):
+        _min_p = f"₪{_yad2pd['min_price']:,.0f}"
+        _max_p = f"₪{_yad2pd['max_price']:,.0f}"
+        _matched = _yad2pd.get("matched_model", _search)
+        _exact   = _yad2pd.get("exact_match", False)
+        _match_label = ("✓ " if _exact else "~") + _matched
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.35);"
+            f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+            f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
+            f"margin-bottom:0.6rem;'>💰 {t('yad2_price_label')}</div>"
+            f"<div style='font-size:2rem;font-weight:700;color:var(--text);letter-spacing:0.03em;'>"
+            f"{_min_p} &ndash; {_max_p}</div>"
+            f"<div style='font-size:0.95rem;color:var(--muted);margin-top:0.3rem;'>"
+            f"{t('yad2_price_model')} <span style='color:var(--text);'>{_match_label}</span></div>"
+            f"<div style='font-size:0.88rem;color:var(--muted);margin-top:0.25rem;'>{t('yad2_price_note')}</div>"
+            f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.8rem;'>"
+            f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
+            f"style='display:inline-block;background:rgba(200,169,106,0.12);color:var(--gold);"
+            f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.4rem 1rem;"
+            f"font-size:0.97rem;text-decoration:none;'>🔍 {t('yad2_ref_btn')}</a>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.06);border:1px solid rgba(200,169,106,0.25);"
+            f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+            f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
+            f"margin-bottom:0.5rem;'>💰 {t('yad2_ref_label')}</div>"
+            f"<div style='font-size:1.07rem;color:var(--muted);margin-bottom:0.7rem;'>{t('yad2_ref_hint')}</div>"
+            f"<div style='font-size:1.05rem;color:var(--muted);margin-bottom:0.6rem;'>"
+            f"<span style='color:var(--gold);'>{t('yad2_search_hint')}</span> "
+            f"<strong style='color:var(--text);'>{_search}</strong></div>"
+            f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;'>"
+            f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
+            f"style='display:inline-block;background:rgba(200,169,106,0.12);color:var(--gold);"
+            f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.45rem 1.1rem;"
+            f"font-size:1rem;text-decoration:none;letter-spacing:0.05em;'>"
+            f"🔍 {t('yad2_ref_btn')}</a>"
+            f"<a href='{_google_url}' target='_blank' rel='noopener' "
+            f"style='display:inline-block;background:transparent;color:var(--muted);"
+            f"border:1px solid var(--border);border-radius:5px;padding:0.45rem 1.1rem;"
+            f"font-size:1rem;text-decoration:none;'>"
+            f"🌐 {'חיפוש Google' if is_rtl else 'Google Search'}</a>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
@@ -2399,6 +2442,173 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
         }
     except Exception:
         return None
+
+
+# ─── Yad2 Pricelist fetch ─────────────────────────────────────────────────────
+# Module-level cache: (build_id, {he_make: yad2_id}, fetched_at)
+_YAD2_CACHE: dict = {}
+
+# English make → Hebrew as Yad2 spells it (for reverse-lookup against their manufacturer list)
+_EN_TO_YAD2_HE: dict[str, str] = {
+    "Audi": "אאודי", "BMW": "ב מ וו", "Honda": "הונדה", "Toyota": "טויוטה",
+    "Hyundai": "יונדאי", "Mazda": "מאזדה", "Mercedes-Benz": "מרצדס-בנץ",
+    "Nissan": "ניסאן", "Volkswagen": "פולקסווגן", "Ford": "פורד", "Kia": "קיה",
+    "Tesla": "טסלה", "Subaru": "סובארו", "Mitsubishi": "מיצובישי",
+    "Volvo": "וולוו", "Jeep": "ג'יפ", "Suzuki": "סוזוקי", "MINI": "מיני",
+    "Porsche": "פורשה", "Land Rover": "לנד רובר", "Jaguar": "ג'אגואר",
+    "Lexus": "לקסוס", "Infiniti": "אינפיניטי", "Seat": "סיאט",
+    "Škoda": "סקודה", "Citroën": "סיטרואן", "Peugeot": "פיג'ו",
+    "Renault": "רנו", "Fiat": "פיאט", "Opel": "אופל", "Chevrolet": "שברולט",
+    "Dacia": "דאציה", "Alfa Romeo": "אלפא רומיאו", "BYD": "ב.י.ד",
+    "MG": "מ.ג.", "Cupra": "קופרה", "Genesis": "ג'נסיס",
+}
+
+
+def _fetch_yad2_price(manufacturer_en: str, model_name: str, year: int) -> dict | None:
+    """
+    Fetch Yad2 book-value price range for a specific car.
+    Returns dict: {min_price, max_price, matched_model, year, currency='ILS'} or None.
+    Caches the build_id + manufacturer map for up to 6 hours.
+    """
+    import requests as _req, re as _re, json as _json, time as _time
+
+    HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,*/*",
+    }
+
+    # ── Step 1: resolve Yad2 manufacturer ID ─────────────────────────────────
+    he_name = _EN_TO_YAD2_HE.get(manufacturer_en)
+    if not he_name:
+        return None   # unsupported make
+
+    now = _time.time()
+    cache = _YAD2_CACHE
+
+    # Refresh build_id + make map if stale (> 6 h) or missing
+    if not cache or (now - cache.get("fetched_at", 0)) > 21_600:
+        try:
+            r = _req.get("https://www.yad2.co.il/price-list",
+                         headers=HEADERS, timeout=8)
+            m = _re.search(r'"buildId":"([^"]+)"', r.text)
+            nd_m = _re.search(
+                r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+                r.text, _re.DOTALL)
+            if not m or not nd_m:
+                return None
+            build_id = m.group(1)
+            nd = _json.loads(nd_m.group(1))
+            # Manufacturers live under pageProps.manufacturers or similar path
+            mfrs_raw = (
+                nd.get("props", {}).get("pageProps", {}).get("manufacturers")
+                or nd.get("props", {}).get("pageProps", {}).get("carManufacturers")
+                or []
+            )
+            make_map: dict[str, int] = {}
+            for entry in mfrs_raw:
+                mfr_id  = entry.get("id") or entry.get("manufacturerId")
+                mfr_he  = (entry.get("manufacturer") or entry.get("name") or "").strip()
+                if mfr_id and mfr_he:
+                    make_map[mfr_he] = int(mfr_id)
+            cache.update({"build_id": build_id, "make_map": make_map,
+                          "fetched_at": now})
+        except Exception:
+            return None
+
+    build_id = cache.get("build_id")
+    make_map  = cache.get("make_map", {})
+    mfr_id    = make_map.get(he_name)
+    if not mfr_id or not build_id:
+        return None
+
+    # ── Step 2: fetch models for this manufacturer ────────────────────────────
+    try:
+        feed_url = (f"https://www.yad2.co.il/price-list"
+                    f"/_next/data/{build_id}/feed.json")
+        resp = _req.get(feed_url, params={"manufacturer": mfr_id},
+                        headers={**HEADERS, "Accept": "application/json"},
+                        timeout=8)
+        models = resp.json().get("pageProps", {}).get("models", [])
+    except Exception:
+        return None
+
+    if not models:
+        return None
+
+    # ── Step 3: match by model name + year ───────────────────────────────────
+    def _norm(s: str) -> str:
+        """Lowercase, strip punctuation/spaces for fuzzy matching."""
+        import unicodedata
+        s = unicodedata.normalize("NFKD", str(s)).lower()
+        return _re.sub(r"[^a-z0-9\u05d0-\u05ea]", "", s)
+
+    model_norm = _norm(model_name)
+
+    # Score each model: +2 for name match, +1 for year match (±1 tolerance)
+    scored: list[tuple[int, dict]] = []
+    for m in models:
+        score = 0
+        m_name_norm = _norm(m.get("model", ""))
+        if model_norm and m_name_norm:
+            if model_norm in m_name_norm or m_name_norm in model_norm:
+                score += 2
+        m_year = m.get("year")
+        if m_year and year and abs(int(m_year) - int(year)) <= 1:
+            score += 1
+        if score > 0:
+            scored.append((score, m))
+
+    # Pick best match; fall back to year-only match across all models
+    if scored:
+        scored.sort(key=lambda x: x[0], reverse=True)
+        best = scored[0][1]
+    else:
+        # Year fallback — collect all models within ±2 years
+        year_matches = [m for m in models
+                        if m.get("year") and abs(int(m.get("year")) - int(year)) <= 2]
+        if not year_matches:
+            return None
+        best = None
+        # Return aggregated range across year matches
+        all_min = [m["minPrice"] for m in year_matches if m.get("minPrice")]
+        all_max = [m["maxPrice"] for m in year_matches if m.get("maxPrice")]
+        if not all_min:
+            return None
+        return {
+            "min_price":     min(all_min),
+            "max_price":     max(all_max) if all_max else min(all_min),
+            "matched_model": f"{manufacturer_en} ({year})",
+            "year":          year,
+            "currency":      "ILS",
+            "source":        "yad2",
+            "exact_match":   False,
+        }
+
+    min_p = best.get("minPrice") or 0
+    max_p = best.get("maxPrice") or min_p
+
+    # Also consider sub-model prices for tighter range
+    sub_prices = [s.get("price") for s in best.get("subModels", []) if s.get("price")]
+    if sub_prices:
+        min_p = min(sub_prices)
+        max_p = max(sub_prices)
+
+    if not min_p:
+        return None
+
+    return {
+        "min_price":     min_p,
+        "max_price":     max_p,
+        "matched_model": f"{best.get('model', '')} {best.get('year', '')}".strip(),
+        "year":          best.get("year", year),
+        "currency":      "ILS",
+        "source":        "yad2",
+        "exact_match":   True,
+    }
 
 
 # ─── Step 1 — Vehicle Details ─────────────────────────────────────────────────
@@ -2657,7 +2867,7 @@ def step_audio():
                 if _error_box[0]:
                     st.error(f"{t('analysis_failed')}: {_error_box[0]}")
                 else:
-                    decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data = _result_box[0]
+                    decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data = _result_box[0]
                     result = {
                         "recommendation":      decision.recommendation,
                         "confidence":          decision.confidence,
@@ -2680,6 +2890,7 @@ def step_audio():
                         "conclusion_external":     ai_report.get("conclusion_external", ""),
                         "conclusion_internal":     ai_report.get("conclusion_internal", ""),
                         "conclusion_mechanical":   ai_report.get("conclusion_mechanical", ""),
+                        "yad2_price_data":         yad2_price_data,
                     }
                     check_id = save_check(st.session_state.email, result)
                     result["check_id"]      = check_id
