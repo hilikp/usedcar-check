@@ -1030,8 +1030,57 @@ p[data-testid="InputInstructions"],
     margin: 0 auto 0.4rem;
     font-size: 1.2rem;
 }}
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {{
+    /* Tighten outer padding */
+    .block-container {{
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+        max-width: 100% !important;
+    }}
+
+    /* Hero section */
+    .hero-title  {{ font-size: 1.75rem !important; letter-spacing: 0.1em !important; }}
+    .hero-subtitle {{ font-size: 1.15rem !important; }}
+    .hero-img    {{ height: 72px !important; }}
+
+    /* Verdict box */
+    .verdict-icon  {{ font-size: 1.6rem !important; }}
+    .verdict-label {{ font-size: 2.1rem !important; letter-spacing: 0.1em !important; }}
+    .verdict-car   {{ font-size: 0.95rem !important; }}
+
+    /* Action / registry / score cards — tighter padding, wrapping text */
+    .mobile-card {{
+        padding: 0.75rem 0.9rem !important;
+        word-break: break-word !important;
+    }}
+
+    /* Hide the vertical spacer used to align the plate button on desktop
+       (columns stack on mobile so the spacer just creates empty space) */
+    .plate-btn-spacer {{ display: none !important; }}
+
+    /* Step indicator — smaller labels so 4 fit on one row */
+    .step-icon {{ width: 32px !important; height: 32px !important; font-size: 0.95rem !important; }}
+
+    /* Streamlit native elements */
+    .stButton > button {{
+        font-size: 0.95rem !important;
+        padding: 0.5rem 0.8rem !important;
+    }}
+    [data-testid="stSidebar"] {{ min-width: 240px !important; }}
+
+    /* Score bar text */
+    .score-num {{ font-size: 1.1rem !important; }}
+}}
 </style>
 """, unsafe_allow_html=True)
+
+# Inject proper viewport meta — critical for iOS Safari (Streamlit Cloud omits it)
+st.markdown(
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">',
+    unsafe_allow_html=True,
+)
 
 # ─── Data helpers ─────────────────────────────────────────────────────────────
 def load_users() -> dict:
@@ -1786,15 +1835,15 @@ def render_result(result: dict):
     icon = verdict_icons.get(rec, "◈")
 
     st.markdown(f"""
-    <div style='background:{bg};border:1px solid {color};border-radius:6px;
+    <div class='mobile-card' style='background:{bg};border:1px solid {color};border-radius:6px;
                 padding:2.5rem 2rem;text-align:{align};margin:1rem 0;
                 box-shadow:0 0 40px {color}22;'>
-        <div style='font-size:2.5rem;color:{color};margin-bottom:0.5rem;'>{icon}</div>
-        <div style='font-family:Cormorant Garamond,serif;font-size:3.5rem;
+        <div class='verdict-icon' style='font-size:2.5rem;color:{color};margin-bottom:0.5rem;'>{icon}</div>
+        <div class='verdict-label' style='font-family:Cormorant Garamond,serif;font-size:3.5rem;
                     font-weight:600;letter-spacing:0.22em;color:{color};
                     line-height:1;'>{label}</div>
         <div style='height:1px;width:60px;background:{color};margin:1rem {"0 1rem auto" if not is_rtl else "0 auto 1rem 0"};opacity:0.6;'></div>
-        <div style='font-size:1.17rem;letter-spacing:0.2em;color:var(--muted);
+        <div class='verdict-car' style='font-size:1.17rem;letter-spacing:0.2em;color:var(--muted);
                     text-transform:uppercase;'>{car_label}</div>
         <div style='font-size:1.04rem;color:var(--muted);margin-top:0.3rem;'>{date}</div>
     </div>
@@ -1866,7 +1915,7 @@ def render_result(result: dict):
         _action_icon = "✅"
 
     st.markdown(
-        f"<div style='background:{_action_bg};border:1.5px solid {_action_border};"
+        f"<div class='mobile-card' style='background:{_action_bg};border:1.5px solid {_action_border};"
         f"border-radius:8px;padding:1.1rem 1.4rem;margin:0.4rem 0 1.2rem;{rtl_css}'>"
         f"<div style='font-size:1rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;"
         f"margin-bottom:0.4rem;'>{_action_icon}&nbsp; {t('action_label')}</div>"
@@ -1953,7 +2002,7 @@ def render_result(result: dict):
         )
 
         st.markdown(
-            f"<div style='background:rgba(200,169,106,0.05);border:1px solid rgba(200,169,106,0.22);"
+            f"<div class='mobile-card' style='background:rgba(200,169,106,0.05);border:1px solid rgba(200,169,106,0.22);"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
             f"margin-bottom:0.6rem;'>🏛 {t('registry_title')}</div>"
@@ -2280,7 +2329,7 @@ def render_result(result: dict):
         _exact   = _yad2pd.get("exact_match", False)
         _match_label = ("✓ " if _exact else "~") + _matched
         st.markdown(
-            f"<div style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.35);"
+            f"<div class='mobile-card' style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.35);"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
             f"margin-bottom:0.6rem;'>💰 {t('yad2_price_label')}</div>"
@@ -2815,8 +2864,9 @@ def step_vehicle_details():
         )
     with pcol2:
         # Spacer to vertically align button with the input field below the two label lines
+        # (hidden on mobile via .plate-btn-spacer — columns stack there, no spacer needed)
         st.markdown(
-            "<div style='height:3.9rem'></div>",
+            "<div class='plate-btn-spacer' style='height:3.9rem'></div>",
             unsafe_allow_html=True,
         )
         plate_btn = st.button(t("plate_lookup_btn"), use_container_width=True)
@@ -3126,14 +3176,14 @@ def main_app():
     st.markdown(f"""
     <div style='text-align:center;padding:1.2rem 0 0.2rem;overflow:hidden;'>
         <div class='car-animated' style='margin-bottom:0.4rem;'>
-            <img src='data:image/png;base64,{_PORSCHE_B64}'
+            <img class='hero-img' src='data:image/png;base64,{_PORSCHE_B64}'
                  style='height:110px;width:auto;filter:drop-shadow(0 4px 14px rgba(200,169,106,0.45));'/>
         </div>
-        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2.9rem;
+        <div class='hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2.9rem;
                     letter-spacing:0.18em;color:var(--gold);text-transform:uppercase;line-height:1.1;'>
             {t("app_title")}
         </div>
-        <div style='font-size:1.85rem;letter-spacing:0.08em;color:var(--muted);margin-top:0.4rem;font-style:italic;'>
+        <div class='hero-subtitle' style='font-size:1.85rem;letter-spacing:0.08em;color:var(--muted);margin-top:0.4rem;font-style:italic;'>
             {t("app_subtitle_main")}
         </div>
     </div>
