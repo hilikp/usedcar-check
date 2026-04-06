@@ -470,6 +470,15 @@ TR = {
         "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות — ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
         "action_red":       "זוהו מספר גורמי סיכון: בעיות צבע/גוף ורעשי מנוע חריגים. לא מומלץ לרכוש רכב זה. אין כדאיות לבדיקה טכנית עד שהבעיות הוויזואליות יובהרו ויטופלו.",
         "action_leak":      "זוהתה דליפת נוזל — זהו סימן אזהרה חמור. יש לבדוק במוסך מורשה לפני כל שיקול רכישה. אל תרכוש ללא בדיקה מקיפה.",
+        "refine_title":         "שפר את הניתוח",
+        "refine_details_btn":   "עדכן פרטי רכב",
+        "refine_photos_btn":    "הוסף / החלף תמונות",
+        "refine_audio_btn":     "הוסף הקלטת מנוע",
+        "view_original_btn":    "דוח מקורי ←",
+        "original_report_title":"הניתוח המקורי",
+        "refine_banner":        "מצב עדכון — הוסף חומר חדש לניתוח מחודש",
+        "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
+        "back_to_result_btn":   "← חזור לתוצאה",
     },
     "en": {
         "app_title":        "UsedCar Check",
@@ -625,6 +634,15 @@ TR = {
         "action_yellow":    "Engine noise risk detected. No paint or leak issues found — the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
         "action_red":       "Multiple risk factors detected: paint/body issues and abnormal engine sounds. We recommend avoiding this vehicle. There is no point taking it to a test center until the visual issues are fully investigated.",
         "action_leak":      "Fluid leak detected — this is a serious warning sign. Have the vehicle inspected at a certified garage before any purchase consideration. Do not buy without a full mechanical check.",
+        "refine_title":         "Refine Analysis",
+        "refine_details_btn":   "Update Vehicle Details",
+        "refine_photos_btn":    "Add / Replace Photos",
+        "refine_audio_btn":     "Add Engine Recording",
+        "view_original_btn":    "Original Report ←",
+        "original_report_title":"Original Analysis",
+        "refine_banner":        "Update Mode — upload new material for a fresh analysis",
+        "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
+        "back_to_result_btn":   "Back to Result →",
     }
 }
 
@@ -842,9 +860,11 @@ for key, default in {
     "interior_photos":  [],
     "underbody":        None,
     "vehicle_video": None,
-    "audio":         None,
-    "result":        None,
-    "lang":          "he",
+    "audio":          None,
+    "result":         None,
+    "original_result":None,
+    "refine_mode":    False,
+    "lang":           "he",
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -1341,6 +1361,7 @@ def _generate_comprehensive_report(
     audio_metrics: dict | None = None,
     paint_data: dict | None = None,
     interior_paths: list[str] | None = None,
+    underbody_cv_hints: str | None = None,
 ) -> dict:
     """
     Single Claude Sonnet call that:
@@ -1443,6 +1464,19 @@ def _generate_comprehensive_report(
             f"Only flag an issue if suspicion is MEDIUM or HIGH AND you can visually confirm it.\n"
         )
 
+    # ── Underbody CV hint block ───────────────────────────────────────────────
+    underbody_block = ""
+    if underbody_cv_hints:
+        underbody_block = (
+            f"\nUnderbody Computer Vision Pre-scan:\n"
+            f"  {underbody_cv_hints}\n"
+            f"  INSTRUCTION: Use this as a prompt to carefully examine the underbody/engine-bay "
+            f"image(s) for actual fluid pooling, wet shiny patches, or accumulated liquid. "
+            f"Only report a leak if you can SEE clear visual evidence of fluid. "
+            f"Rust, shadows, dark metal, and undercoating do NOT indicate a leak. "
+            f"Your visual inspection is the final authority — override the CV hint if the images look clean.\n"
+        )
+
     photo_ctx = f"Images provided: {n_exterior} exterior photo(s)"
     if n_interior:
         photo_ctx += f" + {n_interior} interior photo(s)"
@@ -1459,7 +1493,7 @@ System verdict: {decision.recommendation.upper()} (confidence: {decision.confide
 
 Automated findings (English): {"; ".join(existing_reasons) or "none"}
 Automated next steps (English): {"; ".join(existing_steps) or "none"}
-{nhtsa_block}{audio_block}{paint_block}
+{nhtsa_block}{audio_block}{paint_block}{underbody_block}
 Your task — respond ONLY in {lang_name} — produce this exact JSON (no extra text):
 {{
   "report": "<4–6 sentences: overall condition summary covering body, paint, interior and any concerns>",
@@ -1734,7 +1768,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         _KNOCK_LABELS  = {"rod_knock_suspected", "exhaust_leak_suspected"}
         _WARN_LABELS   = {"valve_tick_suspected", "belt_squeal_suspected", "rough_idle_suspected"}
 
-        has_underbody_leak = any(
+        has_underbody_leak_cv = any(
             f.get("label", "").lower() in _LEAK_LABELS
             for f in underbody_findings
         )
@@ -1742,7 +1776,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         has_warn   = any(f.label in _WARN_LABELS  for f in audio_findings)
 
         _mech_issues = []
-        if has_underbody_leak:
+        if has_underbody_leak_cv:
             _mech_issues.append({
                 "severity": "high",
                 "title": TR[lang_now].get("leak_oil", "Oil leak suspected") if lang_now == "he"
@@ -1804,17 +1838,44 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         except Exception:
             import os
             api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        # Build soft underbody CV hint for Claude (lets Claude visually override)
+        _cv_hint = None
+        if has_underbody_leak_cv:
+            _cv_hint = (
+                "Computer vision pre-scan flagged a possible fluid stain in the underbody image "
+                "(brownish/amber hue or large dark patch detected). Please examine the underbody/engine "
+                "image carefully and determine if there is real fluid pooling or leak evidence."
+            )
+
         ai_report = _generate_comprehensive_report(
             car_details, decision, photo_paths + video_frame_paths, [], lang, api_key,
             nhtsa_data=nhtsa_data,
             audio_metrics=audio_metrics,
             paint_data=paint_data,
             interior_paths=interior_paths,
+            underbody_cv_hints=_cv_hint,
         )
 
-        # ── Override leak_assessment if underbody leak was physically detected ─
-        if has_underbody_leak:
-            ai_report["leak_assessment"] = "oil leak suspected"
+        # ── Combine CV + Claude visual inspection for final leak determination ─
+        _ai_leak_str = ai_report.get("leak_assessment", "none detected").lower()
+        _ai_says_leak = _ai_leak_str != "none detected"
+        # Trust Claude's visual inspection as the final authority;
+        # CV is only used as a hint — don't override a clean Claude assessment
+        has_underbody_leak = _ai_says_leak
+
+        # ── If CV triggered but Claude's visual inspection finds no leak, clean up ──
+        if has_underbody_leak_cv and not has_underbody_leak:
+            # Remove the CV-inserted leak finding from top_reasons
+            _leak_kw = ("leak", "דליפ")
+            decision.top_reasons = [
+                r for r in (decision.top_reasons or [])
+                if not any(kw in r.get("title", "").lower() for kw in _leak_kw)
+            ]
+            # Revert verdict if it was changed solely due to the CV leak
+            if not has_knock and not has_warn:
+                # Was forced to no_go only by CV — revert to inconclusive
+                if decision.recommendation == "no_go":
+                    decision.recommendation = "inconclusive"
 
         # Apply Claude translations back (may still be English if Claude failed)
         tr_reasons = ai_report.get("translated_reasons", []) or []
@@ -1899,6 +1960,24 @@ def render_result(result: dict):
         <div style='font-size:1.04rem;color:var(--muted);margin-top:0.3rem;'>{date}</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── Original report expander (shown when user has refined the analysis) ─────
+    _orig = st.session_state.get("original_result")
+    if _orig:
+        with st.expander(f"📋 {t('view_original_btn')}", expanded=False):
+            _orig_rec = _orig.get("recommendation", "inconclusive")
+            _orig_label, _orig_color, _ = verdict_meta(_orig_rec)
+            st.markdown(
+                f"<div style='margin-bottom:0.5rem;{rtl_css}'>"
+                f"<span style='font-size:1.5rem;font-weight:700;color:{_orig_color};'>{_orig_label}</span>"
+                f"<span style='font-size:0.95rem;color:var(--muted);margin-{\"right\" if is_rtl else \"left\"}:0.8rem;'>"
+                f"{_orig.get('created_at','')[:10]}</span></div>",
+                unsafe_allow_html=True,
+            )
+            _orig_report = _orig.get("detailed_report", "")
+            if _orig_report:
+                st.markdown(f"<p style='font-size:1.1rem;color:var(--text);{rtl_css}'>{_orig_report}</p>",
+                            unsafe_allow_html=True)
 
     # ── Confidence + Audio meta ───────────────────────────────────────────────
     _conf_levels = {"high": {"he": "גבוה", "en": "High"},
@@ -2422,6 +2501,36 @@ def render_result(result: dict):
             unsafe_allow_html=True,
         )
 
+    # ── Refine Analysis ───────────────────────────────────────────────────────
+    gold_divider()
+    st.markdown(
+        f"<div style='font-size:1.3rem;font-family:Cormorant Garamond,serif;font-weight:600;"
+        f"letter-spacing:0.12em;color:var(--gold);text-transform:uppercase;margin-bottom:0.5rem;{rtl_css}'>"
+        f"🔄 {t('refine_title')}</div>"
+        f"<p style='font-size:1.05rem;color:var(--muted);margin-bottom:0.8rem;{rtl_css}'>"
+        f"{t('refine_banner')}</p>",
+        unsafe_allow_html=True,
+    )
+    _rcol1, _rcol2, _rcol3 = st.columns(3)
+    with _rcol1:
+        if st.button(f"🚗 {t('refine_details_btn')}", key="refine_details", use_container_width=True):
+            st.session_state.original_result = result
+            st.session_state.refine_mode     = True
+            st.session_state.step            = 1
+            st.rerun()
+    with _rcol2:
+        if st.button(f"📸 {t('refine_photos_btn')}", key="refine_photos", use_container_width=True):
+            st.session_state.original_result = result
+            st.session_state.refine_mode     = True
+            st.session_state.step            = 2
+            st.rerun()
+    with _rcol3:
+        if st.button(f"🎙 {t('refine_audio_btn')}", key="refine_audio", use_container_width=True):
+            st.session_state.original_result = result
+            st.session_state.refine_mode     = True
+            st.session_state.step            = 3
+            st.rerun()
+
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
 
@@ -2583,13 +2692,15 @@ def render_sidebar():
         gold_divider()
 
         if st.button(t("new_check"), use_container_width=True):
-            st.session_state.step          = 1
-            st.session_state.car_details   = {}
-            st.session_state.photos        = []
-            st.session_state.underbody     = None
-            st.session_state.vehicle_video = None
-            st.session_state.audio         = None
-            st.session_state.result        = None
+            st.session_state.step            = 1
+            st.session_state.car_details     = {}
+            st.session_state.photos          = []
+            st.session_state.underbody       = None
+            st.session_state.vehicle_video   = None
+            st.session_state.audio           = None
+            st.session_state.result          = None
+            st.session_state.original_result = None
+            st.session_state.refine_mode     = False
             st.rerun()
 
         past = get_user_checks(st.session_state.email)
@@ -3033,6 +3144,23 @@ def step_vehicle_details():
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
+    # ── Refine mode banner ────────────────────────────────────────────────────
+    if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.10);border:1px solid rgba(200,169,106,0.4);"
+            f"border-radius:6px;padding:0.7rem 1rem;margin-bottom:0.8rem;{rtl_css}'>"
+            f"🔄 {t('refine_banner')}</div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander(f"📋 {t('view_original_btn')}", expanded=False):
+            _orig2 = st.session_state.original_result
+            _o_label, _o_color, _ = verdict_meta(_orig2.get("recommendation", "inconclusive"))
+            st.markdown(f"<span style='color:{_o_color};font-weight:700;font-size:1.3rem;'>{_o_label}</span>",
+                        unsafe_allow_html=True)
+            _rpt = _orig2.get("detailed_report", "")
+            if _rpt:
+                st.markdown(f"<p style='font-size:1.05rem;{rtl_css}'>{_rpt}</p>", unsafe_allow_html=True)
+
     # ── Exterior photos ───────────────────────────────────────────────────────
     section_label("vehicle_photos")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>"
@@ -3096,6 +3224,23 @@ def step_photos():
 
 # ─── Step 3 — Audio ───────────────────────────────────────────────────────────
 def step_audio():
+    # ── Refine mode banner ────────────────────────────────────────────────────
+    if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.10);border:1px solid rgba(200,169,106,0.4);"
+            f"border-radius:6px;padding:0.7rem 1rem;margin-bottom:0.8rem;{rtl_css}'>"
+            f"🔄 {t('refine_banner')}</div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander(f"📋 {t('view_original_btn')}", expanded=False):
+            _orig3 = st.session_state.original_result
+            _oa_label, _oa_color, _ = verdict_meta(_orig3.get("recommendation", "inconclusive"))
+            st.markdown(f"<span style='color:{_oa_color};font-weight:700;font-size:1.3rem;'>{_oa_label}</span>",
+                        unsafe_allow_html=True)
+            _rpt3 = _orig3.get("detailed_report", "")
+            if _rpt3:
+                st.markdown(f"<p style='font-size:1.05rem;{rtl_css}'>{_rpt3}</p>", unsafe_allow_html=True)
+
     section_label("engine_audio")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('audio_hint')}</p>", unsafe_allow_html=True)
     audio = st.file_uploader(t("engine_audio"), type=["mp3","wav","m4a","ogg","aac","flac","mp4","mov","avi","mkv","webm","3gp"], label_visibility="collapsed")
@@ -3222,8 +3367,9 @@ def step_audio():
                         st.session_state.email, result,
                         st.session_state.get("lang", "he")
                     )
-                    st.session_state.result = result
-                    st.session_state.step   = 4; st.rerun()
+                    st.session_state.result      = result
+                    st.session_state.refine_mode = False   # refine complete
+                    st.session_state.step        = 4; st.rerun()
 
 # ─── Main app ─────────────────────────────────────────────────────────────────
 def main_app():

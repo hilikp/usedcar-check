@@ -49,7 +49,7 @@ def analyze_underbody_image(path: str) -> list[UnderbodyFinding]:
         if num_labels > 1:
             largest = int(stats[1:, cv2.CC_STAT_AREA].max())
             total_px = img.shape[0] * img.shape[1]
-            if largest / total_px > 0.015:   # blob covers >1.5% of image
+            if largest / total_px > 0.030:   # blob covers >3% of image
                 oil_blob_ok = True
 
     if oil_blob_ok:
@@ -73,14 +73,14 @@ def analyze_underbody_image(path: str) -> list[UnderbodyFinding]:
     dark_ratio = float(dark_mask.mean())
     bright_ratio = float((v > 120).mean())
 
-    if dark_ratio > 0.40 and bright_ratio > 0.08:
+    if dark_ratio > 0.55 and bright_ratio > 0.08:
         # Additionally require a single large contiguous dark blob
         dark_u8 = dark_mask.astype(np.uint8) * 255
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(dark_u8, connectivity=8)
         if num_labels > 1:
             largest = int(stats[1:, cv2.CC_STAT_AREA].max())
             total_px = img.shape[0] * img.shape[1]
-            if largest / total_px > 0.10:   # blob covers >10% of image
+            if largest / total_px > 0.20:   # blob covers >20% of image
                 confidence = min(0.60, 0.30 + dark_ratio * 0.5)
                 findings.append(
                     UnderbodyFinding(
