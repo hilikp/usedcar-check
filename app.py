@@ -1062,11 +1062,17 @@ p[data-testid="InputInstructions"],
         max-width: 100% !important;
     }}
 
-    /* ── Stack form columns on mobile (but NOT step indicator — stays a row) ── */
-    [data-testid="stHorizontalBlock"]:not(.step-row) > [data-testid="stColumn"] {{
+    /* ── Stack ALL Streamlit columns on mobile ── */
+    /* (step indicator no longer uses st.columns — it's pure HTML) */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
         flex: 0 0 100% !important;
         width: 100% !important;
         min-width: 0 !important;
+    }}
+
+    /* ── Continue / back / analyse buttons full-width on mobile ── */
+    .stButton > button {{
+        width: 100% !important;
     }}
 
     /* ── Hero section ── */
@@ -2399,23 +2405,29 @@ def render_result(result: dict):
 STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
 
 def step_indicator(current: int):
+    """Pure-HTML step bar — never uses st.columns so mobile CSS can't stack it."""
     labels = [t("step_details"), t("step_photos"), t("step_audio"), t("step_result")]
-    cols   = st.columns(4)
-    for i, (col, name, icon) in enumerate(zip(cols, labels, STEP_ICONS), 1):
-        with col:
-            active = i == current
-            done   = i < current
-            bg_c   = "rgba(200,169,106,0.15)" if active else ("rgba(74,122,74,0.1)" if done else "rgba(44,44,44,0.4)")
-            border = "var(--gold)" if active else ("#4A7A4A" if done else "var(--border)")
-            txt    = "var(--gold)" if active else ("#4A7A4A" if done else "var(--muted)")
-            st.markdown(f"""
-            <div style='text-align:center;'>
-                <div class='step-icon' style='background:{bg_c};border:1px solid {border};'>
-                    <span style='color:{border};'>{icon}</span>
-                </div>
-                <div style='font-size:1.04rem;letter-spacing:0.08em;text-transform:uppercase;color:{txt};'>{name}</div>
-            </div>
-            """, unsafe_allow_html=True)
+    items  = ""
+    for i, (name, icon) in enumerate(zip(labels, STEP_ICONS), 1):
+        active = i == current
+        done   = i < current
+        bg_c   = "rgba(200,169,106,0.15)" if active else ("rgba(74,122,74,0.1)" if done else "rgba(44,44,44,0.4)")
+        border = "var(--gold)" if active else ("#4A7A4A" if done else "var(--border)")
+        txt    = "var(--gold)" if active else ("#4A7A4A" if done else "var(--muted)")
+        items += (
+            f"<div style='flex:1;text-align:center;min-width:0;'>"
+            f"<div style='width:36px;height:36px;border-radius:50%;background:{bg_c};"
+            f"border:1px solid {border};display:flex;align-items:center;justify-content:center;"
+            f"margin:0 auto 0.3rem;font-size:1.1rem;'>"
+            f"<span style='color:{border};'>{icon}</span></div>"
+            f"<div style='font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;"
+            f"color:{txt};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{name}</div>"
+            f"</div>"
+        )
+    st.markdown(
+        f"<div style='display:flex;gap:4px;margin:0.6rem 0 0.4rem;align-items:flex-start;'>{items}</div>",
+        unsafe_allow_html=True,
+    )
     gold_divider()
 
 # ─── Login screen ─────────────────────────────────────────────────────────────
