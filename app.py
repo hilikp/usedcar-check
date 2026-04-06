@@ -1063,11 +1063,28 @@ p[data-testid="InputInstructions"],
     }}
 
     /* ── Stack ALL Streamlit columns on mobile ── */
-    /* (step indicator no longer uses st.columns — it's pure HTML) */
+    /* flex-wrap:wrap is REQUIRED — without it children overflow right instead of wrapping */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+    }}
     [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
         flex: 0 0 100% !important;
         width: 100% !important;
         min-width: 0 !important;
+    }}
+
+    /* ── Login hero — scale down huge title & reduce padding ── */
+    .login-hero-title {{
+        font-size: 2.8rem !important;
+        letter-spacing: 0.08em !important;
+        line-height: 1.2 !important;
+    }}
+    .login-hero-subtitle {{
+        font-size: 1.1rem !important;
+        letter-spacing: 0.05em !important;
+    }}
+    .login-hero-wrap {{
+        padding: 2.5rem 1rem 3rem !important;
     }}
 
     /* ── Continue / back / analyse buttons full-width on mobile ── */
@@ -2434,7 +2451,7 @@ def step_indicator(current: int):
 def login_screen():
     # ── Hero banner with car image (flags embedded inside) ───────────────────
     st.markdown(f"""
-    <div style="
+    <div class='login-hero-wrap' style="
         background:
             linear-gradient(to bottom, rgba(12,12,12,0.2) 0%, rgba(12,12,12,0.7) 55%, rgba(12,12,12,1) 100%),
             url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80')
@@ -2445,14 +2462,14 @@ def login_screen():
         text-align: center;
         position: relative;
     ">
-        <div style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:5.5rem;
+        <div class='login-hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:5.5rem;
                     letter-spacing:0.22em;color:#C8A96A;text-transform:uppercase;
                     text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.05;'>
             {t("app_title")}
         </div>
         <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#C8A96A,transparent);
                     margin:1.2rem auto;'></div>
-        <div style='font-size:1.7rem;letter-spacing:0.1em;color:rgba(240,235,224,0.85);font-style:italic;'>
+        <div class='login-hero-subtitle' style='font-size:1.7rem;letter-spacing:0.1em;color:rgba(240,235,224,0.85);font-style:italic;'>
             {t("app_subtitle")}
         </div>
     </div>
