@@ -1037,19 +1037,23 @@ p[data-testid="InputInstructions"],
     /* ── Prevent any horizontal overflow ── */
     html, body, .stApp {{ overflow-x: hidden !important; }}
 
-    /* ── Force sidebar CLOSED on mobile (backup for initial_sidebar_state=auto) ── */
+    /* ── Hide sidebar on mobile — push it entirely off-screen left ── */
+    /* NOTE: translateX(-110%) was broken because it calculated % of width:0 = 0px */
+    /* Using left:-100vw + overflow:hidden is bulletproof */
     section[data-testid="stSidebar"] {{
-        transform: translateX(-110%) !important;
-        visibility: hidden !important;
-        width: 0 !important;
-        min-width: 0 !important;
         position: fixed !important;
+        left: -100vw !important;
+        top: 0 !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }}
-    /* Show the collapse/expand toggle arrow so sidebar is still reachable */
+    /* Keep the expand-sidebar arrow button reachable */
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"] {{
         display: flex !important;
         visibility: visible !important;
+        pointer-events: auto !important;
     }}
 
     /* ── Main content fills full width ── */
@@ -3010,7 +3014,7 @@ def step_vehicle_details():
         )
 
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
-    if st.button(t("continue_btn")):
+    if st.button(t("continue_btn"), use_container_width=True):
         # Start from existing dict so registry fields (underscore-prefixed) are preserved
         new_details = {k: v for k, v in d.items() if k.startswith("_")}
         new_details.update({
@@ -3075,10 +3079,10 @@ def step_photos():
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1, 3])
     with col1:
-        if st.button(t("back_btn")):
+        if st.button(t("back_btn"), use_container_width=True):
             st.session_state.step = 1; st.rerun()
     with col2:
-        if st.button(t("continue_btn"), key="photos_continue"):
+        if st.button(t("continue_btn"), key="photos_continue", use_container_width=True):
             if not photos or len(photos) < 3:
                 st.error("אנא העלה לפחות 3 תמונות חיצוניות." if is_rtl else "Please upload at least 3 exterior photos.")
             elif len(photos) > 8:
@@ -3098,10 +3102,10 @@ def step_audio():
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1, 3])
     with col1:
-        if st.button(t("back_btn"), key="audio_back"):
+        if st.button(t("back_btn"), key="audio_back", use_container_width=True):
             st.session_state.step = 2; st.rerun()
     with col2:
-        if st.button(t("analyse_btn")):
+        if st.button(t("analyse_btn"), use_container_width=True):
             if not audio:
                 st.error(t("audio_missing"))
             else:
