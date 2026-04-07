@@ -969,22 +969,28 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 .stButton > button:hover {{ opacity: 0.82 !important; }}
 
 .lang-btn > button {{
-    background: transparent !important;
-    color: var(--muted) !important;
-    border: 1px solid var(--border) !important;
+    background: rgba(200,169,106,0.06) !important;
+    color: var(--gold) !important;
+    border: 1px solid var(--gold-dark) !important;
     border-radius: 50px !important;
-    font-size: 1.1rem !important;
-    padding: 0.1rem 0.45rem !important;
-    letter-spacing: 0 !important;
+    font-size: 0.82rem !important;
+    padding: 0.18rem 0.85rem !important;
+    letter-spacing: 0.06em !important;
     text-transform: none !important;
     min-height: 0 !important;
-    line-height: 1.6 !important;
+    line-height: 1.5 !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
 }}
-.lang-btn > button:hover {{ border-color: var(--gold-dark) !important; opacity: 1 !important; }}
+.lang-btn > button:hover {{
+    border-color: var(--gold) !important;
+    background: rgba(200,169,106,0.14) !important;
+    opacity: 1 !important;
+}}
 .lang-btn-active > button {{
     border-color: var(--gold) !important;
     color: var(--gold) !important;
-    background: rgba(200,169,106,0.08) !important;
+    background: rgba(200,169,106,0.12) !important;
 }}
 
 /* Car driving animation */
@@ -1124,6 +1130,7 @@ p[data-testid="InputInstructions"],
     /* flex-wrap:wrap is REQUIRED — without it children overflow right instead of wrapping */
     [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
+        align-items: center !important;
     }}
     [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
         flex: 0 0 100% !important;
@@ -2704,13 +2711,14 @@ def login_screen():
     with col_form:
         st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-        # Language flag — single button showing the OTHER language flag
-        fc1, _ = st.columns([1, 6])
+        # Language toggle pill — shows both languages, click to switch
+        fc1, _ = st.columns([1, 5])
         with fc1:
+            _is_he      = st.session_state.lang == "he"
+            _other_lang = "en" if _is_he else "he"
+            _btn_label  = "עב → EN" if _is_he else "EN → עב"
             st.markdown("<div class='lang-btn'>", unsafe_allow_html=True)
-            _other_flag = "🇺🇸" if st.session_state.lang == "he" else "🇮🇱"
-            _other_lang = "en"  if st.session_state.lang == "he" else "he"
-            if st.button(_other_flag, key="login_lang_toggle"):
+            if st.button(_btn_label, key="login_lang_toggle"):
                 st.session_state.lang = _other_lang; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2758,12 +2766,13 @@ def login_screen():
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
-        col_flag, _ = st.columns([1, 5])
+        col_flag, _ = st.columns([1, 4])
         with col_flag:
+            _is_he_sb   = st.session_state.lang == "he"
+            _other_lang = "en" if _is_he_sb else "he"
+            _btn_label  = "עב → EN" if _is_he_sb else "EN → עב"
             st.markdown("<div class='lang-btn'>", unsafe_allow_html=True)
-            _other_flag = "🇺🇸" if st.session_state.lang == "he" else "🇮🇱"
-            _other_lang = "en"  if st.session_state.lang == "he" else "he"
-            if st.button(_other_flag, key="sb_lang_toggle"):
+            if st.button(_btn_label, key="sb_lang_toggle"):
                 st.session_state.lang = _other_lang
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
