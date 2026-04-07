@@ -817,7 +817,7 @@ CAR_MAKES_MODELS: dict[str, list[str]] = {
     "Porsche":       ["911", "Boxster", "Cayman", "Cayenne", "Macan", "Panamera", "Taycan"],
     "Renault":       ["Twingo", "Clio", "Captur", "Megane", "Arkana", "Kadjar", "Austral", "Koleos", "Duster", "Laguna", "Scenic", "Talisman", "Zoe", "Kangoo"],
     "Seat":          ["Mii", "Ibiza", "Arona", "Leon", "Tarraco", "Ateca", "Alhambra", "Altea"],
-    "Škoda":         ["Fabia", "Rapid", "Scala", "Octavia", "Superb", "Kamiq", "Karoq", "Kodiaq", "Enyaq"],
+    "Škoda":         ["Fabia", "Rapid", "Scala", "Octavia", "Superb", "Kamiq", "Karoq", "Kodiaq", "Enyaq", "Citigo", "Yeti", "Roomster"],
     "Smart":         ["Fortwo", "Forfour", "#1", "#3"],
     "SsangYong":     ["Tivoli", "Korando", "Rexton", "Musso", "Rodius", "XLV"],
     "Subaru":        ["Impreza", "Legacy", "Outback", "Forester", "XV", "Crosstrek", "WRX", "BRZ", "Solterra", "Levorg"],
@@ -3083,7 +3083,19 @@ def step_vehicle_details():
         if manufacturer and manufacturer in CAR_MAKES_MODELS:
             models_list = [""] + CAR_MAKES_MODELS[manufacturer]
             saved_model = d.get("model_name", "")
-            model_idx   = models_list.index(saved_model) if saved_model in models_list else 0
+            # Case-insensitive lookup (MOT API returns UPPERCASE model names like "ENYAQ")
+            # Falls back to startswith match for longer MOT names like "ENYAQ IV 80" → "Enyaq"
+            model_idx = 0
+            if saved_model:
+                _sm_lower = saved_model.lower()
+                for _mi, _mn in enumerate(models_list):
+                    if _mn.lower() == _sm_lower:
+                        model_idx = _mi; break
+                else:
+                    # Partial match: "ENYAQ IV 80" → "Enyaq", or "ENYAQ" → "Enyaq iV"
+                    for _mi, _mn in enumerate(models_list):
+                        if _mn and (_sm_lower.startswith(_mn.lower()) or _mn.lower().startswith(_sm_lower)):
+                            model_idx = _mi; break
             model_name  = st.selectbox(
                 t("model"),
                 options=models_list,
