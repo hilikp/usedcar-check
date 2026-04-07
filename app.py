@@ -3107,27 +3107,19 @@ def step_vehicle_details():
     d = st.session_state.car_details
 
     # ── Plate number auto-fill ────────────────────────────────────────────────
+    st.markdown(
+        f"<p style='font-size:0.88rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>"
+        f"🔍 {t('plate_label')} — {t('plate_hint')}</p>",
+        unsafe_allow_html=True,
+    )
     pcol1, pcol2 = st.columns([3, 1])
     with pcol1:
-        st.markdown(
-            f"<p style='font-size:1.15rem;font-weight:600;color:var(--gold);letter-spacing:0.08em;"
-            f"margin-bottom:0.1rem;{rtl_css}'>{t('plate_label')}</p>"
-            f"<p style='font-size:0.95rem;color:var(--muted);margin:0 0 0.3rem;{rtl_css}'>"
-            f"{t('plate_hint')}</p>",
-            unsafe_allow_html=True,
-        )
         plate_input = st.text_input(
             "", value=d.get("plate", ""),
             placeholder="12-345-67",
             key="plate_number", label_visibility="collapsed",
         )
     with pcol2:
-        # Spacer to vertically align button with the input field below the two label lines
-        # (hidden on mobile via .plate-btn-spacer — columns stack there, no spacer needed)
-        st.markdown(
-            "<div class='plate-btn-spacer' style='height:3.9rem'></div>",
-            unsafe_allow_html=True,
-        )
         plate_btn = st.button(t("plate_lookup_btn"), use_container_width=True)
 
     if plate_btn and plate_input.strip():
