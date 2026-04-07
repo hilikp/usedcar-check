@@ -3108,18 +3108,19 @@ def step_vehicle_details():
 
     # ── Plate number auto-fill ────────────────────────────────────────────────
     st.markdown(
-        f"<p style='font-size:0.88rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>"
-        f"🔍 {t('plate_label')} — {t('plate_hint')}</p>",
+        f"<p style='font-size:0.85rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>"
+        f"🔍 {t('plate_label')} — {t('plate_optional')}</p>",
         unsafe_allow_html=True,
     )
-    pcol1, pcol2 = st.columns([3, 1])
-    with pcol1:
+    # [input narrow] [button] [empty space fills rest]
+    pcol_in, pcol_btn, _ = st.columns([2, 1, 3])
+    with pcol_in:
         plate_input = st.text_input(
             "", value=d.get("plate", ""),
             placeholder="12-345-67",
             key="plate_number", label_visibility="collapsed",
         )
-    with pcol2:
+    with pcol_btn:
         plate_btn = st.button(t("plate_lookup_btn"), use_container_width=True)
 
     if plate_btn and plate_input.strip():
