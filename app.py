@@ -851,10 +851,30 @@ MAKES_LIST = [""] + sorted(
 # ─── Constants ────────────────────────────────────────────────────────────────
 # Password removed — access is open, email-only
 DATA_DIR     = _ROOT / "data"
-USERS_FILE   = DATA_DIR / "users.json"
-CHECKS_DIR   = DATA_DIR / "checks"
+USERS_FILE        = DATA_DIR / "users.json"
+MAILING_LIST_FILE = DATA_DIR / "mailing_list.csv"
+CHECKS_DIR        = DATA_DIR / "checks"
 DATA_DIR.mkdir(exist_ok=True)
 CHECKS_DIR.mkdir(exist_ok=True)
+
+def _backfill_mailing_list():
+    """On first run, populate mailing_list.csv from existing users.json."""
+    if MAILING_LIST_FILE.exists():
+        return   # already exists — nothing to backfill
+    if not USERS_FILE.exists():
+        return
+    try:
+        import csv as _csv
+        _users = json.loads(USERS_FILE.read_text(encoding="utf-8"))
+        with MAILING_LIST_FILE.open("w", encoding="utf-8", newline="") as _fh:
+            _w = _csv.writer(_fh)
+            _w.writerow(["email", "first_seen"])
+            for _em, _info in _users.items():
+                _w.writerow([_em, _info.get("created_at", "")])
+    except Exception:
+        pass
+
+_backfill_mailing_list()
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -1176,11 +1196,34 @@ def load_users() -> dict:
 def save_users(users: dict):
     USERS_FILE.write_text(json.dumps(users, indent=2), encoding="utf-8")
 
+def _append_mailing_list(email: str, first_seen: str):
+    """Append a new email to mailing_list.csv (one line per unique user, no duplicates)."""
+    import csv
+    # Read existing emails to avoid duplicates
+    existing = set()
+    if MAILING_LIST_FILE.exists():
+        try:
+            with MAILING_LIST_FILE.open(encoding="utf-8", newline="") as fh:
+                for row in csv.DictReader(fh):
+                    existing.add(row.get("email", "").lower())
+        except Exception:
+            pass
+    if email.lower() in existing:
+        return   # already listed
+    write_header = not MAILING_LIST_FILE.exists() or MAILING_LIST_FILE.stat().st_size == 0
+    with MAILING_LIST_FILE.open("a", encoding="utf-8", newline="") as fh:
+        writer = csv.writer(fh)
+        if write_header:
+            writer.writerow(["email", "first_seen"])
+        writer.writerow([email, first_seen])
+
 def get_or_create_user(email: str):
     users = load_users()
     if email not in users:
-        users[email] = {"created_at": datetime.now().isoformat(), "checks": []}
+        first_seen = datetime.now().isoformat()
+        users[email] = {"created_at": first_seen, "checks": []}
         save_users(users)
+        _append_mailing_list(email, first_seen)   # ← add to CSV mailing list
     return users[email]
 
 def save_check(email: str, result: dict) -> str:
