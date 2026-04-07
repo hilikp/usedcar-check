@@ -479,6 +479,13 @@ TR = {
         "refine_banner":        "מצב עדכון — הוסף חומר חדש לניתוח מחודש",
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
         "back_to_result_btn":   "← חזור לתוצאה",
+        "data_quality_title":   "⚠️ הדוח מבוסס על נתונים חלקיים",
+        "data_quality_msg":     "חלק מהנתונים לא סופקו. הוספת מידע נוסף תשפר את דיוק הניתוח.",
+        "data_missing_interior":"לא הועלו תמונות פנים",
+        "data_missing_underbody":"לא הועלה תמונת תחתית הרכב",
+        "data_few_exterior":    "מעט תמונות חיצוניות ({n} — מומלץ 6 ומעלה)",
+        "data_short_audio":     "הקלטת המנוע קצרה ({s:.0f} שניות — מומלץ 15 שניות לפחות)",
+        "data_refine_hint":     "לחץ על כפתורי 'שפר את הניתוח' בתחתית הדף להוספת נתונים",
     },
     "en": {
         "app_title":        "UsedCar Check",
@@ -643,6 +650,13 @@ TR = {
         "refine_banner":        "Update Mode — upload new material for a fresh analysis",
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
         "back_to_result_btn":   "Back to Result →",
+        "data_quality_title":   "⚠️ Report is based on incomplete data",
+        "data_quality_msg":     "Some data was not provided. Adding more material will improve the accuracy of the analysis.",
+        "data_missing_interior":"No interior photos uploaded",
+        "data_missing_underbody":"No underbody photo uploaded",
+        "data_few_exterior":    "Few exterior photos ({n} — 6+ recommended)",
+        "data_short_audio":     "Engine audio is short ({s:.0f}s — 15+ seconds recommended)",
+        "data_refine_hint":     "Use the 'Refine Analysis' buttons at the bottom of this page to add more data",
     }
 }
 
@@ -1978,6 +1992,40 @@ def render_result(result: dict):
             if _orig_report:
                 st.markdown(f"<p style='font-size:1.1rem;color:var(--text);{rtl_css}'>{_orig_report}</p>",
                             unsafe_allow_html=True)
+
+    # ── Data quality notice ───────────────────────────────────────────────────
+    _dq = result.get("data_quality") or {}
+    _dq_issues = []
+    _ext_n = _dq.get("exterior_count", 0)
+    _int_n = _dq.get("interior_count", 0)
+    _aud_s = _dq.get("audio_duration", 99)
+    if _ext_n and _ext_n < 6:
+        _dq_issues.append(t("data_few_exterior").format(n=_ext_n))
+    if not _int_n:
+        _dq_issues.append(t("data_missing_interior"))
+    if not _dq.get("has_underbody"):
+        _dq_issues.append(t("data_missing_underbody"))
+    if _aud_s and _aud_s < 15:
+        _dq_issues.append(t("data_short_audio").format(s=_aud_s))
+    if _dq_issues:
+        _items_html = "".join(
+            f"<li style='margin:0.25rem 0;'>{_i}</li>" for _i in _dq_issues
+        )
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.45);"
+            f"border-radius:8px;padding:1rem 1.4rem;margin:0.6rem 0 1rem;{rtl_css}'>"
+            f"<div style='font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:0.5rem;'>"
+            f"{t('data_quality_title')}</div>"
+            f"<div style='font-size:1rem;color:var(--muted);margin-bottom:0.5rem;'>"
+            f"{t('data_quality_msg')}</div>"
+            f"<ul style='font-size:0.97rem;color:var(--text);margin:0.3rem 0 0.5rem "
+            f"{'1.2rem' if not is_rtl else '0'};padding-{'left' if not is_rtl else 'right'}:1.2rem;'>"
+            f"{_items_html}</ul>"
+            f"<div style='font-size:0.9rem;color:var(--muted);font-style:italic;'>"
+            f"💡 {t('data_refine_hint')}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
     # ── Confidence + Audio meta ───────────────────────────────────────────────
     _conf_levels = {"high": {"he": "גבוה", "en": "High"},
@@ -3370,6 +3418,13 @@ def step_audio():
                             "trim":           d.get("_trim", ""),
                             "plate":          d.get("plate", ""),
                         } if d.get("plate") else None,
+                        "data_quality": {
+                            "exterior_count":  len(_photos),
+                            "interior_count":  len(_interior),
+                            "has_underbody":   _underbody is not None,
+                            "has_video":       _video is not None,
+                            "audio_duration":  audio_dur,
+                        },
                     }
                     check_id = save_check(st.session_state.email, result)
                     result["check_id"]      = check_id
