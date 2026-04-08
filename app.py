@@ -1049,6 +1049,16 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 .stButton > button:hover {{ opacity: 0.82 !important; }}
 
 /* ── All buttons: never wrap text ─────────────────────────── */
+/* ── Plate lookup (form submit) — flat, same height as input ─ */
+[data-testid="stFormSubmitButton"] button {{
+    padding: 0.32rem 0.9rem !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.04em !important;
+    min-height: 0 !important;
+    height: 2.45rem !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}}
 
 /* ── Flag language toggle (st.radio) ─────────────────────── */
 div[data-testid="stRadio"] > div {{
@@ -2714,77 +2724,188 @@ def render_result(result: dict):
     # ── WhatsApp Share + HTML Report Download ────────────────────────────────
     import urllib.parse as _urllibparse
     import html as _html_mod
-    _cd_share = result.get("car_details", {})
-    _make_s   = _cd_share.get("manufacturer", "")
-    _model_s  = _cd_share.get("model_name", "")
-    _year_s   = str(_cd_share.get("year", ""))
-    _km_s     = _cd_share.get("odometer", "")
-    _plate_s  = _cd_share.get("plate", "")
-    _verdict_label_s, _verdict_color_s, _ = verdict_meta(rec)
-    if is_rtl:
-        _wa_msg = f"בדיקת רכב {_make_s} {_model_s} {_year_s}\nתוצאה: {_verdict_label_s}\nבדיקה מופעלת על ידי UsedCar Check"
-    else:
-        _wa_msg = f"Used Car Check: {_make_s} {_model_s} {_year_s}\nResult: {_verdict_label_s}\nPowered by UsedCar Check"
-    _wa_url = "https://wa.me/?text=" + _urllibparse.quote(_wa_msg)
+    _cd_share   = result.get("car_details", {})
+    _make_s     = _cd_share.get("manufacturer", "")
+    _model_s    = _cd_share.get("model_name", "")
+    _year_s     = str(_cd_share.get("year", ""))
+    _km_s       = _cd_share.get("odometer", "")
+    _plate_s    = _cd_share.get("plate", "")
+    _verdict_label_s, _verdict_hex_s, _ = verdict_meta(rec)
 
-    # Build HTML report bytes
-    _report_text = result.get("detailed_report", "") or (result.get("ai_report") or {}).get("report", "")
-    _rc_list_rep = result.get("reject_codes") or []
-    _yad2_rep    = result.get("yad2_price_data")
-    _verdict_colors_map = {"go": "#2e7d32", "no_go": "#c62828", "inconclusive": "#e65100"}
-    _verdict_hex = _verdict_colors_map.get(rec, "#555555")
-    _dir_attr    = 'rtl' if is_rtl else 'ltr'
-    _rc_items_html = ""
-    if _rc_list_rep:
-        _lang_rep = st.session_state.get("lang", "he")
-        for _rcode in _rc_list_rep:
-            _rinfo = REJECT_TABLE.get(_rcode)
-            if _rinfo:
-                _rtitle = _rinfo["title_he"] if _lang_rep == "he" else _rinfo["title_en"]
-                _rc_items_html += f"<li>{_html_mod.escape(_rcode)}: {_html_mod.escape(_rtitle)}</li>"
+    # ── Pull all report text sections ────────────────────────────────────────
+    _report_text  = result.get("detailed_report", "")
+    _conc_ext     = result.get("conclusion_external", "")
+    _conc_int     = result.get("conclusion_internal", "")
+    _conc_mech    = result.get("conclusion_mechanical", "")
+    _leak_txt     = result.get("leak_assessment", "")
+    _rc_list_rep  = result.get("reject_codes") or []
+    _yad2_rep     = result.get("yad2_price_data")
+    _audio_raw    = result.get("audio_findings_raw") or []
+    _paint_data   = result.get("paint_data") or {}
+    _lang_rep     = st.session_state.get("lang", "he")
+    _dir_attr     = "rtl" if is_rtl else "ltr"
+    _verdict_colors_map = {"go": "#1b7c2e", "no_go": "#c62828", "inconclusive": "#b56a00"}
+    _verdict_hex  = _verdict_colors_map.get(rec, "#555")
+
+    # ── Reject codes rows ─────────────────────────────────────────────────────
+    _rc_rows = ""
+    for _rcode in _rc_list_rep:
+        _ri = REJECT_TABLE.get(_rcode, {})
+        _rt = _ri.get("title_he" if _lang_rep == "he" else "title_en", _rcode)
+        _re = _ri.get("expl_he"  if _lang_rep == "he" else "expl_en",  "")
+        _sev_colors = {"hard": "#c62828", "soft": "#b56a00", "tech": "#1565c0"}
+        _sev_col = _sev_colors.get(_ri.get("severity", "soft"), "#555")
+        _rc_rows += (
+            f"<tr><td style='color:{_sev_col};font-weight:700;padding:4px 8px;'>{_html_mod.escape(_rcode)}</td>"
+            f"<td style='padding:4px 8px;font-weight:600;'>{_html_mod.escape(_rt)}</td>"
+            f"<td style='padding:4px 8px;color:#555;'>{_html_mod.escape(_re)}</td></tr>"
+        )
+
+    # ── Price HTML ────────────────────────────────────────────────────────────
     _price_html = ""
     if _yad2_rep and _yad2_rep.get("min_price") and _yad2_rep.get("max_price"):
-        _min_rep = f"₪{_yad2_rep['min_price']:,.0f}"
-        _max_rep = f"₪{_yad2_rep['max_price']:,.0f}"
-        _price_label = "טווח מחיר שוק" if is_rtl else "Market Price Range"
-        _price_html = f"<p><strong>{_price_label}:</strong> {_min_rep} &ndash; {_max_rep}</p>"
+        _min_rep = f"&#x20AA;{_yad2_rep['min_price']:,.0f}"
+        _max_rep = f"&#x20AA;{_yad2_rep['max_price']:,.0f}"
+        _price_lbl = "טווח מחיר שוק" if is_rtl else "Market Price Range"
+        _price_html = f"<p style='font-size:1.15rem;'><strong>{_price_lbl}:</strong> {_min_rep} &ndash; {_max_rep}</p>"
+
+    # ── Audio findings ────────────────────────────────────────────────────────
+    _audio_html = ""
+    if _audio_raw:
+        _aud_lbl = "ממצאי שמע" if is_rtl else "Audio Findings"
+        _aud_rows = "".join(
+            f"<li>{_html_mod.escape(str(f.get('label','')))} "
+            f"<span style='color:#888;font-size:0.88em;'>({f.get('confidence','')}) {_html_mod.escape(str(f.get('details','')))}</span></li>"
+            for f in _audio_raw if f.get("label")
+        )
+        if _aud_rows:
+            _audio_html = f"<h2>{_aud_lbl}</h2><ul>{_aud_rows}</ul>"
+
+    # ── Paint section ─────────────────────────────────────────────────────────
+    _paint_html = ""
+    _paint_susp = _paint_data.get("suspicion", "none")
+    if _paint_susp != "none":
+        _paint_lbl  = "ניתוח צבע" if is_rtl else "Paint Analysis"
+        _susp_map   = {"none": ("תקין","OK"), "low": ("חשד נמוך","Low suspicion"),
+                       "medium": ("חשד בינוני","Medium suspicion"), "high": ("חשד גבוה","High suspicion")}
+        _susp_he, _susp_en = _susp_map.get(_paint_susp, (_paint_susp, _paint_susp))
+        _susp_txt = _susp_he if is_rtl else _susp_en
+        _paint_html = f"<h2>{_paint_lbl}</h2><p>{_html_mod.escape(_susp_txt)}</p>"
+
+    # ── Build full HTML report ─────────────────────────────────────────────────
+    _date_str = datetime.now().strftime("%Y-%m-%d")
+    _veh_lbl  = "רכב" if is_rtl else "Vehicle"
+    _km_lbl   = "ק\"מ" if is_rtl else "km"
+    _pl_lbl   = "לוחית" if is_rtl else "Plate"
+    _own_lbl  = "בעלים" if is_rtl else "Owners"
+    _prev_own = _cd_share.get("prev_owners", "")
+
+    def _sec(title, body):
+        if not body: return ""
+        return f"<h2 style='margin-top:1.4rem;padding-bottom:0.3rem;border-bottom:2px solid #e0b84a;color:#333;'>{title}</h2>{body}"
+
+    _body_sections = ""
+    if _report_text:
+        _body_sections += _sec("סיכום" if is_rtl else "Summary", f"<p>{_html_mod.escape(_report_text)}</p>")
+    if _conc_ext:
+        _body_sections += _sec("מצב חיצוני" if is_rtl else "Exterior", f"<p>{_html_mod.escape(_conc_ext)}</p>")
+    if _conc_int:
+        _body_sections += _sec("מצב פנים" if is_rtl else "Interior", f"<p>{_html_mod.escape(_conc_int)}</p>")
+    if _conc_mech:
+        _body_sections += _sec("מצב מכאני" if is_rtl else "Mechanical", f"<p>{_html_mod.escape(_conc_mech)}</p>")
+    if _leak_txt and _leak_txt not in ("none detected", ""):
+        _body_sections += _sec("דליפות" if is_rtl else "Leak Assessment", f"<p>{_html_mod.escape(_leak_txt)}</p>")
+    _body_sections += _audio_html
+    _body_sections += _paint_html
+    if _rc_rows:
+        _find_lbl = "ממצאים שזוהו" if is_rtl else "Issues Detected"
+        _body_sections += _sec(_find_lbl,
+            f"<table style='width:100%;border-collapse:collapse;font-size:0.95rem;'>"
+            f"<thead><tr style='background:#f5f5f5;'>"
+            f"<th style='padding:4px 8px;text-align:{'right' if is_rtl else 'left'};'>קוד</th>"
+            f"<th style='padding:4px 8px;text-align:{'right' if is_rtl else 'left'};'>כותרת</th>"
+            f"<th style='padding:4px 8px;text-align:{'right' if is_rtl else 'left'};'>הסבר</th>"
+            f"</tr></thead><tbody>{_rc_rows}</tbody></table>")
+    if _price_html:
+        _body_sections += _sec("מחירון שוק" if is_rtl else "Market Price", _price_html)
+
     _report_html = f"""<!DOCTYPE html>
 <html lang="{'he' if is_rtl else 'en'}" dir="{_dir_attr}">
 <head>
 <meta charset="UTF-8">
-<title>UsedCar Check Report</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UsedCar Check | {_html_mod.escape(_make_s)} {_html_mod.escape(_model_s)} {_html_mod.escape(_year_s)}</title>
 <style>
-  body {{ font-family: Arial, sans-serif; background: #fff; color: #222; padding: 2rem; max-width: 800px; margin: auto; direction: {_dir_attr}; }}
-  h1 {{ font-size: 1.8rem; margin-bottom: 0.3rem; }}
-  h2 {{ font-size: 1.3rem; margin-top: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; }}
-  .verdict {{ font-size: 2rem; font-weight: bold; color: {_verdict_hex}; margin: 1rem 0; }}
-  .meta {{ color: #555; font-size: 0.97rem; margin-bottom: 1rem; }}
-  .footer {{ margin-top: 2rem; font-size: 0.85rem; color: #888; border-top: 1px solid #ddd; padding-top: 0.5rem; }}
+  @media print {{ .no-print {{ display:none; }} }}
+  body {{ font-family: Arial, Helvetica, sans-serif; background: #fff; color: #222;
+         padding: 2rem; max-width: 820px; margin: auto; direction: {_dir_attr}; line-height: 1.6; }}
+  h1 {{ font-size: 1.5rem; color: #c8a96a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.2rem; }}
+  .car-name {{ font-size: 1.7rem; font-weight: 700; margin: 0.2rem 0 0.8rem; }}
+  .verdict-box {{ border-radius: 8px; padding: 1rem 1.5rem; margin: 1rem 0;
+                  background: {_verdict_hex}18; border: 2px solid {_verdict_hex}; }}
+  .verdict-label {{ font-size: 2rem; font-weight: 700; color: {_verdict_hex}; }}
+  .meta-row {{ display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.95rem; color: #555;
+               margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee; }}
+  .meta-item span {{ font-weight: 600; color: #222; }}
+  .footer {{ margin-top: 2rem; font-size: 0.82rem; color: #aaa;
+             border-top: 1px solid #eee; padding-top: 0.6rem; text-align: center; }}
+  .print-hint {{ background: #fffbea; border: 1px solid #f0c040; border-radius: 6px;
+                 padding: 0.5rem 1rem; font-size: 0.88rem; margin-bottom: 1rem; }}
 </style>
 </head>
 <body>
 <h1>UsedCar Check</h1>
-<div class="meta">{_html_mod.escape(str(datetime.now().strftime('%Y-%m-%d')))}</div>
-<div class="meta">{"רכב" if is_rtl else "Vehicle"}: <strong>{_html_mod.escape(f"{_make_s} {_model_s} {_year_s}")}</strong>
-{"קילומטראז'" if is_rtl else "Odometer"}: {_html_mod.escape(str(_km_s))} km
-{"לוחית" if is_rtl else "Plate"}: {_html_mod.escape(str(_plate_s))}</div>
-<div class="verdict">{_html_mod.escape(_verdict_label_s)}</div>
-<h2>{"דוח מפורט" if is_rtl else "Detailed Report"}</h2>
-<p>{_html_mod.escape(_report_text)}</p>
-{"<h2>" + ("ממצאי בדיקה" if is_rtl else "Inspection Findings") + "</h2><ul>" + _rc_items_html + "</ul>" if _rc_items_html else ""}
-{_price_html}
-<div class="footer">{"דוח מאת" if is_rtl else "Report by"} UsedCar Check</div>
+<div class="car-name">{_html_mod.escape(_make_s)} {_html_mod.escape(_model_s)} {_html_mod.escape(_year_s)}</div>
+<div class="meta-row">
+  <div class="meta-item">{'לוחית' if is_rtl else 'Plate'}: <span>{_html_mod.escape(str(_plate_s or '-'))}</span></div>
+  <div class="meta-item">{'ק"מ' if is_rtl else 'Odometer'}: <span>{_html_mod.escape(str(_km_s) if _km_s else '-'):} {'ק"מ' if is_rtl else 'km'}</span></div>
+  {'<div class="meta-item">בעלים: <span>' + _html_mod.escape(str(_prev_own)) + "</span></div>" if _prev_own else ''}
+  <div class="meta-item">{'תאריך' if is_rtl else 'Date'}: <span>{_date_str}</span></div>
+</div>
+<div class="verdict-box">
+  <div class="verdict-label">{_html_mod.escape(_verdict_label_s)}</div>
+</div>
+<div class="print-hint no-print">
+  {'להפקת PDF: לחץ Ctrl+P ← שמור כ-PDF' if is_rtl else 'To save as PDF: press Ctrl+P &rarr; Save as PDF'}
+</div>
+{_body_sections}
+<div class="footer">UsedCar Check &mdash; usedcar-check-if-the-car-is-worth-it.streamlit.app</div>
 </body>
 </html>"""
     _report_bytes = _report_html.encode("utf-8")
+
+    # ── WhatsApp message (rich summary) ──────────────────────────────────────
+    _wa_lines = []
+    if is_rtl:
+        _wa_lines += [f"✅ בדיקת רכב | {_make_s} {_model_s} {_year_s}",
+                      f"🔑 תוצאה: {_verdict_label_s}"]
+        if _km_s: _wa_lines.append(f"🛣 קילומטראז': {_km_s:,} ק\"מ" if isinstance(_km_s, int) else f"🛣 קילומטראז': {_km_s} ק\"מ")
+        if _conc_ext:   _wa_lines.append(f"🚗 חוץ: {_conc_ext[:120]}")
+        if _conc_mech:  _wa_lines.append(f"🔧 מכאני: {_conc_mech[:120]}")
+        if _rc_list_rep:
+            _codes_txt = ", ".join(_rc_list_rep)
+            _wa_lines.append(f"⚠️ קודי ממצא: {_codes_txt}")
+        _wa_lines.append("📋 הורד את הדוח המלא מהאפליקציה")
+        _wa_lines.append("🔗 usedcar-check-if-the-car-is-worth-it.streamlit.app")
+    else:
+        _wa_lines += [f"✅ Car Check | {_make_s} {_model_s} {_year_s}",
+                      f"🔑 Result: {_verdict_label_s}"]
+        if _km_s: _wa_lines.append(f"🛣 Odometer: {_km_s} km")
+        if _conc_ext:   _wa_lines.append(f"🚗 Exterior: {_conc_ext[:120]}")
+        if _conc_mech:  _wa_lines.append(f"🔧 Mechanical: {_conc_mech[:120]}")
+        if _rc_list_rep:
+            _wa_lines.append(f"⚠️ Issues: {', '.join(_rc_list_rep)}")
+        _wa_lines.append("📋 Download full report from the app")
+        _wa_lines.append("🔗 usedcar-check-if-the-car-is-worth-it.streamlit.app")
+    _wa_url = "https://wa.me/?text=" + _urllibparse.quote("\n".join(_wa_lines))
 
     gold_divider()
     _wa_col, _dl_col = st.columns([1, 1])
     with _wa_col:
         st.markdown(
             f"<a href='{_wa_url}' target='_blank' rel='noopener' "
-            f"style='background:#25D366;color:white;border-radius:8px;padding:0.5rem 1.2rem;"
-            f"text-decoration:none;display:inline-block;font-size:1rem;'>"
+            f"style='background:#25D366;color:white;border-radius:8px;padding:0.55rem 1.2rem;"
+            f"text-decoration:none;display:inline-block;font-size:1rem;font-weight:600;width:100%;text-align:center;box-sizing:border-box;'>"
             f"{t('whatsapp_share')}</a>",
             unsafe_allow_html=True,
         )
@@ -2794,6 +2915,7 @@ def render_result(result: dict):
             data=_report_bytes,
             file_name=f"car_check_{_year_s}_{_model_s}.html",
             mime="text/html",
+            use_container_width=True,
         )
 
     # ── Yad2 Market Price Reference ───────────────────────────────────────────
@@ -2876,14 +2998,18 @@ def render_result(result: dict):
         f"<div style='font-size:1rem;color:var(--text);margin-bottom:0.6rem;'>{_r02_note}</div>"
         f"<div style='font-size:0.97rem;color:var(--muted);margin-bottom:0.5rem;'>{t('damage_history_hint')}</div>"
         f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.5rem;'>"
-        f"<a href='https://www.niv.co.il' target='_blank' rel='noopener' "
+        f"<a href='https://www.check-car.co.il' target='_blank' rel='noopener' "
         f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
         f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
-        f"font-size:0.97rem;text-decoration:none;'>niv.co.il</a>"
-        f"<a href='https://www.autodna.com' target='_blank' rel='noopener' "
+        f"font-size:0.97rem;text-decoration:none;'>check-car.co.il</a>"
+        f"<a href='https://www.carfax.com' target='_blank' rel='noopener' "
         f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
         f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
-        f"font-size:0.97rem;text-decoration:none;'>autodna.com</a>"
+        f"font-size:0.97rem;text-decoration:none;'>carfax.com</a>"
+        f"<a href='https://www.otocheck.co.il' target='_blank' rel='noopener' "
+        f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
+        f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
+        f"font-size:0.97rem;text-decoration:none;'>otocheck.co.il</a>"
         f"</div>"
         f"<div style='font-size:0.88rem;color:var(--muted);font-style:italic;'>"
         f"◦ {t('damage_history_external')}</div>"
@@ -3418,17 +3544,18 @@ def step_vehicle_details():
             f"🔍 {t('plate_label')}</p>",
             unsafe_allow_html=True,
         )
-        _pi, _pb = st.columns([3, 2])
-        with _pi:
-            plate_input = st.text_input(
-                "", value=d.get("plate", ""),
-                placeholder="12-345-67",
-                key="plate_number", label_visibility="collapsed",
-            )
-        with _pb:
-            plate_btn = st.button(
-                t("plate_lookup_btn"), use_container_width=True, key="plate_lookup_btn"
-            )
+        with st.form(key="plate_form", border=False):
+            _pi, _pb = st.columns([3, 2])
+            with _pi:
+                plate_input = st.text_input(
+                    "", value=d.get("plate", ""),
+                    placeholder="12-345-67",
+                    key="plate_number", label_visibility="collapsed",
+                )
+            with _pb:
+                plate_btn = st.form_submit_button(
+                    t("plate_lookup_btn"), use_container_width=True
+                )
 
     if plate_btn and plate_input.strip():
         with st.spinner("" if is_rtl else ""):
