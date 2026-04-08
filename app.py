@@ -318,7 +318,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "האמת על הרכב — לפני שהוא שלך",
+        "app_subtitle":     "האמת על הרכב | לפני שהוא שלך",
         "app_subtitle_main":"ניתוח חכם. החלטה בטוחה.",
         "email_label":      "כתובת אימייל",
         "password_label":   "קוד גישה",
@@ -332,8 +332,8 @@ TR = {
         "plate_hint":       "הזן מספר רישוי לטעינה אוטומטית של פרטי הרכב ממשרד התחבורה",
         "plate_lookup_btn": "טעינה אוטומטית",
         "plate_found":      "✓ פרטי הרכב נטענו ממשרד התחבורה",
-        "plate_not_found":  "לא נמצאו נתונים — מלא ידנית",
-        "plate_optional":   "אופציונלי — או מלא ידנית למטה",
+        "plate_not_found":  "לא נמצאו נתונים | מלא ידנית",
+        "plate_optional":   "אופציונלי | או מלא ידנית למטה",
         "yad2_ref_label":     "השוואת מחירים בשוק",
         "yad2_ref_hint":     "בדוק מה רכבים דומים נמכרים היום ביד2",
         "yad2_ref_btn":      "פתח ביד2 ←",
@@ -341,7 +341,7 @@ TR = {
         "yad2_price_label":  "מחירון יד2",
         "yad2_price_range":  "טווח מחיר שוק",
         "yad2_price_model":  "דגם:",
-        "yad2_price_note":   "מחיר בסיס לפי מחירון יד2 — לא כולל התאמה לקילומטראז'",
+        "yad2_price_note":   "מחיר בסיס לפי מחירון יד2 | לא כולל התאמה לקילומטראז'",
         "yad2_price_na":     "מחירון לא זמין לרכב זה",
         "registry_title":        "נתוני רישוי רשמיים",
         "registry_source":       "מקור: משרד התחבורה הישראלי",
@@ -351,13 +351,13 @@ TR = {
         "ownership_rental":      "השכרה",
         "ownership_govt":        "ממשלתי",
         "ownership_company":     "עסקי / חברה",
-        "ownership_warn":        "⚠️ הרכב רשום כ-{type} — אמת מול המוכר לפני רכישה",
+        "ownership_warn":        "⚠️ הרכב רשום כ-{type} | אמת מול המוכר לפני רכישה",
         "first_road_reg":        "עלייה לכביש",
         "last_inspection":       "טסט אחרון",
         "reg_valid_until":       "רישיון בתוקף עד",
         "car_color":             "צבע",
         "fuel_type":             "סוג דלק",
-        "no_plate_data":         "לא בוצעה בדיקת לוחית — הזן לוחית רישוי בפרטי הרכב לאימות בעלות",
+        "no_plate_data":         "לא בוצעה בדיקת לוחית | הזן לוחית רישוי בפרטי הרכב לאימות בעלות",
         "new_check":        "＋  בדיקה חדשה",
         "past_checks":      "בדיקות קודמות",
         "sign_out":         "יציאה",
@@ -368,8 +368,8 @@ TR = {
         "vehicle_details":  "פרטי הרכב",
         "manufacturer":     "יצרן",
         "model":            "דגם",
-        "select_make":      "— בחר יצרן —",
-        "select_model":     "— בחר דגם —",
+        "select_make":      "| בחר יצרן |",
+        "select_model":     "| בחר דגם |",
         "year":             "שנה",
         "odometer":         "קילומטראז' (ק״מ)",
         "trim":             "גרסה / ורסיה (אופציונלי)",
@@ -380,7 +380,7 @@ TR = {
         "back_btn":         "→  חזור",
         "vehicle_photos":   "תמונות הרכב",
         "photos_hint":      "העלה 4–10 תמונות: חיצוני (כל הצדדים), תא המנוע, פנים, לוח מחוונים. ודא תאורה טובה ומצלמה יציבה.",
-        "underbody_title":  "תמונת תחתית הרכב — אופציונלי",
+        "underbody_title":  "תמונת תחתית הרכב | אופציונלי",
         "underbody_hint":   "תמונה של חלק התחתון של הרכב מסייעת לזיהוי דליפות אפשריות.",
         "photos_count":     "תמונות נבחרו",
         "photos_min_error": "אנא העלה לפחות 4 תמונות.",
@@ -389,12 +389,12 @@ TR = {
         "audio_hint":       "הקלט לפחות 10 שניות של מנוע פועל בסרק. קרב את המיקרופון לתא המנוע לתוצאות הטובות ביותר. ניתן להעלות גם קובץ וידאו (MP4 וכד׳).",
         "audio_missing":    "אנא העלה הקלטת שמע של המנוע.",
         "analyse_btn":      "נתח רכב  ←",
-        "analysing":        "מנתח — זה עשוי לקחת רגע ...",
+        "analysing":        "מנתח | זה עשוי לקחת רגע ...",
         "analysis_failed":  "הניתוח נכשל",
         "confidence_label": "מהימנות האבחון",
         "conf_ctx_go":      "מערכת מזהה סיכוי {} שהרכב במצב תקין",
-        "conf_ctx_nogo":    "זוהו בעיות — רמת ודאות {}. מומלץ לבדוק לפני רכישה",
-        "conf_ctx_inc":     "נדרש מידע נוסף לאבחון מלא — רמת ודאות {}",
+        "conf_ctx_nogo":    "זוהו בעיות | רמת ודאות {}. מומלץ לבדוק לפני רכישה",
+        "conf_ctx_inc":     "נדרש מידע נוסף לאבחון מלא | רמת ודאות {}",
         "audio_analysed":   "שמע: {:.1f} שניות נותחו",
         "findings_title":   "ממצאי הבדיקה",
         "next_steps_title": "צעדים מומלצים",
@@ -409,28 +409,28 @@ TR = {
         "feat1_desc":       "זיהוי בעיות חיצוניות ופנימיות",
         "feat2":            "ניתוח קול מנוע",
         "feat2_desc":       "זיהוי רעשים חריגים בזמן מנוע פועל בסרק",
-        "feat3":            "פסיקה מיידית — קנה / אל תקנה",
+        "feat3":            "פסיקה מיידית | קנה / אל תקנה",
         "feat3_desc":       "GO או NO-GO בהתבסס על כל הנתונים",
-        "own_single_good":  "בעלים יחיד במשך {age} שנים — סימן חיובי לתחזוקה טובה",
-        "own_red_flag":     "{owners} בעלים ב-{age} שנים בלבד — החלפות תכופות: דגל אדום",
-        "own_concern":      "ממוצע {avg:.1f} שנים לבעלים — קצר מהמצופה",
-        "own_stable":       "היסטוריית בעלות יציבה — ממוצע {avg:.1f} שנים לבעלים",
-        "km_very_low":      "קילומטראז' נמוך מאוד ({km:,} ק\"מ) — שחיקה מינימלית צפויה",
-        "km_low":           "קילומטראז' נמוך ({km:,} ק\"מ) — מצב מנוע ורכיבים טוב יותר בממוצע",
-        "km_high":          "קילומטראז' גבוה ({km:,} ק\"מ) — שחיקת מנוע גבוהה יותר באופן טבעי",
-        "km_very_high":     "קילומטראז' גבוה מאוד ({km:,} ק\"מ) — בלאי משמעותי: מומלץ לבדוק בדחיפות",
+        "own_single_good":  "בעלים יחיד במשך {age} שנים | סימן חיובי לתחזוקה טובה",
+        "own_red_flag":     "{owners} בעלים ב-{age} שנים בלבד | החלפות תכופות: דגל אדום",
+        "own_concern":      "ממוצע {avg:.1f} שנים לבעלים | קצר מהמצופה",
+        "own_stable":       "היסטוריית בעלות יציבה | ממוצע {avg:.1f} שנים לבעלים",
+        "km_very_low":      "קילומטראז' נמוך מאוד ({km:,} ק\"מ) | שחיקה מינימלית צפויה",
+        "km_low":           "קילומטראז' נמוך ({km:,} ק\"מ) | מצב מנוע ורכיבים טוב יותר בממוצע",
+        "km_high":          "קילומטראז' גבוה ({km:,} ק\"מ) | שחיקת מנוע גבוהה יותר באופן טבעי",
+        "km_very_high":     "קילומטראז' גבוה מאוד ({km:,} ק\"מ) | בלאי משמעותי: מומלץ לבדוק בדחיפות",
         "usage_type":       "סוג שימוש קודם",
         "usage_type_opts":  ["פרטי", "השכרה / ליסינג", "רכב חברה", "לא ידוע"],
-        "usage_rental":     "רכב השכרה/ליסינג — שימוש אינטנסיבי ושחיקה מהירה יותר",
-        "usage_rental_hi":  "רכב השכרה/ליסינג עם {owners} בעלים — בלאי גבוה: דגל אדום",
-        "usage_company":    "רכב חברה — בדוק היסטוריית תחזוקה ורשומות שירות",
+        "usage_rental":     "רכב השכרה/ליסינג | שימוש אינטנסיבי ושחיקה מהירה יותר",
+        "usage_rental_hi":  "רכב השכרה/ליסינג עם {owners} בעלים | בלאי גבוה: דגל אדום",
+        "usage_company":    "רכב חברה | בדוק היסטוריית תחזוקה ורשומות שירות",
         "recalls_title":    "ריקולים ובעיות ידועות",
         "no_recalls_found": "לא נמצאו ריקולים פתוחים",
         "open_recalls":     "ריקולים פתוחים",
         "complaints_title": "תלונות מוכרות",
         "total_complaints": "סך תלונות NHTSA",
-        "nhtsa_source":     "מקור: NHTSA — מינהל בטיחות הרכב האמריקאי",
-        "audio_diagnosis":       "אבחון קולי — פירוט",
+        "nhtsa_source":     "מקור: NHTSA | מינהל בטיחות הרכב האמריקאי",
+        "audio_diagnosis":       "אבחון קולי | פירוט",
         "vehicle_video":         "סרטון הרכב (אופציונלי)",
         "video_hint":            "הוסף סרטון עד דקה אחת. הAI יזהה שריטות, נזקי גוף, שינויי צבע ודליפות.",
         "interior_photos_title": "תמונות פנים הרכב",
@@ -452,8 +452,8 @@ TR = {
         "conc_mechanical_label": "מצב מכאני",
         "of_10":            "/ 10",
         "paint_title":      "ניתוח צבע והיסטוריית תאונות/תיקונים",
-        "paint_consistent": "הצבע אחיד — לא נמצאו חשדות לצביעה מחדש",
-        "paint_suspect":    "חשד לצביעה מחדש — {count} פאנל(ים) חריגים",
+        "paint_consistent": "הצבע אחיד | לא נמצאו חשדות לצביעה מחדש",
+        "paint_suspect":    "חשד לצביעה מחדש | {count} פאנל(ים) חריגים",
         "paint_panel":      "פאנל",
         "paint_diff":       "חריגת צבע",
         "paint_overspray":  "חשד לאוברספריי",
@@ -466,30 +466,35 @@ TR = {
         "paint_severity_low":    "🟢 עקביות צבע תקינה",
         "paint_note":       "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין פאנלים + בדיקה ויזואלית של AI",
         "action_label":     "המלצת פעולה",
-        "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית — לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
-        "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות — ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
+        "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית | לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
+        "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות | ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
         "action_red":       "זוהו מספר גורמי סיכון: בעיות צבע/גוף ורעשי מנוע חריגים. לא מומלץ לרכוש רכב זה. אין כדאיות לבדיקה טכנית עד שהבעיות הוויזואליות יובהרו ויטופלו.",
-        "action_leak":      "זוהתה דליפת נוזל — זהו סימן אזהרה חמור. יש לבדוק במוסך מורשה לפני כל שיקול רכישה. אל תרכוש ללא בדיקה מקיפה.",
+        "action_leak":      "זוהתה דליפת נוזל | זהו סימן אזהרה חמור. יש לבדוק במוסך מורשה לפני כל שיקול רכישה. אל תרכוש ללא בדיקה מקיפה.",
         "refine_title":         "שפר את הניתוח",
         "refine_details_btn":   "עדכן פרטי רכב",
         "refine_photos_btn":    "הוסף / החלף תמונות",
         "refine_audio_btn":     "הוסף הקלטת מנוע",
         "view_original_btn":    "דוח מקורי ←",
         "original_report_title":"הניתוח המקורי",
-        "refine_banner":        "מצב עדכון — הוסף חומר חדש לניתוח מחודש",
+        "refine_banner":        "מצב עדכון | הוסף חומר חדש לניתוח מחודש",
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
         "back_to_result_btn":   "← חזור לתוצאה",
         "data_quality_title":   "⚠️ הדוח מבוסס על נתונים חלקיים",
         "data_quality_msg":     "חלק מהנתונים לא סופקו. הוספת מידע נוסף תשפר את דיוק הניתוח.",
         "data_missing_interior":"לא הועלו תמונות פנים",
         "data_missing_underbody":"לא הועלה תמונת תחתית הרכב",
-        "data_few_exterior":    "מעט תמונות חיצוניות ({n} — מומלץ 6 ומעלה)",
-        "data_short_audio":     "הקלטת המנוע קצרה ({s:.0f} שניות — מומלץ 15 שניות לפחות)",
+        "data_few_exterior":    "מעט תמונות חיצוניות ({n} | מומלץ 6 ומעלה)",
+        "data_short_audio":     "הקלטת המנוע קצרה ({s:.0f} שניות | מומלץ 15 שניות לפחות)",
         "data_refine_hint":     "לחץ על כפתורי 'שפר את הניתוח' בתחתית הדף להוספת נתונים",
+        "whatsapp_share":       "📲 שתף תוצאה ב-WhatsApp",
+        "download_report":      "⬇️ הורד דוח",
+        "damage_history_title": "היסטוריית נזקים ותאונות",
+        "damage_history_hint":  "לבדיקה מקיפה של היסטוריית תאונות:",
+        "damage_history_external": "בדיקה חיצונית מומלצת",
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "The full picture — before you commit",
+        "app_subtitle":     "The full picture | before you commit",
         "app_subtitle_main":"Smart Analysis. Confident Decision.",
         "email_label":      "Email Address",
         "password_label":   "Access Code",
@@ -503,8 +508,8 @@ TR = {
         "plate_hint":       "Enter plate number to auto-fill details from the Transport Ministry",
         "plate_lookup_btn": "Auto-Fill",
         "plate_found":      "✓ Vehicle details loaded from Transport Authority",
-        "plate_not_found":  "Plate not found — please fill in manually",
-        "plate_optional":   "Optional — or fill in manually below",
+        "plate_not_found":  "Plate not found | please fill in manually",
+        "plate_optional":   "Optional | or fill in manually below",
         "yad2_ref_label":    "Market Price Reference",
         "yad2_ref_hint":    "See what similar cars are selling for on Yad2",
         "yad2_ref_btn":     "Open on Yad2 →",
@@ -512,7 +517,7 @@ TR = {
         "yad2_price_label": "Yad2 Pricelist",
         "yad2_price_range": "Market Price Range",
         "yad2_price_model": "Model:",
-        "yad2_price_note":  "Base price from Yad2 pricelist — not adjusted for mileage",
+        "yad2_price_note":  "Base price from Yad2 pricelist | not adjusted for mileage",
         "yad2_price_na":    "Pricelist not available for this vehicle",
         "registry_title":        "Official Registry Data",
         "registry_source":       "Source: Israeli Ministry of Transport",
@@ -522,13 +527,13 @@ TR = {
         "ownership_rental":      "Rental",
         "ownership_govt":        "Government",
         "ownership_company":     "Business / Company",
-        "ownership_warn":        "⚠️ This vehicle is registered as {type} — verify with the seller before purchase",
+        "ownership_warn":        "⚠️ This vehicle is registered as {type} | verify with the seller before purchase",
         "first_road_reg":        "First on Road",
         "last_inspection":       "Last Inspection",
         "reg_valid_until":       "License Valid Until",
         "car_color":             "Color",
         "fuel_type":             "Fuel Type",
-        "no_plate_data":         "No plate lookup performed — enter a license plate number to verify ownership",
+        "no_plate_data":         "No plate lookup performed | enter a license plate number to verify ownership",
         "new_check":        "＋  New Check",
         "past_checks":      "Past Checks",
         "sign_out":         "Sign Out",
@@ -539,8 +544,8 @@ TR = {
         "vehicle_details":  "Vehicle Details",
         "manufacturer":     "Manufacturer",
         "model":            "Model",
-        "select_make":      "— Select Make —",
-        "select_model":     "— Select Model —",
+        "select_make":      "| Select Make |",
+        "select_model":     "| Select Model |",
         "year":             "Year",
         "odometer":         "Odometer (km)",
         "trim":             "Variant / Version (optional)",
@@ -551,7 +556,7 @@ TR = {
         "back_btn":         "←  Back",
         "vehicle_photos":   "Vehicle Photos",
         "photos_hint":      "Upload 4–10 photos: exterior (all sides), engine bay, interior, dashboard. Ensure good lighting and a steady hand.",
-        "underbody_title":  "Underbody Photo — Optional",
+        "underbody_title":  "Underbody Photo | Optional",
         "underbody_hint":   "A photo of the underside of the vehicle helps detect possible fluid leaks.",
         "photos_count":     "photo(s) selected",
         "photos_min_error": "Please upload at least 4 photos.",
@@ -560,12 +565,12 @@ TR = {
         "audio_hint":       "Record at least 10 seconds of the engine running at idle. Hold the microphone near the engine bay for best results. You can also upload a video file (MP4, etc.).",
         "audio_missing":    "Please upload an engine audio recording.",
         "analyse_btn":      "Analyse Vehicle  →",
-        "analysing":        "Analysing — this may take a moment …",
+        "analysing":        "Analysing | this may take a moment …",
         "analysis_failed":  "Analysis failed",
         "confidence_label": "Diagnostic Reliability",
         "conf_ctx_go":      "System detects {} chance the vehicle is in good condition",
-        "conf_ctx_nogo":    "Issues detected — {} confidence. Inspection recommended before purchase",
-        "conf_ctx_inc":     "More data needed for a full diagnosis — certainty level {}",
+        "conf_ctx_nogo":    "Issues detected | {} confidence. Inspection recommended before purchase",
+        "conf_ctx_inc":     "More data needed for a full diagnosis | certainty level {}",
         "audio_analysed":   "Audio: {:.1f}s analysed",
         "findings_title":   "Assessment Findings",
         "next_steps_title": "Recommended Next Steps",
@@ -582,26 +587,26 @@ TR = {
         "feat2_desc":       "Identify abnormal sounds at idle",
         "feat3":            "Instant GO / NO-GO Verdict",
         "feat3_desc":       "Clear decision based on all data points",
-        "own_single_good":  "Single owner for {age} years — positive sign of good maintenance",
-        "own_red_flag":     "{owners} owners in just {age} years — frequent changes are a red flag",
-        "own_concern":      "Average {avg:.1f} years per owner — shorter than expected",
-        "own_stable":       "Stable ownership history — average {avg:.1f} years per owner",
-        "km_very_low":      "Very low mileage ({km:,} km) — minimal wear expected",
-        "km_low":           "Low mileage ({km:,} km) — engine and components likely in better than average condition",
-        "km_high":          "High mileage ({km:,} km) — naturally higher engine wear",
-        "km_very_high":     "Very high mileage ({km:,} km) — significant wear: urgent inspection strongly advised",
+        "own_single_good":  "Single owner for {age} years | positive sign of good maintenance",
+        "own_red_flag":     "{owners} owners in just {age} years | frequent changes are a red flag",
+        "own_concern":      "Average {avg:.1f} years per owner | shorter than expected",
+        "own_stable":       "Stable ownership history | average {avg:.1f} years per owner",
+        "km_very_low":      "Very low mileage ({km:,} km) | minimal wear expected",
+        "km_low":           "Low mileage ({km:,} km) | engine and components likely in better than average condition",
+        "km_high":          "High mileage ({km:,} km) | naturally higher engine wear",
+        "km_very_high":     "Very high mileage ({km:,} km) | significant wear: urgent inspection strongly advised",
         "usage_type":       "Prior Usage Type",
         "usage_type_opts":  ["Private", "Rental / Lease", "Company Car", "Unknown"],
-        "usage_rental":     "Rental/lease vehicle — typically higher wear and intensive use",
-        "usage_rental_hi":  "Rental/lease with {owners} owners — high wear: red flag",
-        "usage_company":    "Company car — verify service history and maintenance records",
+        "usage_rental":     "Rental/lease vehicle | typically higher wear and intensive use",
+        "usage_rental_hi":  "Rental/lease with {owners} owners | high wear: red flag",
+        "usage_company":    "Company car | verify service history and maintenance records",
         "recalls_title":    "Recalls & Known Issues",
         "no_recalls_found": "No open recalls found",
         "open_recalls":     "Open Recalls",
         "complaints_title": "Reported Complaints",
         "total_complaints": "Total NHTSA Complaints",
-        "nhtsa_source":     "Source: NHTSA — US National Highway Traffic Safety Administration",
-        "audio_diagnosis":       "Audio Diagnosis — Detail",
+        "nhtsa_source":     "Source: NHTSA | US National Highway Traffic Safety Administration",
+        "audio_diagnosis":       "Audio Diagnosis | Detail",
         "vehicle_video":         "Vehicle Video (optional)",
         "video_hint":            "Upload up to 1 minute of video. AI will detect scratches, body damage, color changes and leaks.",
         "interior_photos_title": "Interior Photos",
@@ -623,8 +628,8 @@ TR = {
         "scores_title":     "Condition Scores",
         "of_10":            "/ 10",
         "paint_title":      "Paint Analysis & Accident / Repair History",
-        "paint_consistent": "Paint is consistent — no repaint indicators found",
-        "paint_suspect":    "Repaint suspected — {count} anomalous panel(s)",
+        "paint_consistent": "Paint is consistent | no repaint indicators found",
+        "paint_suspect":    "Repaint suspected | {count} anomalous panel(s)",
         "paint_panel":      "Panel",
         "paint_diff":       "Color deviation",
         "paint_overspray":  "Overspray suspected",
@@ -637,26 +642,31 @@ TR = {
         "paint_severity_low":    "🟢 Paint consistency normal",
         "paint_note":       "Based on LAB color histogram comparison between panels + AI visual inspection",
         "action_label":     "Action Recommendation",
-        "action_green":     "The vehicle looks clean visually — no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
-        "action_yellow":    "Engine noise risk detected. No paint or leak issues found — the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
+        "action_green":     "The vehicle looks clean visually | no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
+        "action_yellow":    "Engine noise risk detected. No paint or leak issues found | the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
         "action_red":       "Multiple risk factors detected: paint/body issues and abnormal engine sounds. We recommend avoiding this vehicle. There is no point taking it to a test center until the visual issues are fully investigated.",
-        "action_leak":      "Fluid leak detected — this is a serious warning sign. Have the vehicle inspected at a certified garage before any purchase consideration. Do not buy without a full mechanical check.",
+        "action_leak":      "Fluid leak detected | this is a serious warning sign. Have the vehicle inspected at a certified garage before any purchase consideration. Do not buy without a full mechanical check.",
         "refine_title":         "Refine Analysis",
         "refine_details_btn":   "Update Vehicle Details",
         "refine_photos_btn":    "Add / Replace Photos",
         "refine_audio_btn":     "Add Engine Recording",
         "view_original_btn":    "Original Report ←",
         "original_report_title":"Original Analysis",
-        "refine_banner":        "Update Mode — upload new material for a fresh analysis",
+        "refine_banner":        "Update Mode | upload new material for a fresh analysis",
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
         "back_to_result_btn":   "Back to Result →",
         "data_quality_title":   "⚠️ Report is based on incomplete data",
         "data_quality_msg":     "Some data was not provided. Adding more material will improve the accuracy of the analysis.",
         "data_missing_interior":"No interior photos uploaded",
         "data_missing_underbody":"No underbody photo uploaded",
-        "data_few_exterior":    "Few exterior photos ({n} — 6+ recommended)",
-        "data_short_audio":     "Engine audio is short ({s:.0f}s — 15+ seconds recommended)",
+        "data_few_exterior":    "Few exterior photos ({n} | 6+ recommended)",
+        "data_short_audio":     "Engine audio is short ({s:.0f}s | 15+ seconds recommended)",
         "data_refine_hint":     "Use the 'Refine Analysis' buttons at the bottom of this page to add more data",
+        "whatsapp_share":       "📲 Share result on WhatsApp",
+        "download_report":      "⬇️ Download Report",
+        "damage_history_title": "Damage & Accident History",
+        "damage_history_hint":  "For full accident history:",
+        "damage_history_external": "Recommended external check",
     }
 }
 
@@ -715,11 +725,11 @@ REJECT_TABLE: dict[str, dict] = {
     "R11": {"severity": "tech",
             "title_he": "אותות ויזואליים סותרים",
             "title_en": "Conflicting visual signals",
-            "expl_he":  "המערכת מצאה סימנים ויזואליים סותרים — לא ניתן להגיע לתוצאה אמינה מהמדיה הנוכחית.",
+            "expl_he":  "המערכת מצאה סימנים ויזואליים סותרים | לא ניתן להגיע לתוצאה אמינה מהמדיה הנוכחית.",
             "expl_en":  "The system found unclear or conflicting visual signs, so a reliable result cannot be given from the current media."},
     "R12": {"severity": "hard",
-            "title_he": "ממצאים מרובים בסיכון גבוה — נדרשת בדיקה דחופה",
-            "title_en": "Multiple high-risk findings — immediate professional inspection",
+            "title_he": "ממצאים מרובים בסיכון גבוה | נדרשת בדיקה דחופה",
+            "title_en": "Multiple high-risk findings | immediate professional inspection",
             "expl_he":  "זוהו מספר ממצאים בעלי סיכון גבוה. הרכב צריך לעבור בדיקה מקצועית בלבד.",
             "expl_en":  "Multiple high-risk issues were detected. This vehicle should only proceed with a professional inspection."},
 }
@@ -750,7 +760,7 @@ _HE_STRINGS = {
     "Engine audio suggests an unstable/rough pattern":
         "קול המנוע מצביע על דפוס לא יציב / גס",
     "High driven KM means engine wear risk is naturally higher":
-        "קילומטראז' גבוה — שחיקת מנוע גבוהה יותר באופן טבעי",
+        "קילומטראז' גבוה | שחיקת מנוע גבוהה יותר באופן טבעי",
     "Dashboard warning indicator may be present":
         "ייתכן שנוכח נורת אזהרה בלוח המחוונים",
     "Underbody image shows possible fluid-stain pattern":
@@ -795,14 +805,14 @@ _EN_STRINGS = {v: k for k, v in _HE_STRINGS.items()}
 # Add hardcoded Hebrew strings used in _mech_issues / _urgent_steps
 _EN_STRINGS.update({
     "חשד לדליפת שמן":                       "Oil / fluid leak detected in underbody image",
-    "דפיקות מנוע — נדרשת בדיקה דחופה":      "Engine knock detected — urgent inspection required",
-    "רעש חריג זוהה בהקלטת המנוע — מומלץ לבדוק": "Abnormal engine noise detected — inspection recommended",
-    "דליפת שמן/נוזל זוהתה — יש לבדוק במוסך מורשה לפני כל שיקול של רכישה.":
-        "Fluid leak detected — have the vehicle inspected by a certified mechanic before any purchase decision.",
-    "זוהו סימנים לדפיקות מנוע — נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות.":
-        "Engine knock detected — compression test and bearing inspection required urgently.",
-    "זוהה רעש חריג במנוע — מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה.":
-        "Abnormal engine noise detected — have valves and drive belts checked before purchase.",
+    "דפיקות מנוע | נדרשת בדיקה דחופה":      "Engine knock detected | urgent inspection required",
+    "רעש חריג זוהה בהקלטת המנוע | מומלץ לבדוק": "Abnormal engine noise detected | inspection recommended",
+    "דליפת שמן/נוזל זוהתה | יש לבדוק במוסך מורשה לפני כל שיקול של רכישה.":
+        "Fluid leak detected | have the vehicle inspected by a certified mechanic before any purchase decision.",
+    "זוהו סימנים לדפיקות מנוע | נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות.":
+        "Engine knock detected | compression test and bearing inspection required urgently.",
+    "זוהה רעש חריג במנוע | מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה.":
+        "Abnormal engine noise detected | have valves and drive belts checked before purchase.",
     "עדיין מומלץ לבצע בדיקה מקצועית לפני הרכישה.":
         "A professional inspection is still recommended before buying.",
 })
@@ -811,28 +821,28 @@ import re as _re
 # Regex patterns for dynamic Hebrew ownership/usage strings → English
 _HE_DYNAMIC_TO_EN = [
     (_re.compile(r"בעלים יחיד במשך ([\d.]+) שנ"),
-     lambda m: f"Single owner for {m.group(1)} years — good sign for maintenance"),
+     lambda m: f"Single owner for {m.group(1)} years | good sign for maintenance"),
     (_re.compile(r"([\d]+) בעלים ב-([\d]+) שנ"),
-     lambda m: f"{m.group(1)} owners in {m.group(2)} years — red flag!"),
+     lambda m: f"{m.group(1)} owners in {m.group(2)} years | red flag!"),
     (_re.compile(r"החלפת בעלים תכופה.*ממוצע ([\d.]+)"),
-     lambda m: f"Frequent ownership changes — average {m.group(1)} years per owner"),
+     lambda m: f"Frequent ownership changes | average {m.group(1)} years per owner"),
     (_re.compile(r"היסטוריית בעלות יציבה.*ממוצע ([\d.]+)"),
-     lambda m: f"Stable ownership history — average {m.group(1)} years per owner"),
+     lambda m: f"Stable ownership history | average {m.group(1)} years per owner"),
     (_re.compile(r"רכב השכרה.*שימוש אינטנסיבי"),
-     lambda m: "Rental/lease vehicle — intensive use and higher wear"),
+     lambda m: "Rental/lease vehicle | intensive use and higher wear"),
     (_re.compile(r"רכב חברה.*בלאי מואץ"),
-     lambda m: "Company car — accelerated wear expected"),
+     lambda m: "Company car | accelerated wear expected"),
 ]
 # Regex patterns for dynamic English ownership/usage strings → Hebrew
 _EN_DYNAMIC_TO_HE = [
     (_re.compile(r"Single owner for ([\d.]+) years"),
-     lambda m: f"בעלים יחיד במשך {m.group(1)} שנים — סימן חיוב לתחזוקה טובה"),
+     lambda m: f"בעלים יחיד במשך {m.group(1)} שנים | סימן חיוב לתחזוקה טובה"),
     (_re.compile(r"([\d]+) owners in ([\d]+) years"),
-     lambda m: f"{m.group(1)} בעלים ב-{m.group(2)} שנים — דגל אדום!"),
+     lambda m: f"{m.group(1)} בעלים ב-{m.group(2)} שנים | דגל אדום!"),
     (_re.compile(r"Frequent ownership.*average ([\d.]+)"),
-     lambda m: f"החלפת בעלים תכופה — ממוצע {m.group(1)} שנים לבעלים"),
+     lambda m: f"החלפת בעלים תכופה | ממוצע {m.group(1)} שנים לבעלים"),
     (_re.compile(r"Stable ownership.*average ([\d.]+)"),
-     lambda m: f"היסטוריית בעלות יציבה — ממוצע {m.group(1)} שנים לבעלים"),
+     lambda m: f"היסטוריית בעלות יציבה | ממוצע {m.group(1)} שנים לבעלים"),
 ]
 
 def _tr_for_display(text: str) -> str:
@@ -1733,8 +1743,8 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
     has_audio    = bool(audio_labels & bad_audio)
 
     if has_leak:
-        action_he = "זוהתה דליפת נוזל — יש לבדוק במוסך מורשה לפני כל שיקול רכישה."
-        action_en = "Fluid leak detected — inspect at a certified garage before any purchase decision."
+        action_he = "זוהתה דליפת נוזל | יש לבדוק במוסך מורשה לפני כל שיקול רכישה."
+        action_en = "Fluid leak detected | inspect at a certified garage before any purchase decision."
     elif has_paint and has_audio:
         action_he = "זוהו מספר גורמי סיכון: בעיות צבע ורעשי מנוע. לא מומלץ לרכוש."
         action_en = "Multiple risk factors: paint/body issues and engine noise. We recommend avoiding this vehicle."
@@ -1742,8 +1752,8 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
         action_he = "זוהה סיכון קולי במנוע. חובה לבדיקה מוסמכת לפני רכישה."
         action_en = "Engine noise risk detected. Must go to a certified inspection center before purchase."
     else:
-        action_he = "הרכב נראה תקין — ייתכן שמדובר ברכישה טובה. חובה לבדיקה מוסמכת לפני חתימה."
-        action_en = "Vehicle looks clean — could be a good buy. An official certified inspection is mandatory before signing."
+        action_he = "הרכב נראה תקין | ייתכן שמדובר ברכישה טובה. חובה לבדיקה מוסמכת לפני חתימה."
+        action_en = "Vehicle looks clean | could be a good buy. An official certified inspection is mandatory before signing."
 
     action_text = action_he if is_he else action_en
 
@@ -1767,7 +1777,7 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 
     dir_attr = 'dir="rtl"' if is_he else 'dir="ltr"'
 
-    subject = f"{'בדיקת רכב' if is_he else 'Car Check'} — {car_label} — {rec_label}"
+    subject = f"{'בדיקת רכב' if is_he else 'Car Check'} | {car_label} | {rec_label}"
     html_body = f"""<!DOCTYPE html>
 <html {dir_attr}>
 <head><meta charset="utf-8"/></head>
@@ -1940,8 +1950,8 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         if has_knock:
             _mech_issues.append({
                 "severity": "high",
-                "title": "חשד לדפיקות מנוע — נדרשת בדיקה דחופה" if lang_now == "he"
-                         else "Engine knock detected — urgent inspection required",
+                "title": "חשד לדפיקות מנוע | נדרשת בדיקה דחופה" if lang_now == "he"
+                         else "Engine knock detected | urgent inspection required",
             })
             if decision.recommendation == "go":
                 decision.recommendation = "no_go"
@@ -1949,8 +1959,8 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         if has_warn and not has_knock:
             _mech_issues.append({
                 "severity": "medium",
-                "title": "רעש חריג זוהה בהקלטת המנוע — מומלץ לבדוק" if lang_now == "he"
-                         else "Abnormal engine noise detected — inspection recommended",
+                "title": "רעש חריג זוהה בהקלטת המנוע | מומלץ לבדוק" if lang_now == "he"
+                         else "Abnormal engine noise detected | inspection recommended",
             })
             # Engine noise is a real finding — flag it as a risk, not "unclear"
             if decision.recommendation in ("go", "inconclusive"):
@@ -2092,18 +2102,18 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         _urgent_steps = []
         if has_underbody_leak:
             _urgent_steps.append({"text":
-                "דליפת שמן/נוזל זוהתה — יש לבדוק במוסך מורשה לפני כל שיקול של רכישה." if lang_now == "he"
-                else "Fluid leak detected — have the vehicle inspected by a certified mechanic before any purchase decision."
+                "דליפת שמן/נוזל זוהתה | יש לבדוק במוסך מורשה לפני כל שיקול של רכישה." if lang_now == "he"
+                else "Fluid leak detected | have the vehicle inspected by a certified mechanic before any purchase decision."
             })
         if has_knock:
             _urgent_steps.append({"text":
-                "זוהו סימנים לדפיקות מנוע — נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות." if lang_now == "he"
-                else "Engine knock detected — compression test and bearing inspection required urgently."
+                "זוהו סימנים לדפיקות מנוע | נדרשת בדיקת לחץ צילינדרים ומסב בדחיפות." if lang_now == "he"
+                else "Engine knock detected | compression test and bearing inspection required urgently."
             })
         if has_warn and not has_knock:
             _urgent_steps.append({"text":
-                "זוהה רעש חריג במנוע — מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה." if lang_now == "he"
-                else "Abnormal engine noise detected — have valves and drive belts checked before purchase."
+                "זוהה רעש חריג במנוע | מומלץ לבדוק שסתומים ורצועות הנע לפני רכישה." if lang_now == "he"
+                else "Abnormal engine noise detected | have valves and drive belts checked before purchase."
             })
         if _urgent_steps:
             decision.next_steps = _urgent_steps + (decision.next_steps or [])
@@ -2499,7 +2509,7 @@ def render_result(result: dict):
     st.markdown(
         f"<div style='margin:0.3rem 0 0.6rem;{rtl_css}'>"
         f"<span style='font-size:1.15rem;font-weight:600;color:{sev_color};'>{sev_label}</span>"
-        f"<span style='font-size:1.07rem;color:var(--muted);margin-{'right' if is_rtl else 'left'}:0.8rem;'> — {summary_text}</span>"
+        f"<span style='font-size:1.07rem;color:var(--muted);margin-{'right' if is_rtl else 'left'}:0.8rem;'> | {summary_text}</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -2514,7 +2524,7 @@ def render_result(result: dict):
                 f"padding:0.5rem 1rem;margin:0.25rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
                 f"<span style='font-size:1rem;color:{a_color};'>◉ </span>"
                 f"<span style='font-size:1.07rem;'>{t('paint_panel')}: <strong>{a['pair']}</strong>"
-                f" — {t('paint_diff')}: {a['score']:.2f}</span></div>",
+                f" | {t('paint_diff')}: {a['score']:.2f}</span></div>",
                 unsafe_allow_html=True,
             )
 
@@ -2698,6 +2708,91 @@ def render_result(result: dict):
             </div>
             """, unsafe_allow_html=True)
 
+    # ── WhatsApp Share + HTML Report Download ────────────────────────────────
+    import urllib.parse as _urllibparse
+    import html as _html_mod
+    _cd_share = result.get("car_details", {})
+    _make_s   = _cd_share.get("manufacturer", "")
+    _model_s  = _cd_share.get("model_name", "")
+    _year_s   = str(_cd_share.get("year", ""))
+    _km_s     = _cd_share.get("odometer", "")
+    _plate_s  = _cd_share.get("plate", "")
+    _verdict_label_s, _verdict_color_s, _ = verdict_meta(rec)
+    if is_rtl:
+        _wa_msg = f"בדיקת רכב {_make_s} {_model_s} {_year_s}\nתוצאה: {_verdict_label_s}\nבדיקה מופעלת על ידי UsedCar Check"
+    else:
+        _wa_msg = f"Used Car Check: {_make_s} {_model_s} {_year_s}\nResult: {_verdict_label_s}\nPowered by UsedCar Check"
+    _wa_url = "https://wa.me/?text=" + _urllibparse.quote(_wa_msg)
+
+    # Build HTML report bytes
+    _report_text = result.get("detailed_report", "") or (result.get("ai_report") or {}).get("report", "")
+    _rc_list_rep = result.get("reject_codes") or []
+    _yad2_rep    = result.get("yad2_price_data")
+    _verdict_colors_map = {"go": "#2e7d32", "no_go": "#c62828", "inconclusive": "#e65100"}
+    _verdict_hex = _verdict_colors_map.get(rec, "#555555")
+    _dir_attr    = 'rtl' if is_rtl else 'ltr'
+    _rc_items_html = ""
+    if _rc_list_rep:
+        _lang_rep = st.session_state.get("lang", "he")
+        for _rcode in _rc_list_rep:
+            _rinfo = REJECT_TABLE.get(_rcode)
+            if _rinfo:
+                _rtitle = _rinfo["title_he"] if _lang_rep == "he" else _rinfo["title_en"]
+                _rc_items_html += f"<li>{_html_mod.escape(_rcode)}: {_html_mod.escape(_rtitle)}</li>"
+    _price_html = ""
+    if _yad2_rep and _yad2_rep.get("min_price") and _yad2_rep.get("max_price"):
+        _min_rep = f"₪{_yad2_rep['min_price']:,.0f}"
+        _max_rep = f"₪{_yad2_rep['max_price']:,.0f}"
+        _price_label = "טווח מחיר שוק" if is_rtl else "Market Price Range"
+        _price_html = f"<p><strong>{_price_label}:</strong> {_min_rep} &ndash; {_max_rep}</p>"
+    _report_html = f"""<!DOCTYPE html>
+<html lang="{'he' if is_rtl else 'en'}" dir="{_dir_attr}">
+<head>
+<meta charset="UTF-8">
+<title>UsedCar Check Report</title>
+<style>
+  body {{ font-family: Arial, sans-serif; background: #fff; color: #222; padding: 2rem; max-width: 800px; margin: auto; direction: {_dir_attr}; }}
+  h1 {{ font-size: 1.8rem; margin-bottom: 0.3rem; }}
+  h2 {{ font-size: 1.3rem; margin-top: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; }}
+  .verdict {{ font-size: 2rem; font-weight: bold; color: {_verdict_hex}; margin: 1rem 0; }}
+  .meta {{ color: #555; font-size: 0.97rem; margin-bottom: 1rem; }}
+  .footer {{ margin-top: 2rem; font-size: 0.85rem; color: #888; border-top: 1px solid #ddd; padding-top: 0.5rem; }}
+</style>
+</head>
+<body>
+<h1>UsedCar Check</h1>
+<div class="meta">{_html_mod.escape(str(datetime.now().strftime('%Y-%m-%d')))}</div>
+<div class="meta">{"רכב" if is_rtl else "Vehicle"}: <strong>{_html_mod.escape(f"{_make_s} {_model_s} {_year_s}")}</strong>
+{"קילומטראז'" if is_rtl else "Odometer"}: {_html_mod.escape(str(_km_s))} km
+{"לוחית" if is_rtl else "Plate"}: {_html_mod.escape(str(_plate_s))}</div>
+<div class="verdict">{_html_mod.escape(_verdict_label_s)}</div>
+<h2>{"דוח מפורט" if is_rtl else "Detailed Report"}</h2>
+<p>{_html_mod.escape(_report_text)}</p>
+{"<h2>" + ("ממצאי בדיקה" if is_rtl else "Inspection Findings") + "</h2><ul>" + _rc_items_html + "</ul>" if _rc_items_html else ""}
+{_price_html}
+<div class="footer">{"דוח מאת" if is_rtl else "Report by"} UsedCar Check</div>
+</body>
+</html>"""
+    _report_bytes = _report_html.encode("utf-8")
+
+    gold_divider()
+    _wa_col, _dl_col = st.columns([1, 1])
+    with _wa_col:
+        st.markdown(
+            f"<a href='{_wa_url}' target='_blank' rel='noopener' "
+            f"style='background:#25D366;color:white;border-radius:8px;padding:0.5rem 1.2rem;"
+            f"text-decoration:none;display:inline-block;font-size:1rem;'>"
+            f"{t('whatsapp_share')}</a>",
+            unsafe_allow_html=True,
+        )
+    with _dl_col:
+        st.download_button(
+            label=t("download_report"),
+            data=_report_bytes,
+            file_name=f"car_check_{_year_s}_{_model_s}.html",
+            mime="text/html",
+        )
+
     # ── Yad2 Market Price Reference ───────────────────────────────────────────
     gold_divider()
     car_d    = result.get("car_details", {})
@@ -2763,6 +2858,35 @@ def render_result(result: dict):
             f"</div></div>",
             unsafe_allow_html=True,
         )
+
+    # ── Damage History ───────────────────────────────────────────────────────
+    gold_divider()
+    _r02_flagged = "R02" in (result.get("reject_codes") or [])
+    _r02_note_he = "⚠️ זוהתה אי-עקביות בצבע (R02) — ייתכן שהרכב עבר תיקון גוף או צביעה מחדש." if _r02_flagged else "לא זוהתה אי-עקביות בצבע בבדיקה הנוכחית."
+    _r02_note_en = "⚠️ Paint inconsistency detected (R02) — the vehicle may have had body repair or repainting." if _r02_flagged else "No paint inconsistency detected in this check."
+    _r02_note    = _r02_note_he if is_rtl else _r02_note_en
+    st.markdown(
+        f"<div class='mobile-card' style='background:rgba(106,143,170,0.07);border:1px solid rgba(106,143,170,0.3);"
+        f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
+        f"<div style='font-size:1rem;color:#6A8FAA;letter-spacing:0.1em;text-transform:uppercase;"
+        f"margin-bottom:0.6rem;'>🔍 {t('damage_history_title')}</div>"
+        f"<div style='font-size:1rem;color:var(--text);margin-bottom:0.6rem;'>{_r02_note}</div>"
+        f"<div style='font-size:0.97rem;color:var(--muted);margin-bottom:0.5rem;'>{t('damage_history_hint')}</div>"
+        f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.5rem;'>"
+        f"<a href='https://www.niv.co.il' target='_blank' rel='noopener' "
+        f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
+        f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
+        f"font-size:0.97rem;text-decoration:none;'>niv.co.il</a>"
+        f"<a href='https://www.autodna.com' target='_blank' rel='noopener' "
+        f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
+        f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
+        f"font-size:0.97rem;text-decoration:none;'>autodna.com</a>"
+        f"</div>"
+        f"<div style='font-size:0.88rem;color:var(--muted);font-style:italic;'>"
+        f"◦ {t('damage_history_external')}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
     # ── Refine Analysis ───────────────────────────────────────────────────────
     gold_divider()
@@ -3319,7 +3443,7 @@ def step_vehicle_details():
             # Store a flash message that survives the rerun
             st.session_state["_plate_msg"] = (
                 t("plate_found")
-                + f"  —  {_pdata.get('_he_make','')} {_pdata.get('model_name','')} {_pdata.get('year','')}"
+                + f"  |  {_pdata.get('_he_make','')} {_pdata.get('model_name','')} {_pdata.get('year','')}"
             )
             st.rerun()
         else:
