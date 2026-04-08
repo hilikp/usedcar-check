@@ -1037,44 +1037,29 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 }}
 .stButton > button:hover {{ opacity: 0.82 !important; }}
 
-/* ── Flag language toggle ─────────────────────────────────── */
-/* NOTE: descendant selector (space, not >) — Streamlit wraps button in .stButton div */
-.lang-flag-il button,
-.lang-flag-us button {{
-    background-color: transparent !important;
-    background-size: cover !important;
-    background-repeat: no-repeat !important;
-    background-position: center !important;
-    border-radius: 4px !important;
-    width: 46px !important;
-    height: 31px !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-    color: transparent !important;
+/* ── Flag language toggle (st.radio) ─────────────────────── */
+div[data-testid="stRadio"] > div {{
+    gap: 6px !important;
+    align-items: center !important;
+}}
+div[data-testid="stRadio"] label {{
+    padding: 3px 6px !important;
+    border-radius: 6px !important;
     border: 2px solid transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
+    cursor: pointer !important;
     transition: border-color 0.15s !important;
 }}
-.lang-flag-il button {{
-    background-image: url('https://flagcdn.com/w80/il.png') !important;
-}}
-.lang-flag-us button {{
-    background-image: url('https://flagcdn.com/w80/us.png') !important;
-}}
-.lang-flag-il button:hover,
-.lang-flag-us button:hover {{
-    background-color: transparent !important;
-    border-color: rgba(200,169,106,0.6) !important;
-    opacity: 1 !important;
-}}
-.lang-flag-il.lang-active button,
-.lang-flag-us.lang-active button {{
-    background-color: transparent !important;
+div[data-testid="stRadio"] label:has(input:checked) {{
     border-color: var(--gold) !important;
-    box-shadow: 0 0 0 1px var(--gold) !important;
+    background: rgba(200,169,106,0.12) !important;
+}}
+div[data-testid="stRadio"] label > div:first-child {{
+    display: none !important;
+}}
+div[data-testid="stRadio"] label > div:last-child p {{
+    font-size: 1.55rem !important;
+    line-height: 1 !important;
+    margin: 0 !important;
 }}
 
 /* Car driving animation */
@@ -2891,20 +2876,15 @@ def login_screen():
     with col_form:
         st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-        # Language toggle — two mini pills side by side
-        _ll1, _ll2, _ = st.columns([2, 2, 8])
-        with _ll1:
-            _active = "lang-active" if st.session_state.lang == "he" else ""
-            st.markdown(f"<div class='lang-flag-il {_active}'>", unsafe_allow_html=True)
-            if st.button(" ", key="login_lang_he"):
-                st.session_state.lang = "he"; st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-        with _ll2:
-            _active = "lang-active" if st.session_state.lang == "en" else ""
-            st.markdown(f"<div class='lang-flag-us {_active}'>", unsafe_allow_html=True)
-            if st.button(" ", key="login_lang_en"):
-                st.session_state.lang = "en"; st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+        # Language toggle — flag radio
+        _login_lang = st.radio("", ["🇮🇱", "🇺🇸"],
+                               index=0 if st.session_state.lang == "he" else 1,
+                               horizontal=True, label_visibility="collapsed",
+                               key="login_lang_radio")
+        if _login_lang == "🇮🇱" and st.session_state.lang != "he":
+            st.session_state.lang = "he"; st.rerun()
+        elif _login_lang == "🇺🇸" and st.session_state.lang != "en":
+            st.session_state.lang = "en"; st.rerun()
 
         st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
 
@@ -2950,19 +2930,14 @@ def login_screen():
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
-        _sl1, _sl2, _ = st.columns([2, 2, 6])
-        with _sl1:
-            _active = "lang-active" if st.session_state.lang == "he" else ""
-            st.markdown(f"<div class='lang-flag-il {_active}'>", unsafe_allow_html=True)
-            if st.button(" ", key="sb_lang_he"):
-                st.session_state.lang = "he"; st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-        with _sl2:
-            _active = "lang-active" if st.session_state.lang == "en" else ""
-            st.markdown(f"<div class='lang-flag-us {_active}'>", unsafe_allow_html=True)
-            if st.button(" ", key="sb_lang_en"):
-                st.session_state.lang = "en"; st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+        _sb_lang = st.radio("", ["🇮🇱", "🇺🇸"],
+                            index=0 if st.session_state.lang == "he" else 1,
+                            horizontal=True, label_visibility="collapsed",
+                            key="sb_lang_radio")
+        if _sb_lang == "🇮🇱" and st.session_state.lang != "he":
+            st.session_state.lang = "he"; st.rerun()
+        elif _sb_lang == "🇺🇸" and st.session_state.lang != "en":
+            st.session_state.lang = "en"; st.rerun()
 
         st.markdown(f"""
         <div style='padding:0.8rem 0 0.4rem;{rtl_css}'>
