@@ -1050,13 +1050,14 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 
 /* ── All buttons: never wrap text ─────────────────────────── */
 /* ── Plate lookup (form submit) — flat, same height as input ─ */
-[data-testid="stFormSubmitButton"] button {{
-    padding: 0.32rem 0.9rem !important;
+[data-testid="stFormSubmitButton"] button,
+button[data-testid="baseButton-secondaryFormSubmit"] {{
+    padding: 0.3rem 0.8rem !important;
     font-size: 0.85rem !important;
     letter-spacing: 0.04em !important;
     min-height: 0 !important;
-    height: 2.45rem !important;
-    line-height: 1.2 !important;
+    max-height: 2.5rem !important;
+    line-height: 1 !important;
     white-space: nowrap !important;
 }}
 
@@ -3553,6 +3554,8 @@ def step_vehicle_details():
                     key="plate_number", label_visibility="collapsed",
                 )
             with _pb:
+                # Spacer matches the label height above the input so button aligns
+                st.markdown("<div style='height:1.55rem'></div>", unsafe_allow_html=True)
                 plate_btn = st.form_submit_button(
                     t("plate_lookup_btn"), use_container_width=True
                 )
