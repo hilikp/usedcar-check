@@ -477,6 +477,11 @@ TR = {
         "view_original_btn":    "דוח מקורי ←",
         "original_report_title":"הניתוח המקורי",
         "refine_banner":        "מצב עדכון | הוסף חומר חדש לניתוח מחודש",
+        "prev_photos_kept":     "📂 {n} תמונות מהבדיקה הקודמת שמורות — ניתן להוסיף עוד",
+        "img_validation_running": "🔍 בודק תמונות...",
+        "img_warn_unrelated":   "⚠️ ייתכן שאחת מהתמונות אינה תמונת רכב. בדוק ונסה שנית.",
+        "img_warn_two_vehicles":"⚠️ נראה שהועלו תמונות של שני רכבים שונים! ודא שכל התמונות שייכות לאותו רכב.",
+        "img_warn_brand_mismatch": "⚠️ לוגו הרכב בתמונות לא תואם את הדגם שנבחר ({selected}). ייתכן שגיבוב תמונות או לוחית לא תואמת.",
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
         "back_to_result_btn":   "← חזור לתוצאה",
         "data_quality_title":   "⚠️ הדוח מבוסס על נתונים חלקיים",
@@ -653,6 +658,11 @@ TR = {
         "view_original_btn":    "Original Report ←",
         "original_report_title":"Original Analysis",
         "refine_banner":        "Update Mode | upload new material for a fresh analysis",
+        "prev_photos_kept":     "📂 {n} photos from previous check saved — you can add more",
+        "img_validation_running": "🔍 Checking photos...",
+        "img_warn_unrelated":   "⚠️ One or more photos may not be a car image. Please review and re-upload.",
+        "img_warn_two_vehicles":"⚠️ Photos appear to show two different vehicles! Make sure all photos are of the same car.",
+        "img_warn_brand_mismatch": "⚠️ The car brand visible in the photos does not match the selected model ({selected}). Possible photo mix-up or plate mismatch.",
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
         "back_to_result_btn":   "Back to Result →",
         "data_quality_title":   "⚠️ Report is based on incomplete data",
@@ -3663,6 +3673,71 @@ def step_vehicle_details():
         st.session_state.step = 2
         st.rerun()
 
+# ─── Image pre-validation ─────────────────────────────────────────────────────
+def _validate_photos(photo_files: list, manufacturer: str, model_name: str) -> list[str]:
+    """Quick Claude Haiku check: unrelated images, two vehicles, brand mismatch.
+    Returns list of warning strings (empty = all clear)."""
+    import base64, json, tempfile
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        if not api_key or len(photo_files) == 0:
+            return []
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        # Sample up to 5 photos for the quick check
+        sample = photo_files[:5]
+        img_blocks = []
+        for f in sample:
+            try:
+                f.seek(0)
+                raw = f.read()
+                f.seek(0)
+                ext = f.name.rsplit(".", 1)[-1].lower()
+                media = {"jpg": "image/jpeg", "jpeg": "image/jpeg",
+                         "png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
+                img_blocks.append({"type": "image", "source": {
+                    "type": "base64", "media_type": media,
+                    "data": base64.standard_b64encode(raw).decode()}})
+            except Exception:
+                continue
+        if not img_blocks:
+            return []
+        mfr_hint = f"{manufacturer} {model_name}".strip() or "unknown"
+        prompt = f"""You are validating a set of car photos uploaded by a user. The user selected vehicle: {mfr_hint}.
+
+Look at ALL the images and answer ONLY with a JSON object (no markdown, no explanation):
+{{
+  "all_are_cars": true/false,           // false if any image is clearly NOT a car/vehicle photo
+  "same_vehicle": true/false,           // false if photos clearly show 2+ different vehicles
+  "brand_matches": true/false/null,     // false if a clearly visible car brand logo contradicts "{manufacturer}"; null if brand not visible
+  "detected_brand": "<brand name or null>"   // brand seen in photos, or null
+}}
+
+Be lenient — only flag clear, obvious problems. If unsure, answer true/null."""
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=150,
+            messages=[{"role": "user", "content": img_blocks + [{"type": "text", "text": prompt}]}]
+        )
+        raw_json = resp.content[0].text.strip()
+        # strip markdown fences if present
+        if raw_json.startswith("```"):
+            raw_json = raw_json.split("```")[1].lstrip("json").strip()
+        data = json.loads(raw_json)
+        warnings = []
+        if not data.get("all_are_cars", True):
+            warnings.append("unrelated")
+        if not data.get("same_vehicle", True):
+            warnings.append("two_vehicles")
+        if data.get("brand_matches") is False and manufacturer:
+            detected = data.get("detected_brand") or ""
+            if detected.lower() not in manufacturer.lower() and manufacturer.lower() not in detected.lower():
+                warnings.append(f"brand_mismatch:{manufacturer}")
+        return warnings
+    except Exception:
+        return []   # never block the user on validation error
+
+
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
     # ── Refine mode banner ────────────────────────────────────────────────────
@@ -3682,26 +3757,44 @@ def step_photos():
             if _rpt:
                 st.markdown(f"<p style='font-size:1.05rem;{rtl_css}'>{_rpt}</p>", unsafe_allow_html=True)
 
+    # ── Saved photos notice (refine mode) ────────────────────────────────────
+    _saved_photos   = st.session_state.get("photos") or []
+    _saved_interior = st.session_state.get("interior_photos") or []
+    _saved_underbody= st.session_state.get("underbody")
+    _saved_video    = st.session_state.get("vehicle_video")
+    _is_refine      = st.session_state.get("refine_mode") and st.session_state.get("original_result")
+    if _is_refine and _saved_photos:
+        st.markdown(
+            f"<div style='background:rgba(74,122,74,0.12);border:1px solid rgba(74,122,74,0.4);"
+            f"border-radius:6px;padding:0.6rem 1rem;margin-bottom:0.6rem;{rtl_css}'>"
+            f"{t('prev_photos_kept').format(n=len(_saved_photos))}</div>",
+            unsafe_allow_html=True,
+        )
+
     # ── Exterior photos ───────────────────────────────────────────────────────
     section_label("vehicle_photos")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>"
                 f"{'העלה 3–8 תמונות חיצוניות: כל הצדדים, תא המנוע, גלגלים. ודא תאורה טובה.' if is_rtl else 'Upload 3–8 exterior photos: all sides, engine bay, wheels. Ensure good lighting.'}"
                 f"</p>", unsafe_allow_html=True)
-    photos = st.file_uploader(t("vehicle_photos"), type=["jpg","jpeg","png","webp"],
+    photos_new = st.file_uploader(t("vehicle_photos"), type=["jpg","jpeg","png","webp"],
                               accept_multiple_files=True, label_visibility="collapsed",
                               key="exterior_upload")
+    # Merge: new uploads replace saved only if user uploaded something new
+    photos = photos_new if photos_new else _saved_photos
     if photos:
         color = "#4A7A4A" if 3 <= len(photos) <= 8 else "#B04040"
-        st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>📸 {len(photos)} {t('photos_count')}</p>", unsafe_allow_html=True)
+        _src = f" ({'חדשות' if is_rtl else 'new'})" if photos_new else (f" ({'שמורות' if is_rtl else 'saved'})" if _is_refine and _saved_photos else "")
+        st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>📸 {len(photos)} {t('photos_count')}{_src}</p>", unsafe_allow_html=True)
 
     gold_divider()
 
     # ── Interior photos ───────────────────────────────────────────────────────
     section_label("interior_photos_title")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('interior_photos_hint')}</p>", unsafe_allow_html=True)
-    interior_photos = st.file_uploader(t("interior_photos_title"), type=["jpg","jpeg","png","webp"],
+    interior_photos_new = st.file_uploader(t("interior_photos_title"), type=["jpg","jpeg","png","webp"],
                                        accept_multiple_files=True, label_visibility="collapsed",
                                        key="interior_upload")
+    interior_photos = interior_photos_new if interior_photos_new else _saved_interior
     if interior_photos:
         color = "#4A7A4A" if 1 <= len(interior_photos) <= 6 else "#C8A96A"
         st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>🪑 {len(interior_photos)} {t('interior_photos_count')}</p>", unsafe_allow_html=True)
@@ -3711,16 +3804,18 @@ def step_photos():
     # ── Underbody ─────────────────────────────────────────────────────────────
     section_label("underbody_title")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('underbody_hint')}</p>", unsafe_allow_html=True)
-    underbody = st.file_uploader(t("underbody_title"), type=["jpg","jpeg","png"],
+    underbody_new = st.file_uploader(t("underbody_title"), type=["jpg","jpeg","png"],
                                  label_visibility="collapsed", key="underbody_upload")
+    underbody = underbody_new if underbody_new else _saved_underbody
 
     gold_divider()
 
     # ── Video ─────────────────────────────────────────────────────────────────
     section_label("vehicle_video")
     st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('video_hint')}</p>", unsafe_allow_html=True)
-    vehicle_video = st.file_uploader(t("vehicle_video"), type=["mp4","mov","avi","mkv","webm"],
+    vehicle_video_new = st.file_uploader(t("vehicle_video"), type=["mp4","mov","avi","mkv","webm"],
                                      label_visibility="collapsed", key="vehicle_video_upload")
+    vehicle_video = vehicle_video_new if vehicle_video_new else _saved_video
     if vehicle_video:
         size_mb = len(vehicle_video.getvalue()) / (1024 * 1024)
         st.markdown(f"<p style='font-size:1.01rem;color:#4A7A4A;margin-top:0.3rem;'>🎬 {vehicle_video.name} ({size_mb:.1f} MB)</p>", unsafe_allow_html=True)
@@ -3737,11 +3832,30 @@ def step_photos():
             elif len(photos) > 8:
                 st.error("מקסימום 8 תמונות חיצוניות." if is_rtl else "Maximum 8 exterior photos.")
             else:
-                st.session_state.photos          = photos
-                st.session_state.interior_photos = interior_photos or []
-                st.session_state.underbody       = underbody
-                st.session_state.vehicle_video   = vehicle_video
-                st.session_state.step            = 3; st.rerun()
+                # ── Image validation (quick Haiku check) ──────────────────
+                _d = st.session_state.get("car_details", {})
+                _mfr = _d.get("manufacturer", "")
+                _mdl = _d.get("model_name", "")
+                # Only validate newly uploaded photos (not saved ones from prior check)
+                _photos_to_validate = photos_new if photos_new else photos
+                with st.spinner(t("img_validation_running")):
+                    _warnings = _validate_photos(_photos_to_validate, _mfr, _mdl)
+                _block = False
+                for _w in _warnings:
+                    if _w == "unrelated":
+                        st.warning(t("img_warn_unrelated"))
+                    elif _w == "two_vehicles":
+                        st.error(t("img_warn_two_vehicles"))
+                        _block = True
+                    elif _w.startswith("brand_mismatch:"):
+                        _sel = _w.split(":", 1)[1]
+                        st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
+                if not _block:
+                    st.session_state.photos          = photos
+                    st.session_state.interior_photos = interior_photos or []
+                    st.session_state.underbody       = underbody
+                    st.session_state.vehicle_video   = vehicle_video
+                    st.session_state.step            = 3; st.rerun()
 
 # ─── Step 3 — Audio ───────────────────────────────────────────────────────────
 def step_audio():
