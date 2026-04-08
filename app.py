@@ -330,7 +330,7 @@ TR = {
         "invalid_email":    "אנא הזן כתובת אימייל תקינה.",
         "plate_label":      "מספר לוחית רישוי",
         "plate_hint":       "הזן מספר רישוי לטעינה אוטומטית של פרטי הרכב ממשרד התחבורה",
-        "plate_lookup_btn": "טעינה אוטומטית",
+        "plate_lookup_btn": "טעינה ↓",
         "plate_found":      "✓ פרטי הרכב נטענו ממשרד התחבורה",
         "plate_not_found":  "לא נמצאו נתונים | מלא ידנית",
         "plate_optional":   "אופציונלי | או מלא ידנית למטה",
@@ -1043,9 +1043,12 @@ input, textarea, .stTextInput input, .stNumberInput input {{
     text-transform: uppercase !important;
     font-size: 1.14rem !important;
     padding: 0.6rem 1.6rem !important;
+    white-space: nowrap !important;
     transition: opacity 0.2s ease !important;
 }}
 .stButton > button:hover {{ opacity: 0.82 !important; }}
+
+/* ── All buttons: never wrap text ─────────────────────────── */
 
 /* ── Flag language toggle (st.radio) ─────────────────────── */
 div[data-testid="stRadio"] > div {{
