@@ -1037,34 +1037,39 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 }}
 .stButton > button:hover {{ opacity: 0.82 !important; }}
 
-.lang-btn > button,
-.lang-btn-active > button {{
-    border-radius: 6px !important;
-    font-size: 1.1rem !important;
-    padding: 0.1rem 0.35rem !important;
-    letter-spacing: 0 !important;
-    text-transform: none !important;
+/* ── Flag language toggle ─────────────────────────────────── */
+.lang-flag-il > button,
+.lang-flag-us > button {{
+    background-color: transparent !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    border-radius: 5px !important;
+    width: 44px !important;
+    height: 30px !important;
     min-height: 0 !important;
-    line-height: 1.4 !important;
-    font-weight: 400 !important;
-    white-space: nowrap !important;
-    width: 100% !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    color: transparent !important;
+    border: 2px solid transparent !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
 }}
-.lang-btn > button {{
-    background: transparent !important;
-    color: var(--muted) !important;
-    border: 1px solid var(--border) !important;
+.lang-flag-il > button {{
+    background-image: url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f1ee-1f1f1.png') !important;
 }}
-.lang-btn > button:hover {{
+.lang-flag-us > button {{
+    background-image: url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f1fa-1f1f8.png') !important;
+}}
+.lang-flag-il > button:hover,
+.lang-flag-us > button:hover {{
     border-color: var(--gold-dark) !important;
-    color: var(--text) !important;
     opacity: 1 !important;
 }}
-.lang-btn-active > button {{
-    background: rgba(200,169,106,0.15) !important;
-    color: var(--gold) !important;
-    border: 1px solid var(--gold) !important;
-    font-weight: 700 !important;
+.lang-flag-il.lang-active > button,
+.lang-flag-us.lang-active > button {{
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 1px var(--gold) !important;
 }}
 
 /* Car driving animation */
@@ -2884,15 +2889,15 @@ def login_screen():
         # Language toggle — two mini pills side by side
         _ll1, _ll2, _ = st.columns([2, 2, 8])
         with _ll1:
-            _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
-            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("🇮🇱", key="login_lang_he"):
+            _active = "lang-active" if st.session_state.lang == "he" else ""
+            st.markdown(f"<div class='lang-flag-il {_active}'>", unsafe_allow_html=True)
+            if st.button(" ", key="login_lang_he"):
                 st.session_state.lang = "he"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         with _ll2:
-            _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
-            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("🇺🇸", key="login_lang_en"):
+            _active = "lang-active" if st.session_state.lang == "en" else ""
+            st.markdown(f"<div class='lang-flag-us {_active}'>", unsafe_allow_html=True)
+            if st.button(" ", key="login_lang_en"):
                 st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2942,15 +2947,15 @@ def render_sidebar():
     with st.sidebar:
         _sl1, _sl2, _ = st.columns([2, 2, 6])
         with _sl1:
-            _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
-            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("🇮🇱", key="sb_lang_he"):
+            _active = "lang-active" if st.session_state.lang == "he" else ""
+            st.markdown(f"<div class='lang-flag-il {_active}'>", unsafe_allow_html=True)
+            if st.button(" ", key="sb_lang_he"):
                 st.session_state.lang = "he"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         with _sl2:
-            _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
-            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("🇺🇸", key="sb_lang_en"):
+            _active = "lang-active" if st.session_state.lang == "en" else ""
+            st.markdown(f"<div class='lang-flag-us {_active}'>", unsafe_allow_html=True)
+            if st.button(" ", key="sb_lang_en"):
                 st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
