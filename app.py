@@ -1040,13 +1040,13 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 .lang-btn > button,
 .lang-btn-active > button {{
     border-radius: 6px !important;
-    font-size: 0.78rem !important;
-    padding: 0.15rem 0.5rem !important;
-    letter-spacing: 0.05em !important;
+    font-size: 1.1rem !important;
+    padding: 0.1rem 0.35rem !important;
+    letter-spacing: 0 !important;
     text-transform: none !important;
     min-height: 0 !important;
-    line-height: 1.5 !important;
-    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    font-weight: 400 !important;
     white-space: nowrap !important;
     width: 100% !important;
 }}
@@ -2886,13 +2886,13 @@ def login_screen():
         with _ll1:
             _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
             st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("עב", key="login_lang_he"):
+            if st.button("🇮🇱", key="login_lang_he"):
                 st.session_state.lang = "he"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         with _ll2:
             _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
             st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("EN", key="login_lang_en"):
+            if st.button("🇺🇸", key="login_lang_en"):
                 st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2944,13 +2944,13 @@ def render_sidebar():
         with _sl1:
             _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
             st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("עב", key="sb_lang_he"):
+            if st.button("🇮🇱", key="sb_lang_he"):
                 st.session_state.lang = "he"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         with _sl2:
             _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
             st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
-            if st.button("EN", key="sb_lang_en"):
+            if st.button("🇺🇸", key="sb_lang_en"):
                 st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
