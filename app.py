@@ -968,29 +968,34 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 }}
 .stButton > button:hover {{ opacity: 0.82 !important; }}
 
-.lang-btn > button {{
-    background: rgba(200,169,106,0.06) !important;
-    color: var(--gold) !important;
-    border: 1px solid var(--gold-dark) !important;
-    border-radius: 50px !important;
-    font-size: 0.82rem !important;
-    padding: 0.18rem 0.85rem !important;
-    letter-spacing: 0.06em !important;
+.lang-btn > button,
+.lang-btn-active > button {{
+    border-radius: 6px !important;
+    font-size: 0.78rem !important;
+    padding: 0.15rem 0.5rem !important;
+    letter-spacing: 0.05em !important;
     text-transform: none !important;
     min-height: 0 !important;
     line-height: 1.5 !important;
     font-weight: 500 !important;
     white-space: nowrap !important;
+    width: 100% !important;
+}}
+.lang-btn > button {{
+    background: transparent !important;
+    color: var(--muted) !important;
+    border: 1px solid var(--border) !important;
 }}
 .lang-btn > button:hover {{
-    border-color: var(--gold) !important;
-    background: rgba(200,169,106,0.14) !important;
+    border-color: var(--gold-dark) !important;
+    color: var(--text) !important;
     opacity: 1 !important;
 }}
 .lang-btn-active > button {{
-    border-color: var(--gold) !important;
+    background: rgba(200,169,106,0.15) !important;
     color: var(--gold) !important;
-    background: rgba(200,169,106,0.12) !important;
+    border: 1px solid var(--gold) !important;
+    font-weight: 700 !important;
 }}
 
 /* Car driving animation */
@@ -2711,15 +2716,19 @@ def login_screen():
     with col_form:
         st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-        # Language toggle pill — shows both languages, click to switch
-        fc1, _ = st.columns([1, 5])
-        with fc1:
-            _is_he      = st.session_state.lang == "he"
-            _other_lang = "en" if _is_he else "he"
-            _btn_label  = "עב → EN" if _is_he else "EN → עב"
-            st.markdown("<div class='lang-btn'>", unsafe_allow_html=True)
-            if st.button(_btn_label, key="login_lang_toggle"):
-                st.session_state.lang = _other_lang; st.rerun()
+        # Language toggle — two mini pills side by side
+        _ll1, _ll2, _ = st.columns([2, 2, 8])
+        with _ll1:
+            _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
+            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
+            if st.button("עב", key="login_lang_he"):
+                st.session_state.lang = "he"; st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        with _ll2:
+            _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
+            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
+            if st.button("EN", key="login_lang_en"):
+                st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
@@ -2766,15 +2775,18 @@ def login_screen():
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
-        col_flag, _ = st.columns([1, 4])
-        with col_flag:
-            _is_he_sb   = st.session_state.lang == "he"
-            _other_lang = "en" if _is_he_sb else "he"
-            _btn_label  = "עב → EN" if _is_he_sb else "EN → עב"
-            st.markdown("<div class='lang-btn'>", unsafe_allow_html=True)
-            if st.button(_btn_label, key="sb_lang_toggle"):
-                st.session_state.lang = _other_lang
-                st.rerun()
+        _sl1, _sl2, _ = st.columns([2, 2, 6])
+        with _sl1:
+            _cls = "lang-btn-active" if st.session_state.lang == "he" else "lang-btn"
+            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
+            if st.button("עב", key="sb_lang_he"):
+                st.session_state.lang = "he"; st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        with _sl2:
+            _cls = "lang-btn-active" if st.session_state.lang == "en" else "lang-btn"
+            st.markdown(f"<div class='{_cls}'>", unsafe_allow_html=True)
+            if st.button("EN", key="sb_lang_en"):
+                st.session_state.lang = "en"; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown(f"""
@@ -3116,21 +3128,26 @@ def step_vehicle_details():
     d = st.session_state.car_details
 
     # ── Plate number auto-fill ────────────────────────────────────────────────
-    st.markdown(
-        f"<p style='font-size:0.85rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>"
-        f"🔍 {t('plate_label')} — {t('plate_optional')}</p>",
-        unsafe_allow_html=True,
-    )
-    # [input narrow] [button] [empty space fills rest]
-    pcol_in, pcol_btn, _ = st.columns([2, 1, 3])
-    with pcol_in:
-        plate_input = st.text_input(
-            "", value=d.get("plate", ""),
-            placeholder="12-345-67",
-            key="plate_number", label_visibility="collapsed",
+    # Outer column limits the TOTAL plate section to ~40% of page width.
+    # Inner columns split that 40% between the input (60%) and button (40%).
+    _plate_outer, _ = st.columns([5, 7])
+    with _plate_outer:
+        st.markdown(
+            f"<p style='font-size:0.82rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>"
+            f"🔍 {t('plate_label')}</p>",
+            unsafe_allow_html=True,
         )
-    with pcol_btn:
-        plate_btn = st.button(t("plate_lookup_btn"), use_container_width=True)
+        _pi, _pb = st.columns([3, 2])
+        with _pi:
+            plate_input = st.text_input(
+                "", value=d.get("plate", ""),
+                placeholder="12-345-67",
+                key="plate_number", label_visibility="collapsed",
+            )
+        with _pb:
+            plate_btn = st.button(
+                t("plate_lookup_btn"), use_container_width=True, key="plate_lookup_btn"
+            )
 
     if plate_btn and plate_input.strip():
         with st.spinner("" if is_rtl else ""):
