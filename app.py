@@ -2876,14 +2876,16 @@ def login_screen():
     with col_form:
         st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-        # Language toggle — flag radio
-        _login_lang = st.radio("", ["🇮🇱", "🇺🇸"],
+        # Language toggle — flag radio (markdown images work on all OS)
+        _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
+        _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
+        _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
                                index=0 if st.session_state.lang == "he" else 1,
                                horizontal=True, label_visibility="collapsed",
                                key="login_lang_radio")
-        if _login_lang == "🇮🇱" and st.session_state.lang != "he":
+        if _login_lang == _FLAG_IL and st.session_state.lang != "he":
             st.session_state.lang = "he"; st.rerun()
-        elif _login_lang == "🇺🇸" and st.session_state.lang != "en":
+        elif _login_lang == _FLAG_US and st.session_state.lang != "en":
             st.session_state.lang = "en"; st.rerun()
 
         st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
@@ -2930,13 +2932,15 @@ def login_screen():
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
-        _sb_lang = st.radio("", ["🇮🇱", "🇺🇸"],
+        _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
+        _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
+        _sb_lang = st.radio("", [_FLAG_IL, _FLAG_US],
                             index=0 if st.session_state.lang == "he" else 1,
                             horizontal=True, label_visibility="collapsed",
                             key="sb_lang_radio")
-        if _sb_lang == "🇮🇱" and st.session_state.lang != "he":
+        if _sb_lang == _FLAG_IL and st.session_state.lang != "he":
             st.session_state.lang = "he"; st.rerun()
-        elif _sb_lang == "🇺🇸" and st.session_state.lang != "en":
+        elif _sb_lang == _FLAG_US and st.session_state.lang != "en":
             st.session_state.lang = "en"; st.rerun()
 
         st.markdown(f"""
