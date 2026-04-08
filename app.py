@@ -2157,7 +2157,7 @@ def render_result(result: dict):
             st.markdown(
                 f"<div style='margin-bottom:0.5rem;{rtl_css}'>"
                 f"<span style='font-size:1.5rem;font-weight:700;color:{_orig_color};'>{_orig_label}</span>"
-                f"<span style='font-size:0.95rem;color:var(--muted);margin-{\"right\" if is_rtl else \"left\"}:0.8rem;'>"
+                f"<span style='font-size:0.95rem;color:var(--muted);margin-{'right' if is_rtl else 'left'}:0.8rem;'>"
                 f"{_orig.get('created_at','')[:10]}</span></div>",
                 unsafe_allow_html=True,
             )
