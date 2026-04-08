@@ -1039,37 +1039,52 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 
 /* ── Flag language toggle ─────────────────────────────────── */
 .lang-flag-il > button,
-.lang-flag-us > button {{
-    background-color: transparent !important;
-    background-size: contain !important;
+.lang-flag-us > button,
+.lang-flag-il > button:focus,
+.lang-flag-us > button:focus,
+.lang-flag-il > button:active,
+.lang-flag-us > button:active,
+.lang-flag-il > button:focus:not(:active),
+.lang-flag-us > button:focus:not(:active) {{
+    background-color: rgba(0,0,0,0) !important;
+    background-size: cover !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
-    border-radius: 5px !important;
-    width: 44px !important;
-    height: 30px !important;
+    border-radius: 4px !important;
+    width: 46px !important;
+    height: 31px !important;
     min-height: 0 !important;
     padding: 0 !important;
     font-size: 0 !important;
-    color: transparent !important;
+    line-height: 0 !important;
+    color: rgba(0,0,0,0) !important;
     border: 2px solid transparent !important;
     box-shadow: none !important;
-    transition: border-color 0.15s, box-shadow 0.15s !important;
+    outline: none !important;
+    transition: border-color 0.15s !important;
+    filter: none !important;
 }}
-.lang-flag-il > button {{
+.lang-flag-il > button,
+.lang-flag-il > button:focus,
+.lang-flag-il > button:active {{
     background-image: url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f1ee-1f1f1.png') !important;
 }}
-.lang-flag-us > button {{
+.lang-flag-us > button,
+.lang-flag-us > button:focus,
+.lang-flag-us > button:active {{
     background-image: url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f1fa-1f1f8.png') !important;
 }}
 .lang-flag-il > button:hover,
 .lang-flag-us > button:hover {{
-    border-color: var(--gold-dark) !important;
+    border-color: rgba(200,169,106,0.6) !important;
     opacity: 1 !important;
+    background-color: rgba(0,0,0,0) !important;
 }}
 .lang-flag-il.lang-active > button,
 .lang-flag-us.lang-active > button {{
     border-color: var(--gold) !important;
     box-shadow: 0 0 0 1px var(--gold) !important;
+    background-color: rgba(0,0,0,0) !important;
 }}
 
 /* Car driving animation */
