@@ -1631,15 +1631,20 @@ def _generate_comprehensive_report(
 
     # ── Underbody CV hint block ───────────────────────────────────────────────
     underbody_block = ""
-    if underbody_cv_hints:
+    if underbody_cv_hints:  # always truthy now — sent regardless of CV result
         underbody_block = (
-            f"\nUnderbody Computer Vision Pre-scan:\n"
+            f"\nUnderbody / Engine-bay Leak Assessment — CRITICAL:\n"
             f"  {underbody_cv_hints}\n"
-            f"  INSTRUCTION: Use this as a prompt to carefully examine the underbody/engine-bay "
-            f"image(s) for actual fluid pooling, wet shiny patches, or accumulated liquid. "
-            f"Only report a leak if you can SEE clear visual evidence of fluid. "
-            f"Rust, shadows, dark metal, and undercoating do NOT indicate a leak. "
-            f"Your visual inspection is the final authority — override the CV hint if the images look clean.\n"
+            f"  Look for ALL of the following leak indicators:\n"
+            f"  • Wet or shiny patches on engine components, hoses, gaskets, or underbody pan\n"
+            f"  • Oil residue — dark brown/black coating or drips on any surface\n"
+            f"  • Coolant stains — green, pink, or white crystalline residue near hoses/radiator\n"
+            f"  • Fresh fluid pooling on the underbody or ground-facing surfaces\n"
+            f"  • Discolouration or streaking suggesting fluid has run across a surface\n"
+            f"  • Any surface that appears wetter, shinier, or darker than surrounding clean metal\n"
+            f"  IMPORTANT: Err on the side of caution. If you see ANYTHING suspicious, report it.\n"
+            f"  Fluid leaks are a critical safety and mechanical issue. A missed leak is far more\n"
+            f"  dangerous than a false positive. If in doubt — flag it.\n"
         )
 
     # ── Reject code context (Claude detects visual ones; R03/R10/R12 set programmatically)
@@ -2021,13 +2026,24 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         except Exception:
             import os
             api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        # Build soft underbody CV hint for Claude (lets Claude visually override)
-        _cv_hint = None
+        # Build underbody CV hint for Claude — always send even without CV signal
+        # so Claude knows to look hard regardless
         if has_underbody_leak_cv:
             _cv_hint = (
-                "Computer vision pre-scan flagged a possible fluid stain in the underbody image "
-                "(brownish/amber hue or large dark patch detected). Please examine the underbody/engine "
-                "image carefully and determine if there is real fluid pooling or leak evidence."
+                "ALERT — Computer vision pre-scan DETECTED a fluid stain signal in the underbody image "
+                "(oil-colour, coolant-colour, dark-wet patch, or shiny reflective area). "
+                "This is a HIGH-PRIORITY finding. Examine every underbody/engine-bay image for: "
+                "wet patches, oily residue, discolouration, pooling fluid, fresh or dried stains, "
+                "drips on components, or any surface that looks wetter/shinier than surrounding metal. "
+                "Even a small or ambiguous stain MUST be reported as a potential leak. "
+                "Set leak_assessment to a descriptive finding — do NOT return 'none detected'."
+            )
+        else:
+            _cv_hint = (
+                "No strong colour signal detected by CV pre-scan. However, you MUST still "
+                "carefully examine all underbody and engine-bay images for any signs of fluid: "
+                "wet/shiny patches, oil residue, discolouration, drips, or staining on components. "
+                "Leaks are a critical safety issue — report any suspicious area, even if minor."
             )
 
         ai_report = _generate_comprehensive_report(
@@ -2036,29 +2052,25 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             audio_metrics=audio_metrics,
             paint_data=paint_data,
             interior_paths=interior_paths,
-            underbody_cv_hints=_cv_hint,
+            underbody_cv_hints=_cv_hint,   # always passed — no-leak hint also sent
         )
 
-        # ── Combine CV + Claude visual inspection for final leak determination ─
+        # ── Combine CV + Claude for final leak determination ─────────────────
+        # Policy: CV OR Claude either one is enough to flag a leak.
+        # CV detection is NOT overrideable by Claude saying "none detected".
+        # Both signals are treated as independent evidence — union, not intersection.
         _ai_leak_str = ai_report.get("leak_assessment", "none detected").lower()
-        _ai_says_leak = _ai_leak_str != "none detected"
-        # Trust Claude's visual inspection as the final authority;
-        # CV is only used as a hint — don't override a clean Claude assessment
-        has_underbody_leak = _ai_says_leak
-
-        # ── If CV triggered but Claude's visual inspection finds no leak, clean up ──
-        if has_underbody_leak_cv and not has_underbody_leak:
-            # Remove the CV-inserted leak finding from top_reasons
-            _leak_kw = ("leak", "דליפ")
-            decision.top_reasons = [
-                r for r in (decision.top_reasons or [])
-                if not any(kw in r.get("title", "").lower() for kw in _leak_kw)
-            ]
-            # Revert verdict if it was changed solely due to the CV leak
-            if not has_knock and not has_warn:
-                # Was forced to no_go only by CV — revert to inconclusive
-                if decision.recommendation == "no_go":
-                    decision.recommendation = "inconclusive"
+        _ai_says_leak = (
+            _ai_leak_str not in ("none detected", "none", "no leak", "no leaks", "clean", "")
+            and "none" not in _ai_leak_str
+        )
+        has_underbody_leak = has_underbody_leak_cv or _ai_says_leak
+        # If CV caught it but Claude didn't mention it, inject a clear leak assessment
+        if has_underbody_leak_cv and not _ai_says_leak:
+            ai_report["leak_assessment"] = (
+                "Possible fluid stain detected by computer vision analysis — "
+                "oil-colour, dark-wet patch, or reflective area found in underbody image."
+            )
 
         # ── Reject code computation ──────────────────────────────────────────────────────────────────────
         _ai_codes = set(ai_report.get("reject_codes") or [])

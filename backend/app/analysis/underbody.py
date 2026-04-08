@@ -37,23 +37,22 @@ def analyze_underbody_image(path: str) -> list[UnderbodyFinding]:
     # ── Signal 1: Oil-stain colour (brownish/amber) ─────────────────────────
     # Hue 8-22 (brown/amber in OpenCV 0-179 scale), moderate saturation,
     # not too dark (visible stain, not just shadow).
-    oil_mask = (h >= 8) & (h <= 22) & (s >= 50) & (s <= 200) & (v >= 30) & (v <= 160)
+    # ── Signal 1a: Classic oil stain (brownish/amber) ──────────────────────
+    oil_mask = (h >= 8) & (h <= 22) & (s >= 35) & (s <= 220) & (v >= 20) & (v <= 180)
     oil_ratio = float(oil_mask.mean())
 
-    # Require a contiguous blob for oil colour signal
     oil_blob_ok = False
-    if oil_ratio > 0.02:
+    if oil_ratio > 0.008:   # lowered from 0.02 — smaller stains count
         oil_u8 = oil_mask.astype(np.uint8) * 255
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(oil_u8, connectivity=8)
-        # Largest non-background blob
         if num_labels > 1:
             largest = int(stats[1:, cv2.CC_STAT_AREA].max())
             total_px = img.shape[0] * img.shape[1]
-            if largest / total_px > 0.030:   # blob covers >3% of image
+            if largest / total_px > 0.008:   # lowered from 0.03 — 0.8% blob is enough
                 oil_blob_ok = True
 
     if oil_blob_ok:
-        confidence = min(0.72, 0.40 + oil_ratio * 3)
+        confidence = min(0.85, 0.55 + oil_ratio * 4)
         findings.append(
             UnderbodyFinding(
                 label="possible_underbody_fluid_stain",
@@ -61,32 +60,69 @@ def analyze_underbody_image(path: str) -> list[UnderbodyFinding]:
                 details={"signal": "oil_colour", "oil_ratio": round(oil_ratio, 3)},
             )
         )
-        return findings   # strong signal — no need to check further
+        return findings
+
+    # ── Signal 1b: Dark greenish tones — coolant / antifreeze ──────────────
+    # Coolant is often green/pink; hue 35-85 (green range), moderate saturation
+    coolant_mask = (h >= 35) & (h <= 85) & (s >= 40) & (v >= 25) & (v <= 180)
+    coolant_ratio = float(coolant_mask.mean())
+    if coolant_ratio > 0.008:
+        cool_u8 = coolant_mask.astype(np.uint8) * 255
+        num_labels, _, stats, _ = cv2.connectedComponentsWithStats(cool_u8, connectivity=8)
+        if num_labels > 1:
+            largest = int(stats[1:, cv2.CC_STAT_AREA].max())
+            total_px = img.shape[0] * img.shape[1]
+            if largest / total_px > 0.008:
+                confidence = min(0.80, 0.50 + coolant_ratio * 4)
+                findings.append(
+                    UnderbodyFinding(
+                        label="possible_underbody_fluid_stain",
+                        confidence=confidence,
+                        details={"signal": "coolant_colour", "coolant_ratio": round(coolant_ratio, 3)},
+                    )
+                )
+                return findings
 
     # ── Signal 2: Concentrated dark-wet patches ──────────────────────────────
-    # Dark (v < 45) AND very low saturation (s < 50) — a wet oily surface
-    # looks uniformly very dark and loses colour.  We require:
-    #   a) The ratio of such pixels exceeds 0.40 (very dominant — not just shadows)
-    #   b) AND the image contains a meaningful bright region too (i.e. the photo
-    #      was taken with light; a uniformly dark photo is just bad lighting).
-    dark_mask = (v < 45) & (s < 50)
+    # Wet oily surfaces look uniformly very dark and lose colour.
+    dark_mask = (v < 55) & (s < 60)   # loosened from v<45, s<50
     dark_ratio = float(dark_mask.mean())
-    bright_ratio = float((v > 120).mean())
+    bright_ratio = float((v > 100).mean())   # lowered from 120
 
-    if dark_ratio > 0.55 and bright_ratio > 0.08:
-        # Additionally require a single large contiguous dark blob
+    if dark_ratio > 0.35 and bright_ratio > 0.05:   # lowered from 0.55 / 0.08
         dark_u8 = dark_mask.astype(np.uint8) * 255
         num_labels, _, stats, _ = cv2.connectedComponentsWithStats(dark_u8, connectivity=8)
         if num_labels > 1:
             largest = int(stats[1:, cv2.CC_STAT_AREA].max())
             total_px = img.shape[0] * img.shape[1]
-            if largest / total_px > 0.20:   # blob covers >20% of image
-                confidence = min(0.60, 0.30 + dark_ratio * 0.5)
+            if largest / total_px > 0.10:   # lowered from 0.20
+                confidence = min(0.72, 0.40 + dark_ratio * 0.6)
                 findings.append(
                     UnderbodyFinding(
                         label="possible_underbody_fluid_stain",
                         confidence=confidence,
                         details={"signal": "dark_patch", "dark_ratio": round(dark_ratio, 3)},
+                    )
+                )
+                return findings
+
+    # ── Signal 3: Shiny/reflective wet patch ─────────────────────────────────
+    # Fresh fluid pooling reflects light — high V, low-medium S, irregular shape
+    shiny_mask = (v > 180) & (s < 80)
+    shiny_ratio = float(shiny_mask.mean())
+    if shiny_ratio > 0.005:
+        shiny_u8 = shiny_mask.astype(np.uint8) * 255
+        num_labels, _, stats, _ = cv2.connectedComponentsWithStats(shiny_u8, connectivity=8)
+        if num_labels > 1:
+            largest = int(stats[1:, cv2.CC_STAT_AREA].max())
+            total_px = img.shape[0] * img.shape[1]
+            if largest / total_px > 0.005:
+                confidence = min(0.65, 0.35 + shiny_ratio * 5)
+                findings.append(
+                    UnderbodyFinding(
+                        label="possible_underbody_fluid_stain",
+                        confidence=confidence,
+                        details={"signal": "shiny_patch", "shiny_ratio": round(shiny_ratio, 3)},
                     )
                 )
 
