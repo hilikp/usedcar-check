@@ -372,7 +372,8 @@ TR = {
         "select_model":     "| בחר דגם |",
         "year":             "שנה",
         "odometer":         "קילומטראז' (ק״מ)",
-        "trim":             "גרסה / ורסיה (אופציונלי)",
+        "trim":             "גרסה / ורסיה",
+        "trim_help":        "שדה אופציונלי",
         "trim_ph":          "למשל: Sport, SE, Luxury",
         "prev_owners":      "יד הרכב",
         "prev_owners_opts": ["יד ראשונה", "יד שנייה", "יד שלישית", "יד רביעית+"],
@@ -553,7 +554,8 @@ TR = {
         "select_model":     "| Select Model |",
         "year":             "Year",
         "odometer":         "Odometer (km)",
-        "trim":             "Variant / Version (optional)",
+        "trim":             "Variant / Version",
+        "trim_help":        "Optional field",
         "trim_ph":          "e.g. Sport, SE, Luxury",
         "prev_owners":      "Previous Owners",
         "prev_owners_opts": ["1st Owner", "2nd Owner", "3rd Owner", "4th Owner+"],
@@ -3775,8 +3777,7 @@ def step_vehicle_details():
                 format_func=lambda x: t("select_model") if x == "" else x,
             )
         else:
-            st.markdown(f"<p style='font-size:1rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>{t('model')}</p>", unsafe_allow_html=True)
-            model_name = st.text_input("", value=d.get("model_name", ""), key="model_free", label_visibility="collapsed")
+            model_name = st.text_input(t("model"), value=d.get("model_name", ""), key="model_free")
 
         year     = st.number_input(t("year"), min_value=1990, max_value=2026, step=1,
                                    value=int(d.get("year", 2020)))
@@ -3784,8 +3785,7 @@ def step_vehicle_details():
                                    step=1000, value=int(d.get("odometer", 0)))
 
     with col2:
-        st.markdown(f"<p style='font-size:1rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>{t('trim')}</p>", unsafe_allow_html=True)
-        trim = st.text_input("", value=d.get("trim", ""), placeholder=t("trim_ph"), key="trim_input", label_visibility="collapsed")
+        trim = st.text_input(t("trim"), value=d.get("trim", ""), placeholder=t("trim_ph"), key="trim_input", help=t("trim_help"))
 
         # ── Prior usage type ──────────────────────────────────────────────────
         usage_opts = t("usage_type_opts")   # list of 4 labels
