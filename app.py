@@ -2920,17 +2920,118 @@ def render_result(result: dict):
 </body>
 </html>"""
 
-    # Convert HTML to PDF using xhtml2pdf
+    # ── Generate PDF using fpdf2 (pure Python, no system deps) ──────────────
+    def _build_pdf() -> bytes:
+        from fpdf import FPDF
+        import re as _re2
+
+        def _strip(txt: str) -> str:
+            """Remove HTML tags and decode basic entities."""
+            txt = _re2.sub(r'<[^>]+>', ' ', txt)
+            txt = txt.replace('&ndash;', '-').replace('&mdash;', '-').replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS ')
+            txt = _re2.sub(r'&[a-z]+;', '', txt)
+            return txt.strip()
+
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_margins(15, 15, 15)
+
+        # ── Header ────────────────────────────────────────────────────────
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(200, 169, 106)
+        pdf.cell(0, 6, "USEDCAR CHECK - INSPECTION REPORT", ln=True)
+        pdf.set_draw_color(200, 169, 106)
+        pdf.set_line_width(0.5)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(2)
+
+        pdf.set_text_color(30, 30, 30)
+        pdf.set_font("Helvetica", "B", 16)
+        car_title = f"{_make_s} {_model_s} {_year_s}".strip() or "Vehicle"
+        pdf.cell(0, 9, car_title, ln=True)
+
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(100, 100, 100)
+        meta_parts = []
+        if _plate_s: meta_parts.append(f"Plate: {_plate_s}")
+        if _km_s:    meta_parts.append(f"Odometer: {_km_s} km")
+        if _prev_own: meta_parts.append(f"Owners: {_prev_own}")
+        meta_parts.append(f"Date: {_date_str}")
+        pdf.cell(0, 5, "  |  ".join(meta_parts), ln=True)
+        pdf.ln(3)
+
+        # ── Verdict box ───────────────────────────────────────────────────
+        _vc_map = {"go": (46, 125, 50), "no_go": (198, 40, 40), "inconclusive": (181, 106, 0)}
+        _vr, _vg, _vb = _vc_map.get(rec, (80, 80, 80))
+        pdf.set_fill_color(_vr, _vg, _vb)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 12, f"  {_pdf_verdict_lbl}", ln=True, fill=True)
+        pdf.set_text_color(30, 30, 30)
+        pdf.ln(4)
+
+        def _section(title: str, body: str):
+            if not body.strip(): return
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(0, 7, title, ln=True)
+            pdf.set_draw_color(200, 169, 106)
+            pdf.set_line_width(0.3)
+            pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+            pdf.ln(1)
+            pdf.set_font("Helvetica", "", 9)
+            pdf.set_text_color(60, 60, 60)
+            clean = _strip(body)
+            pdf.multi_cell(0, 5, clean)
+            pdf.ln(3)
+
+        if _report_text:  _section("Summary", _report_text)
+        if _conc_ext:     _section("Exterior Condition", _conc_ext)
+        if _conc_int:     _section("Interior Condition", _conc_int)
+        if _conc_mech:    _section("Mechanical Condition", _conc_mech)
+        if _leak_txt and _leak_txt not in ("none detected", "none", ""):
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(198, 40, 40)
+            pdf.cell(0, 7, "⚠ Leak Assessment", ln=True)
+            pdf.set_draw_color(198, 40, 40)
+            pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+            pdf.ln(1)
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.multi_cell(0, 5, _leak_txt)
+            pdf.set_text_color(30, 30, 30)
+            pdf.ln(3)
+        if _audio_raw:
+            _aud_lines = [f"{f.get('label','')} ({f.get('confidence','')}) {f.get('details','')}" for f in _audio_raw if f.get("label")]
+            if _aud_lines: _section("Audio Findings", "\n".join(_aud_lines))
+        if _paint_susp != "none":
+            _section("Paint Analysis", f"Suspicion level: {_paint_susp}")
+        if _rc_list_rep:
+            _rc_text = ""
+            for _rcode in _rc_list_rep:
+                _ri = REJECT_TABLE.get(_rcode, {})
+                _rt = _ri.get("title_en", _rcode)
+                _re2_ = _ri.get("expl_en", "")
+                _rc_text += f"{_rcode}: {_rt}\n  {_re2_}\n"
+            _section("Issues Detected", _rc_text)
+        if _yad2_rep and _yad2_rep.get("min_price"):
+            _section("Market Price", f"ILS {_yad2_rep['min_price']:,.0f} - {_yad2_rep['max_price']:,.0f}")
+
+        # ── Footer ────────────────────────────────────────────────────────
+        pdf.set_y(-20)
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(170, 170, 170)
+        pdf.cell(0, 5, "UsedCar Check  |  usedcar-check-if-the-car-is-worth-it.streamlit.app", ln=True, align="C")
+
+        return bytes(pdf.output())
+
     try:
-        import io as _io
-        from xhtml2pdf import pisa as _pisa
-        _pdf_buf = _io.BytesIO()
-        _pisa.CreatePDF(_pdf_html, dest=_pdf_buf, encoding="utf-8")
-        _report_bytes = _pdf_buf.getvalue()
+        _report_bytes = _build_pdf()
         _report_mime = "application/pdf"
         _report_ext  = "pdf"
     except Exception:
-        # Fallback to HTML if xhtml2pdf unavailable
         _report_bytes = _pdf_html.encode("utf-8")
         _report_mime = "text/html"
         _report_ext  = "html"
