@@ -2184,8 +2184,9 @@ def render_result(result: dict):
                     font-weight:600;letter-spacing:0.22em;color:{color};
                     line-height:1;'>{label}</div>
         <div style='height:1px;width:60px;background:{color};margin:1rem {"0 1rem auto" if not is_rtl else "0 auto 1rem 0"};opacity:0.6;'></div>
-        <div class='verdict-car' style='font-size:1.17rem;letter-spacing:0.2em;color:var(--muted);
-                    text-transform:uppercase;'>{car_label}</div>
+        <div class='verdict-car' style='font-size:clamp(0.72rem,2.2vw,1.17rem);
+                    letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;
+                    word-break:break-word;max-width:100%;line-height:1.35;'>{car_label}</div>
         <div style='font-size:1.04rem;color:var(--muted);margin-top:0.3rem;'>{date}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -2939,72 +2940,96 @@ def render_result(result: dict):
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
 
-        # ── Font: DejaVu has full Hebrew glyphs; try common install paths ──
+        # ── Font: DejaVu has full Unicode glyphs; try common install paths ──
         _FONT_CANDIDATES = [
-            # Ubuntu / Streamlit Cloud
+            # Ubuntu / Streamlit Cloud (primary)
             ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
              '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
-            # Debian variant
+            # Noto fonts (excellent Unicode, also on Ubuntu)
+            ('/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf',
+             '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf'),
+            ('/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf',
+             '/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf'),
+            # Debian DejaVu variant path
             ('/usr/share/fonts/truetype/DejaVuSans.ttf',
              '/usr/share/fonts/truetype/DejaVuSans-Bold.ttf'),
-            # Windows (Arial supports Hebrew)
-            ('C:/Windows/Fonts/arial.ttf', 'C:/Windows/Fonts/arialbd.ttf'),
+            # Windows (Arial and Tahoma both support Hebrew)
+            ('C:/Windows/Fonts/arial.ttf',  'C:/Windows/Fonts/arialbd.ttf'),
             ('C:/Windows/Fonts/tahoma.ttf', 'C:/Windows/Fonts/tahomabd.ttf'),
         ]
         fn, fb = 'Helvetica', 'Helvetica-Bold'
         _has_unicode = False
-        for _fp, _bfp in _FONT_CANDIDATES:
-            if _os.path.exists(_fp):
-                try:
-                    pdfmetrics.registerFont(TTFont('_PDFUni',     _fp))
-                    pdfmetrics.registerFont(TTFont('_PDFUniBold', _bfp if _os.path.exists(_bfp) else _fp))
-                    fn, fb = '_PDFUni', '_PDFUniBold'
-                    _has_unicode = True
-                except Exception:
-                    pass
-                break
 
-        # ── Text helper: strip HTML, fix entities, handle RTL ──────────────
+        # ── Reuse already-registered font (avoids re-registration exception) ──
+        try:
+            _reg_names = pdfmetrics.getRegisteredFontNames()
+            if '_PDFUni' in _reg_names:
+                fn, fb = '_PDFUni', '_PDFUniBold'
+                _has_unicode = True
+        except Exception:
+            pass
+
+        if not _has_unicode:
+            for _fp, _bfp in _FONT_CANDIDATES:
+                if _os.path.exists(_fp):
+                    try:
+                        _bfp2 = _bfp if _os.path.exists(_bfp) else _fp
+                        pdfmetrics.registerFont(TTFont('_PDFUni',     _fp))
+                        pdfmetrics.registerFont(TTFont('_PDFUniBold', _bfp2))
+                        fn, fb = '_PDFUni', '_PDFUniBold'
+                        _has_unicode = True
+                    except Exception:
+                        pass
+                    break
+
+        # ── Text helper: strip HTML tags, fix entities, handle RTL ─────────
         def _t(txt: str) -> str:
             txt = _re_pdf.sub(r'<[^>]+>', ' ', str(txt))
             txt = (txt.replace('&ndash;', '-').replace('&mdash;', '-')
                       .replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS ')
                       .replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>'))
             txt = _re_pdf.sub(r'&[a-zA-Z0-9#]+;', '', txt)
+            txt = _re_pdf.sub(r'\s+', ' ', txt).strip()
             if _has_unicode:
                 try:
                     from bidi.algorithm import get_display
                     txt = get_display(txt)
                 except Exception:
                     pass
+                # Escape XML-special chars so Paragraph parser doesn't choke
+                txt = txt.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                 return txt.strip()
-            # Fallback: NFKD decomposition keeps accented Latin (Škoda→Skoda)
-            return _ud.normalize('NFKD', txt).encode('ascii', 'ignore').decode('ascii').strip()
+            # Fallback: NFKD keeps accented Latin (Škoda→Skoda); Hebrew becomes empty
+            _ascii = _ud.normalize('NFKD', txt).encode('ascii', 'ignore').decode('ascii').strip()
+            # If stripping removed all content (Hebrew text), return a placeholder
+            # so the section still appears in the PDF
+            return _ascii if _ascii else txt[:120].encode('ascii', 'replace').decode('ascii').strip()
 
-        # ── Bilingual section labels ────────────────────────────────────────
-        _he = (_lang_rep == "he")
+        # ── PDF is always in English (ensures clean rendering on all viewers) ──
+        _he = False   # never Hebrew in PDF labels — avoids font/encoding issues
         _L  = {
-            "report_title": "USEDCAR CHECK - INSPECTION REPORT",
-            "plate":      "לוחית:" if _he else "Plate:",
-            "odo":        "ק\"מ:" if _he else "Odometer:",
-            "owners":     "יד:" if _he else "Owners:",
-            "date":       "תאריך:" if _he else "Date:",
-            "summary":    "סיכום" if _he else "Summary",
-            "exterior":   "מצב חיצוני" if _he else "Exterior Condition",
-            "interior":   "מצב פנים" if _he else "Interior Condition",
-            "mechanical": "מצב מכאני" if _he else "Mechanical",
-            "leak":       "דליפות - התראה" if _he else "Leak Assessment - Alert",
-            "audio":      "ממצאי שמע - מנוע" if _he else "Engine Audio Findings",
-            "paint":      "ניתוח צבע" if _he else "Paint Analysis",
-            "issues":     "בעיות שזוהו" if _he else "Issues Detected",
-            "price":      "מחירון שוק" if _he else "Market Price",
-            "ext_sc":     "ציון חיצוני" if _he else "Exterior Score",
-            "int_sc":     "ציון פנים" if _he else "Interior Score",
+            "report_title": "USEDCAR CHECK — INSPECTION REPORT",
+            "plate":     "Plate:",
+            "odo":       "Odometer:",
+            "owners":    "Owners:",
+            "date":      "Date:",
+            "conf":      "Confidence:",
+            "summary":   "Summary",
+            "exterior":  "Exterior Condition",
+            "interior":  "Interior Condition",
+            "mechanical":"Mechanical",
+            "leak":      "Leak Assessment — Alert",
+            "audio":     "Engine Audio Findings",
+            "paint":     "Paint Analysis",
+            "issues":    "Issues Detected",
+            "price":     "Market Price",
+            "ext_sc":    "Exterior Score",
+            "int_sc":    "Interior Score",
         }
         _vmap_pdf = {
-            "go":           "GO - Recommended" if not _he else "מומלץ לרכישה",
-            "no_go":        "NO-GO - Not Recommended" if not _he else "לא מומלץ לרכישה",
-            "inconclusive": "INCONCLUSIVE - Further Inspection Needed" if not _he else "תוצאה לא חד-משמעית",
+            "go":           "GO — Recommended",
+            "no_go":        "NO-GO — Not Recommended",
+            "inconclusive": "INCONCLUSIVE — Further Inspection Needed",
         }
 
         # ── Colours ────────────────────────────────────────────────────────
@@ -3072,36 +3097,53 @@ def render_result(result: dict):
         meta_parts.append(f"{_L['date']} {_date_str}")
         story.append(Paragraph("   |   ".join(meta_parts), meta_s))
 
-        # ── Verdict ────────────────────────────────────────────────────────
+        # ── Verdict box ────────────────────────────────────────────────────
         vt = Table([[Paragraph(_vmap_pdf.get(rec, _t(_pdf_verdict_lbl)), verd_s)]],
                    colWidths=[W_pt])
         vt.setStyle(TableStyle([
             ('BACKGROUND',    (0,0), (-1,-1), verdict_bg),
             ('LEFTPADDING',   (0,0), (-1,-1), 14),
             ('RIGHTPADDING',  (0,0), (-1,-1), 14),
-            ('TOPPADDING',    (0,0), (-1,-1), 10),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('TOPPADDING',    (0,0), (-1,-1), 12),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+            ('ROUNDEDCORNERS',(0,0), (-1,-1), 4),
         ]))
         story.append(vt)
-        story.append(Spacer(1, 5*mm))
+        story.append(Spacer(1, 3*mm))
 
-        # ── Scores ─────────────────────────────────────────────────────────
-        _ext_sc = result.get("exterior_score")
-        _int_sc = result.get("interior_score")
-        if _ext_sc is not None or _int_sc is not None:
-            half = W_pt / 2
-            sc_tbl = Table([
-                [Paragraph(_L["ext_sc"], sc_lbl), Paragraph(_L["int_sc"], sc_lbl)],
-                [Paragraph(f"{int(_ext_sc)}/100" if _ext_sc else "-", sc_val),
-                 Paragraph(f"{int(_int_sc)}/100" if _int_sc else "-", sc_val)],
-            ], colWidths=[half, half])
+        # ── Confidence + Scores row ─────────────────────────────────────────
+        _ext_sc  = result.get("exterior_score")
+        _int_sc  = result.get("interior_score")
+        _conf_lv = str(result.get("confidence", "")).capitalize()
+        _conf_map = {"High": "High ▲", "Medium": "Medium ●", "Low": "Low ▼"}
+        _conf_str = _conf_map.get(_conf_lv, _conf_lv)
+
+        _score_cols, _score_labels, _score_vals = [], [], []
+        if _conf_str:
+            _score_cols.append(W_pt / 3)
+            _score_labels.append(Paragraph("Confidence", sc_lbl))
+            _score_vals.append(Paragraph(_conf_str,
+                _s('cfv', True, 13, verdict_bg, alignment=TA_CENTER, leading=18)))
+        if _ext_sc is not None:
+            _score_cols.append(W_pt / 3)
+            _score_labels.append(Paragraph(_L["ext_sc"], sc_lbl))
+            _score_vals.append(Paragraph(f"{int(_ext_sc)}/100", sc_val))
+        if _int_sc is not None:
+            _score_cols.append(W_pt / 3)
+            _score_labels.append(Paragraph(_L["int_sc"], sc_lbl))
+            _score_vals.append(Paragraph(f"{int(_int_sc)}/100", sc_val))
+
+        if _score_cols:
+            sc_tbl = Table([_score_labels, _score_vals], colWidths=_score_cols)
             sc_tbl.setStyle(TableStyle([
                 ('BACKGROUND',    (0,0), (-1,-1), light_c),
                 ('GRID',          (0,0), (-1,-1), 0.3, gold_c),
                 ('LEFTPADDING',   (0,0), (-1,-1), 8),
                 ('RIGHTPADDING',  (0,0), (-1,-1), 8),
-                ('TOPPADDING',    (0,0), (-1,-1), 5),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                ('TOPPADDING',    (0,0), (-1,-1), 6),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+                ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
+                ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
             ]))
             story.append(sc_tbl)
             story.append(Spacer(1, 5*mm))
@@ -3114,43 +3156,13 @@ def render_result(result: dict):
         if _leak_txt and _leak_txt not in ("none detected", "none", ""):
             _sec(_L["leak"], _leak_txt, alert=True)
 
-        # ── Audio findings (human-readable, no raw dict) ────────────────────
-        if _audio_raw:
-            _aud_items = []
-            for f in _audio_raw:
-                if not f.get("label"):
-                    continue
-                lbl      = str(f["label"]).replace("_", " ").title()
-                conf_raw = f.get("confidence", "")
-                try:
-                    conf_pct = f"{float(conf_raw) * 100:.0f}%"
-                except Exception:
-                    conf_pct = str(conf_raw)
-                _aud_items.append(f"• {lbl}  ({conf_pct})")
-            if _aud_items:
-                story.append(KeepTogether([
-                    Paragraph(_L["audio"], h2_s),
-                    _hr(),
-                    *[Paragraph(item, body_s) for item in _aud_items],
-                    Spacer(1, 2*mm),
-                ]))
-
-        # ── Paint ──────────────────────────────────────────────────────────
-        if _paint_susp not in ("none", ""):
-            _susp_label = {
-                "low":    "חשד נמוך לצביעה" if _he else "Low paint-work suspicion",
-                "medium": "חשד בינוני לצביעה" if _he else "Moderate paint-work suspicion",
-                "high":   "חשד גבוה לצביעה" if _he else "High paint-work suspicion",
-            }.get(_paint_susp, _paint_susp)
-            _sec(_L["paint"], _susp_label)
-
-        # ── Issues detected (reject codes) ─────────────────────────────────
+        # ── Issues detected (reject codes) — placed before audio for priority
         if _rc_list_rep:
             rows = []
             for _rcode in _rc_list_rep:
                 _ri   = REJECT_TABLE.get(_rcode, {})
-                _rt   = _t(_ri.get("title_he" if _he else "title_en", _rcode))
-                _rex  = _t(_ri.get("expl_he"  if _he else "expl_en",  ""))
+                _rt   = _ri.get("title_en", _rcode)    # always English
+                _rex  = _ri.get("expl_en",  "")
                 _sev  = _ri.get("severity", "soft")
                 _scol = {"hard": red_c, "soft": colors.Color(0.65,0.38,0),
                          "tech": colors.Color(0.10,0.34,0.65)}.get(_sev, dark_c)
@@ -3181,10 +3193,57 @@ def render_result(result: dict):
             story.append(rc_tbl)
             story.append(Spacer(1, 4*mm))
 
+        # ── Audio findings (human-readable, no raw dict) ────────────────────
+        if _audio_raw:
+            _aud_items = []
+            for f in _audio_raw:
+                if not f.get("label"):
+                    continue
+                lbl      = str(f["label"]).replace("_", " ").title()
+                conf_raw = f.get("confidence", "")
+                try:
+                    conf_pct = f"{float(conf_raw) * 100:.0f}%"
+                except Exception:
+                    conf_pct = str(conf_raw)
+                _aud_items.append(f"• {lbl}  ({conf_pct})")
+            if _aud_items:
+                story.append(KeepTogether([
+                    Paragraph(_L["audio"], h2_s),
+                    _hr(),
+                    *[Paragraph(item, body_s) for item in _aud_items],
+                    Spacer(1, 2*mm),
+                ]))
+
+        # ── Paint analysis ─────────────────────────────────────────────────
+        if _paint_susp not in ("none", ""):
+            _susp_label = {
+                "low":    "Low paint-work suspicion detected",
+                "medium": "Moderate paint-work suspicion — further inspection advised",
+                "high":   "High paint-work suspicion — panels may have been repainted",
+            }.get(_paint_susp, _paint_susp)
+            _sec(_L["paint"], _susp_label)
+
         # ── Market price ───────────────────────────────────────────────────
         if _yad2_rep and _yad2_rep.get("min_price"):
             _sec(_L["price"],
                  f"ILS {_yad2_rep['min_price']:,.0f} \u2013 {_yad2_rep['max_price']:,.0f}")
+
+        # ── Recommended next steps ─────────────────────────────────────────
+        _steps = result.get("next_steps", [])
+        if _steps:
+            _step_items = []
+            for _si, _step in enumerate(_steps[:8], 1):
+                _stxt = _step.get("text", "") if isinstance(_step, dict) else str(_step)
+                _stxt = _t(_stxt)
+                if _stxt:
+                    _step_items.append(f"{_si}. {_stxt}")
+            if _step_items:
+                story.append(KeepTogether([
+                    Paragraph("Recommended Next Steps", h2_s),
+                    _hr(),
+                    *[Paragraph(s, body_s) for s in _step_items],
+                    Spacer(1, 2*mm),
+                ]))
 
         # ── Footer ─────────────────────────────────────────────────────────
         story.append(Spacer(1, 10*mm))
