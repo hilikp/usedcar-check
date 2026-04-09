@@ -2110,10 +2110,15 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         has_underbody_leak = has_underbody_leak_cv or _ai_says_leak
         # If CV caught it but Claude didn't mention it, inject a clear leak assessment
         if has_underbody_leak_cv and not _ai_says_leak:
-            ai_report["leak_assessment"] = (
+            _leak_cv_he = (
+                "זוהה כתם נוזל אפשרי בניתוח ממוחשב של תמונת תחתית הרכב — "
+                "ייתכן כתם שמן, אנטיפריז, או השתקפות חריגה."
+            )
+            _leak_cv_en = (
                 "Possible fluid stain detected by computer vision analysis — "
                 "oil-colour, dark-wet patch, or reflective area found in underbody image."
             )
+            ai_report["leak_assessment"] = _leak_cv_he if (_lang == "he") else _leak_cv_en
 
         # ── Reject code computation ──────────────────────────────────────────────────────────────────────
         _ai_codes = set(ai_report.get("reject_codes") or [])
@@ -3105,7 +3110,7 @@ def render_result(result: dict):
         sc_lbl  = _s('scl',  False,  7,  muted_c, align=TA_CENTER, spaceAfter=0, letterSpacing=0.3)
         sc_val  = _s('scv',  True,   17, dark_c,  align=TA_CENTER, leading=22)
         code_s  = _s('cds',  True,   9,  red_c,   align=TA_LEFT)
-        bullet_s= _s('blt',  False,  9,  dark_c,  leading=15,    spaceAfter=2, leftIndent=6)
+        bullet_s= _s('blt',  False,  9,  dark_c,  leading=15,    spaceAfter=2)
 
         # ── Document setup ──────────────────────────────────────────────────
         buf   = BytesIO()
@@ -3160,6 +3165,33 @@ def render_result(result: dict):
                 Paragraph(clean, style),
                 Spacer(1, 4*mm),
             ]))
+
+        def _bullet_row(text: str) -> Table:
+            """
+            Render one bullet item as a 2-column table row so the bullet (•)
+            always sits on the correct side regardless of text direction.
+            Hebrew (RTL): bullet on the RIGHT  [text | •]
+            English (LTR): bullet on the LEFT  [• | text]
+            """
+            _dot_s = _s('dot', True, 10, gold_c, align=TA_CENTER, leading=14)
+            _txt_s = _s('btxt', False, 9, dark_c, align=_ALIGN, leading=14)
+            _dot_cell = Paragraph("•", _dot_s)
+            _txt_cell = Paragraph(_t(text), _txt_s)
+            if _rtl_pdf:
+                _cells = [[_txt_cell, _dot_cell]]
+                _widths = [W_pt - 12*mm, 12*mm]
+            else:
+                _cells = [[_dot_cell, _txt_cell]]
+                _widths = [12*mm, W_pt - 12*mm]
+            _tbl = Table(_cells, colWidths=_widths)
+            _tbl.setStyle(TableStyle([
+                ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+                ('TOPPADDING',    (0, 0), (-1, -1), 1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ]))
+            return _tbl
 
         # ── HEADER ─────────────────────────────────────────────────────────
         story.append(Paragraph(_L["report_title"], hdr_s))
@@ -3246,14 +3278,21 @@ def render_result(result: dict):
                 _sev = _ri.get("severity", "soft")
                 _scol = {"hard": red_c, "soft": orange_c,
                          "tech": colors.Color(0.10, 0.34, 0.65)}.get(_sev, dark_c)
-                _issue_rows.append([
-                    Paragraph(f"<b>{_rcode}</b>", _s('rcc', True, 9, _scol, align=TA_LEFT)),
-                    Paragraph(f"<b>{_rt}</b>",    _s('rct', True, 9, dark_c)),
-                    Paragraph(_rex,               _s('rce', False, 8, muted_c, leading=11)),
-                ])
+                _code_p  = Paragraph(f"<b>{_rcode}</b>", _s('rcc', True, 9, _scol, align=TA_CENTER))
+                _title_p = Paragraph(f"<b>{_rt}</b>",    _s('rct', True, 9, dark_c, align=_ALIGN))
+                _expl_p  = Paragraph(_rex,               _s('rce', False, 8, muted_c, leading=11, align=_ALIGN))
+                # RTL: show explanation | title | code (right→left reading order)
+                if _rtl_pdf:
+                    _issue_rows.append([_expl_p, _title_p, _code_p])
+                else:
+                    _issue_rows.append([_code_p, _title_p, _expl_p])
             story.append(_sec_title_tbl(_L["issues"], red_c))
             story.append(Spacer(1, 2*mm))
-            _ic_w = [W_pt * 0.11, W_pt * 0.30, W_pt * 0.59]
+            # RTL: widths match reversed column order [expl, title, code]
+            if _rtl_pdf:
+                _ic_w = [W_pt * 0.59, W_pt * 0.30, W_pt * 0.11]
+            else:
+                _ic_w = [W_pt * 0.11, W_pt * 0.30, W_pt * 0.59]
             _i_tbl = Table(_issue_rows, colWidths=_ic_w)
             _i_tbl.setStyle(TableStyle([
                 ('VALIGN',        (0,0), (-1,-1), 'TOP'),
@@ -3294,13 +3333,12 @@ def render_result(result: dict):
                 except Exception:
                     _cp = str(_af.get("confidence", ""))
                 # Normal = green dot, issues = orange dot
-                _dot = "●" if _raw_label == "engine_sounds_normal" else "⚠"
-                _aud_items.append(f"{_dot}  {_lbl}  ({_cp})")
+                _aud_items.append(f"{_lbl}  ({_cp})")
             if _aud_items:
                 story.append(_sec_title_tbl(_L["audio"]))
                 story.append(Spacer(1, 2*mm))
                 for _item in _aud_items:
-                    story.append(Paragraph(_item, bullet_s))
+                    story.append(_bullet_row(_item))
                 story.append(Spacer(1, 4*mm))
 
         # ── PAINT ANALYSIS ──────────────────────────────────────────────────
@@ -3321,25 +3359,16 @@ def render_result(result: dict):
         # ── RECOMMENDED NEXT STEPS ──────────────────────────────────────────
         _steps = result.get("next_steps", [])
         if _steps:
-            # Hebrew: use alef-bet bullets (א ב ג…) — RTL characters stay at the
-            # correct right-side position after bidi processing.
-            # English: use regular numbers.
-            _HEB_LETTERS = "אבגדהוזחטי"
-            _step_items = []
-            for _si, _step in enumerate(_steps[:8], 0):
+            _step_texts = []
+            for _step in _steps[:8]:
                 _stxt = _step.get("text", "") if isinstance(_step, dict) else str(_step)
-                _stxt_clean = _t(_stxt)
-                if _stxt_clean:
-                    if _he:
-                        _bullet = _HEB_LETTERS[min(_si, len(_HEB_LETTERS) - 1)] + "."
-                    else:
-                        _bullet = f"{_si + 1}."
-                    _step_items.append(f"{_bullet}  {_stxt_clean}")
-            if _step_items:
+                if _stxt.strip():
+                    _step_texts.append(_stxt)
+            if _step_texts:
                 story.append(_sec_title_tbl(_L["steps"]))
                 story.append(Spacer(1, 2*mm))
-                for _s_item in _step_items:
-                    story.append(Paragraph(_s_item, bullet_s))
+                for _stxt in _step_texts:
+                    story.append(_bullet_row(_stxt))
                 story.append(Spacer(1, 4*mm))
 
         # ── FOOTER ──────────────────────────────────────────────────────────
