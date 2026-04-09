@@ -2928,10 +2928,12 @@ def render_result(result: dict):
         import re as _re2
 
         def _strip(txt: str) -> str:
-            """Remove HTML tags and decode basic entities."""
-            txt = _re2.sub(r'<[^>]+>', ' ', txt)
+            """Remove HTML tags, decode basic entities, drop chars outside Latin-1
+            (fpdf2's built-in Helvetica font cannot render Hebrew/CJK/etc.)."""
+            txt = _re2.sub(r'<[^>]+>', ' ', str(txt))
             txt = txt.replace('&ndash;', '-').replace('&mdash;', '-').replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS ')
-            txt = _re2.sub(r'&[a-z]+;', '', txt)
+            txt = _re2.sub(r'&[a-zA-Z0-9#]+;', '', txt)
+            txt = txt.encode('latin-1', 'ignore').decode('latin-1')
             return txt.strip()
 
         pdf = FPDF()
@@ -2950,7 +2952,7 @@ def render_result(result: dict):
 
         pdf.set_text_color(30, 30, 30)
         pdf.set_font("Helvetica", "B", 16)
-        car_title = f"{_make_s} {_model_s} {_year_s}".strip() or "Vehicle"
+        car_title = (f"{_make_s} {_model_s} {_year_s}".strip() or "Vehicle").encode('latin-1', 'ignore').decode('latin-1')
         pdf.cell(0, 9, car_title, ln=True)
 
         pdf.set_font("Helvetica", "", 9)
@@ -3033,7 +3035,8 @@ def render_result(result: dict):
         _report_bytes = _build_pdf()
         _report_mime = "application/pdf"
         _report_ext  = "pdf"
-    except Exception:
+    except Exception as _pdf_err:
+        st.warning(f"PDF generation failed ({_pdf_err}); falling back to HTML report.")
         _report_bytes = _pdf_html.encode("utf-8")
         _report_mime = "text/html"
         _report_ext  = "html"
