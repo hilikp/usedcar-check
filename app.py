@@ -3780,7 +3780,7 @@ def step_vehicle_details():
             model_name = st.text_input(t("model"), value=d.get("model_name", ""), key="model_free")
     with r1c2:
         trim = st.text_input(t("trim"), value=d.get("trim", ""), placeholder=t("trim_ph"),
-                             key="trim_input", help=t("trim_help"))
+                             key="trim_input")
 
     # ── Row 2 : Year | Prior Usage ────────────────────────────────────────────
     r2c1, r2c2 = st.columns(2)
