@@ -3200,15 +3200,15 @@ def render_result(result: dict):
         if st.button(f"🎙 {t('refine_audio_btn')}", key="refine_audio", use_container_width=True):
             st.session_state.original_result = result
             st.session_state.refine_mode     = True
-            st.session_state.step            = 3
+            st.session_state.step            = 2
             st.rerun()
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
-STEP_ICONS = ["🚗", "📸", "🎙", "✓"]
+STEP_ICONS = ["🚗", "📸", "✓"]
 
 def step_indicator(current: int):
     """Pure-HTML step bar — never uses st.columns so mobile CSS can't stack it."""
-    labels = [t("step_details"), t("step_photos"), t("step_audio"), t("step_result")]
+    labels = [t("step_details"), t("step_photos"), t("step_result")]
     items  = ""
     for i, (name, icon) in enumerate(zip(labels, STEP_ICONS), 1):
         active = i == current
@@ -3390,7 +3390,7 @@ def render_sidebar():
                 st.markdown(f"<div style='font-size:1.07rem;color:{v_color};margin-bottom:0.1rem;{rtl_css}'>{v_label}</div>", unsafe_allow_html=True)
                 if st.button(display, key=f"past_{check['check_id']}", use_container_width=True):
                     st.session_state.result = check
-                    st.session_state.step   = 4
+                    st.session_state.step   = 3
                     st.rerun()
 
         st.markdown("<div style='height:2rem;'></div>", unsafe_allow_html=True)
@@ -3925,6 +3925,7 @@ def step_photos():
     _saved_interior = st.session_state.get("interior_photos") or []
     _saved_underbody= st.session_state.get("underbody")
     _saved_video    = st.session_state.get("vehicle_video")
+    _saved_audio    = st.session_state.get("audio_file")
     _is_refine      = st.session_state.get("refine_mode") and st.session_state.get("original_result")
     if _is_refine and _saved_photos:
         st.markdown(
@@ -3983,23 +3984,40 @@ def step_photos():
         size_mb = len(vehicle_video.getvalue()) / (1024 * 1024)
         st.markdown(f"<p style='font-size:1.01rem;color:#4A7A4A;margin-top:0.3rem;'>🎬 {vehicle_video.name} ({size_mb:.1f} MB)</p>", unsafe_allow_html=True)
 
+    gold_divider()
+
+    # ── Engine audio ──────────────────────────────────────────────────────────
+    section_label("engine_audio")
+    st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('audio_hint')}</p>",
+                unsafe_allow_html=True)
+    audio_new = st.file_uploader(
+        t("engine_audio"),
+        type=["mp3","wav","m4a","ogg","aac","flac","mp4","mov","avi","mkv","webm","3gp"],
+        label_visibility="collapsed", key="audio_upload",
+    )
+    audio = audio_new if audio_new else _saved_audio
+    if audio:
+        st.markdown(f"<p style='font-size:1.01rem;color:#4A7A4A;margin-top:0.3rem;'>🎙 {audio.name}</p>",
+                    unsafe_allow_html=True)
+
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1, 3])
     with col1:
         if st.button(t("back_btn"), use_container_width=True):
             st.session_state.step = 1; st.rerun()
     with col2:
-        if st.button(t("continue_btn"), key="photos_continue", use_container_width=True):
+        if st.button(t("analyse_btn"), key="photos_analyse", use_container_width=True):
             if not photos or len(photos) < 3:
                 st.error("אנא העלה לפחות 3 תמונות חיצוניות." if is_rtl else "Please upload at least 3 exterior photos.")
             elif len(photos) > 8:
                 st.error("מקסימום 8 תמונות חיצוניות." if is_rtl else "Maximum 8 exterior photos.")
+            elif not audio:
+                st.error(t("audio_missing"))
             else:
                 # ── Image validation (quick Haiku check) ──────────────────
                 _d = st.session_state.get("car_details", {})
                 _mfr = _d.get("manufacturer", "")
                 _mdl = _d.get("model_name", "")
-                # Only validate newly uploaded photos (not saved ones from prior check)
                 _photos_to_validate = photos_new if photos_new else photos
                 with st.spinner(t("img_validation_running")):
                     _warnings = _validate_photos(_photos_to_validate, _mfr, _mdl)
@@ -4014,170 +4032,127 @@ def step_photos():
                         _sel = _w.split(":", 1)[1]
                         st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
                     elif _w.startswith("validation_error:"):
-                        pass  # silent — don't block user on API error
+                        pass  # silent
                 if not _block:
                     st.session_state.photos          = photos
                     st.session_state.interior_photos = interior_photos or []
                     st.session_state.underbody       = underbody
                     st.session_state.vehicle_video   = vehicle_video
-                    st.session_state.step            = 3; st.rerun()
-
-# ─── Step 3 — Audio ───────────────────────────────────────────────────────────
-def step_audio():
-    # ── Refine mode banner ────────────────────────────────────────────────────
-    if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
-        st.markdown(
-            f"<div style='background:rgba(200,169,106,0.10);border:1px solid rgba(200,169,106,0.4);"
-            f"border-radius:6px;padding:0.7rem 1rem;margin-bottom:0.8rem;{rtl_css}'>"
-            f"🔄 {t('refine_banner')}</div>",
-            unsafe_allow_html=True,
-        )
-        with st.expander(f"📋 {t('view_original_btn')}", expanded=False):
-            _orig3 = st.session_state.original_result
-            _oa_label, _oa_color, _ = verdict_meta(_orig3.get("recommendation", "inconclusive"))
-            st.markdown(f"<span style='color:{_oa_color};font-weight:700;font-size:1.3rem;'>{_oa_label}</span>",
-                        unsafe_allow_html=True)
-            _rpt3 = _orig3.get("detailed_report", "")
-            if _rpt3:
-                st.markdown(f"<p style='font-size:1.05rem;{rtl_css}'>{_rpt3}</p>", unsafe_allow_html=True)
-
-    section_label("engine_audio")
-    st.markdown(f"<p style='font-size:1.24rem;color:var(--muted);{rtl_css}'>{t('audio_hint')}</p>", unsafe_allow_html=True)
-    audio = st.file_uploader(t("engine_audio"), type=["mp3","wav","m4a","ogg","aac","flac","mp4","mov","avi","mkv","webm","3gp"], label_visibility="collapsed")
-    st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        if st.button(t("back_btn"), key="audio_back", use_container_width=True):
-            st.session_state.step = 2; st.rerun()
-    with col2:
-        if st.button(t("analyse_btn"), use_container_width=True):
-            if not audio:
-                st.error(t("audio_missing"))
-            else:
-                d = st.session_state.car_details
-                car_label = f"{d.get('year','')} {d.get('manufacturer','')} {d.get('model_name','')}".strip()
-                import threading, time as _time
-                global _ACTIVE_LANG
-                _lang = st.session_state.get("lang", "he")
-                _ACTIVE_LANG = _lang   # expose to thread-safe getter
-                _photos    = list(st.session_state.get("photos", []))
-                _interior  = list(st.session_state.get("interior_photos", []))
-                _underbody = st.session_state.get("underbody")
-                _video     = st.session_state.get("vehicle_video")
-                _stages = [
-                    (0.10, "מנתח תמונות חיצוניות של הרכב..."        if _lang=="he" else "Analysing exterior photos..."),
-                    (0.22, "בודק מצב הפנים והלוח..."                if _lang=="he" else "Checking interior & dashboard..."),
-                    (0.36, "מעבד הקלטת קול המנוע..."                if _lang=="he" else "Processing engine audio..."),
-                    (0.50, "מנתח עקביות צבע לוחות הרכב..."          if _lang=="he" else "Analysing paint panel consistency..."),
-                    (0.63, "מאחזר נתוני ריקול ובטיחות (NHTSA)..."   if _lang=="he" else "Fetching safety & recall data (NHTSA)..."),
-                    (0.78, "מייצר דוח מקצועי מבוסס AI..."           if _lang=="he" else "Generating AI professional report..."),
-                    (0.92, "מסיים ומאמת תוצאות..."                  if _lang=="he" else "Finalising and validating results..."),
-                ]
-                _result_box  = [None]
-                _error_box   = [None]
-                def _worker():
-                    try:
-                        _result_box[0] = run_analysis(
-                            d, _photos, audio, _underbody, _video, _interior,
+                    st.session_state.audio_file      = audio
+                    # ── Run analysis ──────────────────────────────────────
+                    d = st.session_state.car_details
+                    car_label = f"{d.get('year','')} {d.get('manufacturer','')} {d.get('model_name','')}".strip()
+                    import threading, time as _time
+                    global _ACTIVE_LANG
+                    _lang = st.session_state.get("lang", "he")
+                    _ACTIVE_LANG = _lang
+                    _photos    = list(photos)
+                    _interior  = list(interior_photos or [])
+                    _underbody = underbody
+                    _video     = vehicle_video
+                    _stages = [
+                        (0.10, "מנתח תמונות חיצוניות של הרכב..."        if _lang=="he" else "Analysing exterior photos..."),
+                        (0.22, "בודק מצב הפנים והלוח..."                if _lang=="he" else "Checking interior & dashboard..."),
+                        (0.36, "מעבד הקלטת קול המנוע..."                if _lang=="he" else "Processing engine audio..."),
+                        (0.50, "מנתח עקביות צבע לוחות הרכב..."          if _lang=="he" else "Analysing paint panel consistency..."),
+                        (0.63, "מאחזר נתוני ריקול ובטיחות (NHTSA)..."   if _lang=="he" else "Fetching safety & recall data (NHTSA)..."),
+                        (0.78, "מייצר דוח מקצועי מבוסס AI..."           if _lang=="he" else "Generating AI professional report..."),
+                        (0.92, "מסיים ומאמת תוצאות..."                  if _lang=="he" else "Finalising and validating results..."),
+                    ]
+                    _result_box = [None]
+                    _error_box  = [None]
+                    def _worker():
+                        try:
+                            _result_box[0] = run_analysis(
+                                d, _photos, audio, _underbody, _video, _interior,
+                            )
+                        except Exception as _e:
+                            _error_box[0] = _e
+                    _thread = threading.Thread(target=_worker, daemon=True)
+                    _thread.start()
+                    _prog_bar  = st.progress(0.0)
+                    _prog_text = st.empty()
+                    _elapsed   = 0.0
+                    _MIN_SECS  = 15.0
+                    _rtl2 = rtl_css if _lang == "he" else ""
+                    def _render_stage(elapsed: float):
+                        pct = min(0.95, elapsed / _MIN_SECS)
+                        _prog_bar.progress(pct)
+                        si = 0
+                        for _si2, (_thresh, _) in enumerate(_stages):
+                            if pct >= _thresh:
+                                si = _si2
+                        _prog_text.markdown(
+                            f"<p style='font-size:1.05rem;color:var(--gold);{_rtl2}'>"
+                            f"⚙️ &nbsp;{_stages[si][1]}</p>",
+                            unsafe_allow_html=True,
                         )
-                    except Exception as _e:
-                        _error_box[0] = _e
-                _thread = threading.Thread(target=_worker, daemon=True)
-                _thread.start()
-                _prog_bar  = st.progress(0.0)
-                _prog_text = st.empty()
-                _stage_i, _elapsed = 0, 0.0
-                _MIN_SECS  = 15.0   # always show progress for at least this long
-                _rtl = rtl_css if _lang == "he" else ""
+                    while _thread.is_alive():
+                        _time.sleep(0.4); _elapsed += 0.4; _render_stage(_elapsed)
+                    _thread.join()
+                    while _elapsed < _MIN_SECS:
+                        _time.sleep(0.4); _elapsed += 0.4; _render_stage(_elapsed)
+                    _prog_bar.progress(1.0)
+                    _prog_text.empty()
+                    if _error_box[0]:
+                        st.error(f"{t('analysis_failed')}: {_error_box[0]}")
+                    else:
+                        decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data, reject_codes = _result_box[0]
+                        result = {
+                            "recommendation":         decision.recommendation,
+                            "confidence":             decision.confidence,
+                            "top_reasons":            decision.top_reasons,
+                            "breakdown":              decision.breakdown,
+                            "education":              decision.education,
+                            "next_steps":             decision.next_steps,
+                            "audio_duration_seconds": audio_dur,
+                            "car_details":            d,
+                            "car_label":              car_label,
+                            "exterior_score":         ai_report.get("exterior_score"),
+                            "interior_score":         ai_report.get("interior_score"),
+                            "leak_assessment":        ai_report.get("leak_assessment", "none detected"),
+                            "detailed_report":        ai_report.get("report", ""),
+                            "nhtsa_data":             nhtsa_data,
+                            "audio_metrics":          audio_metrics,
+                            "audio_findings_raw":     audio_findings_raw,
+                            "paint_data":             paint_data,
+                            "paint_findings":         ai_report.get("paint_findings", []),
+                            "conclusion_external":    ai_report.get("conclusion_external", ""),
+                            "conclusion_internal":    ai_report.get("conclusion_internal", ""),
+                            "conclusion_mechanical":  ai_report.get("conclusion_mechanical", ""),
+                            "yad2_price_data":        yad2_price_data,
+                            "reject_codes":           reject_codes,
+                            "plate_registry": {
+                                "ownership_key": d.get("_ownership_key", ""),
+                                "baalut_he":     d.get("_baalut_he", ""),
+                                "color_he":      d.get("_color_he", ""),
+                                "fuel_he":       d.get("_fuel_he", ""),
+                                "last_test":     d.get("_last_test", ""),
+                                "valid_until":   d.get("_valid_until", ""),
+                                "first_road":    d.get("_first_road", ""),
+                                "trim":          d.get("_trim", ""),
+                                "plate":         d.get("plate", ""),
+                            } if d.get("plate") else None,
+                            "data_quality": {
+                                "exterior_count": len(_photos),
+                                "interior_count": len(_interior),
+                                "has_underbody":  _underbody is not None,
+                                "has_video":      _video is not None,
+                                "audio_duration": audio_dur,
+                            },
+                        }
+                        check_id = save_check(st.session_state.email, result)
+                        result["check_id"]   = check_id
+                        result["created_at"] = result.get("created_at", "")
+                        _send_result_email(
+                            st.session_state.email, result,
+                            st.session_state.get("lang", "he")
+                        )
+                        st.session_state.result      = result
+                        st.session_state.refine_mode = False
+                        st.session_state.step        = 3; st.rerun()
 
-                def _render_stage(elapsed: float):
-                    """Update bar + stage label for the given elapsed time."""
-                    pct = min(0.95, elapsed / _MIN_SECS)
-                    _prog_bar.progress(pct)
-                    si = 0
-                    for _si2, (_thresh, _) in enumerate(_stages):
-                        if pct >= _thresh:
-                            si = _si2
-                    _prog_text.markdown(
-                        f"<p style='font-size:1.05rem;color:var(--gold);{_rtl}'>"
-                        f"⚙️ &nbsp;{_stages[si][1]}</p>",
-                        unsafe_allow_html=True,
-                    )
-
-                # Phase 1 — tick while analysis is running
-                while _thread.is_alive():
-                    _time.sleep(0.4)
-                    _elapsed += 0.4
-                    _render_stage(_elapsed)
-
-                _thread.join()
-
-                # Phase 2 — analysis finished but minimum time not yet reached
-                while _elapsed < _MIN_SECS:
-                    _time.sleep(0.4)
-                    _elapsed += 0.4
-                    _render_stage(_elapsed)
-
-                _prog_bar.progress(1.0)
-                _prog_text.empty()
-                if _error_box[0]:
-                    st.error(f"{t('analysis_failed')}: {_error_box[0]}")
-                else:
-                    decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data, reject_codes = _result_box[0]
-                    result = {
-                        "recommendation":      decision.recommendation,
-                        "confidence":          decision.confidence,
-                        "top_reasons":         decision.top_reasons,
-                        "breakdown":           decision.breakdown,
-                        "education":           decision.education,
-                        "next_steps":          decision.next_steps,
-                        "audio_duration_seconds": audio_dur,
-                        "car_details":         d,
-                        "car_label":           car_label,
-                        "exterior_score":      ai_report.get("exterior_score"),
-                        "interior_score":      ai_report.get("interior_score"),
-                        "leak_assessment":     ai_report.get("leak_assessment", "none detected"),
-                        "detailed_report":     ai_report.get("report", ""),
-                        "nhtsa_data":          nhtsa_data,
-                        "audio_metrics":       audio_metrics,
-                        "audio_findings_raw":  audio_findings_raw,
-                        "paint_data":              paint_data,
-                        "paint_findings":          ai_report.get("paint_findings", []),
-                        "conclusion_external":     ai_report.get("conclusion_external", ""),
-                        "conclusion_internal":     ai_report.get("conclusion_internal", ""),
-                        "conclusion_mechanical":   ai_report.get("conclusion_mechanical", ""),
-                        "yad2_price_data":         yad2_price_data,
-                        "reject_codes":            reject_codes,
-                        "plate_registry": {
-                            "ownership_key":  d.get("_ownership_key", ""),
-                            "baalut_he":      d.get("_baalut_he", ""),
-                            "color_he":       d.get("_color_he", ""),
-                            "fuel_he":        d.get("_fuel_he", ""),
-                            "last_test":      d.get("_last_test", ""),
-                            "valid_until":    d.get("_valid_until", ""),
-                            "first_road":     d.get("_first_road", ""),
-                            "trim":           d.get("_trim", ""),
-                            "plate":          d.get("plate", ""),
-                        } if d.get("plate") else None,
-                        "data_quality": {
-                            "exterior_count":  len(_photos),
-                            "interior_count":  len(_interior),
-                            "has_underbody":   _underbody is not None,
-                            "has_video":       _video is not None,
-                            "audio_duration":  audio_dur,
-                        },
-                    }
-                    check_id = save_check(st.session_state.email, result)
-                    result["check_id"]      = check_id
-                    result["created_at"]    = result.get("created_at", "")
-                    # Send results to user's email (silently — never block on failure)
-                    _send_result_email(
-                        st.session_state.email, result,
-                        st.session_state.get("lang", "he")
-                    )
-                    st.session_state.result      = result
-                    st.session_state.refine_mode = False   # refine complete
-                    st.session_state.step        = 4; st.rerun()
+# (step_audio removed — audio is now part of step_photos)
 
 # ─── Main app ─────────────────────────────────────────────────────────────────
 def main_app():
@@ -4207,8 +4182,7 @@ def main_app():
 
     if step == 1:   step_vehicle_details()
     elif step == 2: step_photos()
-    elif step == 3: step_audio()
-    elif step == 4 and st.session_state.result:
+    elif step == 3 and st.session_state.result:
         render_result(st.session_state.result)
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
