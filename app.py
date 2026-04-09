@@ -175,8 +175,8 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
         return _EMPTY
 
     # Bhattacharyya distance threshold — above this = potential mismatch
-    # Raised from 0.28 to 0.38 to suppress natural lighting variation false positives
-    _THRESH = 0.38
+    # 0.55 filters out natural lighting variation; only genuine hue shifts pass
+    _THRESH = 0.55
 
     def _hist(roi):
         lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
@@ -242,17 +242,18 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
             continue
 
     # Aggregate overall suspicion — require multiple strong signals
+    # (severity="high" means score > 0.55, which is already well above lighting noise)
     high_count = sum(1 for a in anomalies if a["severity"] == "high")
     if not anomalies:
         suspicion = "none"
-    elif high_count >= 2:
+    elif high_count >= 3:
         suspicion = "high"
-    elif high_count == 1 or len(anomalies) >= 4:
+    elif high_count >= 2 or len(anomalies) >= 5:
         suspicion = "medium"
-    elif len(anomalies) >= 2:
+    elif len(anomalies) >= 3:
         suspicion = "low"
     else:
-        suspicion = "none"  # single borderline hit — ignore
+        suspicion = "none"  # 1-2 borderline hits — normal lighting variation
 
     return {
         "anomalies":      anomalies,
@@ -2922,114 +2923,124 @@ def render_result(result: dict):
 </body>
 </html>"""
 
-    # ── Generate PDF using fpdf2 (pure Python, no system deps) ──────────────
+    # ── Generate PDF using reportlab (reliable, pure-Python, no system deps) ──
     def _build_pdf() -> bytes:
-        from fpdf import FPDF
-        import re as _re2
+        from io import BytesIO
+        import re as _re_pdf
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import mm
+        from reportlab.lib import colors
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle,
+        )
+        from reportlab.lib.enums import TA_CENTER
 
-        def _strip(txt: str) -> str:
-            """Remove HTML tags, decode basic entities, drop chars outside Latin-1
-            (fpdf2's built-in Helvetica font cannot render Hebrew/CJK/etc.)."""
-            txt = _re2.sub(r'<[^>]+>', ' ', str(txt))
-            txt = txt.replace('&ndash;', '-').replace('&mdash;', '-').replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS ')
-            txt = _re2.sub(r'&[a-zA-Z0-9#]+;', '', txt)
-            txt = txt.encode('latin-1', 'ignore').decode('latin-1')
-            return txt.strip()
+        def _safe(txt: str) -> str:
+            """Strip HTML/entities and drop non-ASCII so reportlab built-in fonts work."""
+            txt = _re_pdf.sub(r'<[^>]+>', ' ', str(txt))
+            txt = (txt.replace('&ndash;', '-').replace('&mdash;', '-')
+                      .replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS '))
+            txt = _re_pdf.sub(r'&[a-zA-Z0-9#]+;', '', txt)
+            return txt.encode('ascii', 'ignore').decode('ascii').strip()
 
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.set_margins(15, 15, 15)
+        gold_c    = colors.Color(200/255, 169/255, 106/255)
+        dark_c    = colors.Color(0.15, 0.15, 0.15)
+        muted_c   = colors.Color(0.45, 0.45, 0.45)
+        _vc_map   = {
+            "go":           colors.Color(0.18, 0.49, 0.20),
+            "no_go":        colors.Color(0.78, 0.16, 0.16),
+            "inconclusive": colors.Color(0.71, 0.42, 0.00),
+        }
+        verdict_bg = _vc_map.get(rec, colors.grey)
+
+        hdr_s  = ParagraphStyle('hdr',  fontName='Helvetica-Bold', fontSize=9,  textColor=gold_c,  spaceAfter=2)
+        h1_s   = ParagraphStyle('h1',   fontName='Helvetica-Bold', fontSize=17, textColor=dark_c,  spaceAfter=3)
+        meta_s = ParagraphStyle('meta', fontName='Helvetica',      fontSize=9,  textColor=muted_c, spaceAfter=8)
+        h2_s   = ParagraphStyle('h2',   fontName='Helvetica-Bold', fontSize=11, textColor=dark_c,  spaceBefore=10, spaceAfter=2)
+        body_s = ParagraphStyle('body', fontName='Helvetica',      fontSize=9,  textColor=dark_c,  leading=13, spaceAfter=4)
+        verd_s = ParagraphStyle('verd', fontName='Helvetica-Bold', fontSize=14, textColor=colors.white, leading=20)
+        foot_s = ParagraphStyle('foot', fontName='Helvetica',      fontSize=8,  textColor=muted_c, alignment=TA_CENTER)
+
+        buf = BytesIO()
+        W_pt = A4[0] - 40 * mm
+        doc  = SimpleDocTemplate(
+            buf, pagesize=A4,
+            leftMargin=20*mm, rightMargin=20*mm,
+            topMargin=20*mm, bottomMargin=20*mm,
+            title=f"UsedCar Check - {_safe(_make_s)} {_safe(_model_s)} {_year_s}",
+        )
+        story = []
 
         # ── Header ────────────────────────────────────────────────────────
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_text_color(200, 169, 106)
-        pdf.cell(0, 6, "USEDCAR CHECK - INSPECTION REPORT", ln=True)
-        pdf.set_draw_color(200, 169, 106)
-        pdf.set_line_width(0.5)
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-        pdf.ln(2)
+        story.append(Paragraph('USEDCAR CHECK - INSPECTION REPORT', hdr_s))
+        story.append(HRFlowable(width='100%', thickness=0.5, color=gold_c, spaceAfter=4))
+        story.append(Paragraph(_safe(f"{_make_s} {_model_s} {_year_s}") or 'Vehicle', h1_s))
 
-        pdf.set_text_color(30, 30, 30)
-        pdf.set_font("Helvetica", "B", 16)
-        car_title = (f"{_make_s} {_model_s} {_year_s}".strip() or "Vehicle").encode('latin-1', 'ignore').decode('latin-1')
-        pdf.cell(0, 9, car_title, ln=True)
-
-        pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(100, 100, 100)
         meta_parts = []
-        if _plate_s: meta_parts.append(f"Plate: {_plate_s}")
-        if _km_s:    meta_parts.append(f"Odometer: {_km_s} km")
-        if _prev_own: meta_parts.append(f"Owners: {_prev_own}")
+        if _plate_s:  meta_parts.append(f"Plate: {_safe(str(_plate_s))}")
+        if _km_s:     meta_parts.append(f"Odometer: {_safe(str(_km_s))} km")
+        if _prev_own: meta_parts.append(f"Owners: {_safe(str(_prev_own))}")
         meta_parts.append(f"Date: {_date_str}")
-        pdf.cell(0, 5, "  |  ".join(meta_parts), ln=True)
-        pdf.ln(3)
+        story.append(Paragraph("  |  ".join(meta_parts), meta_s))
 
         # ── Verdict box ───────────────────────────────────────────────────
-        _vc_map = {"go": (46, 125, 50), "no_go": (198, 40, 40), "inconclusive": (181, 106, 0)}
-        _vr, _vg, _vb = _vc_map.get(rec, (80, 80, 80))
-        pdf.set_fill_color(_vr, _vg, _vb)
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 12, f"  {_pdf_verdict_lbl}", ln=True, fill=True)
-        pdf.set_text_color(30, 30, 30)
-        pdf.ln(4)
+        _vmap = {"go": "GO - Recommended", "no_go": "NO-GO - Not Recommended",
+                 "inconclusive": "INCONCLUSIVE - Further Inspection Needed"}
+        vt = Table([[Paragraph(_vmap.get(rec, _safe(_pdf_verdict_lbl)), verd_s)]],
+                   colWidths=[W_pt])
+        vt.setStyle(TableStyle([
+            ('BACKGROUND',    (0,0), (-1,-1), verdict_bg),
+            ('LEFTPADDING',   (0,0), (-1,-1), 10),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 10),
+            ('TOPPADDING',    (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(vt)
+        story.append(Spacer(1, 5*mm))
 
-        def _section(title: str, body: str):
-            if not body.strip(): return
-            pdf.set_font("Helvetica", "B", 11)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(0, 7, title, ln=True)
-            pdf.set_draw_color(200, 169, 106)
-            pdf.set_line_width(0.3)
-            pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-            pdf.ln(1)
-            pdf.set_font("Helvetica", "", 9)
-            pdf.set_text_color(60, 60, 60)
-            clean = _strip(body)
-            pdf.multi_cell(0, 5, clean)
-            pdf.ln(3)
+        def _sec(title: str, body: str):
+            clean = _safe(body)
+            if not clean: return
+            story.append(Paragraph(title, h2_s))
+            story.append(HRFlowable(width='100%', thickness=0.3, color=gold_c, spaceAfter=2))
+            story.append(Paragraph(clean, body_s))
 
-        if _report_text:  _section("Summary", _report_text)
-        if _conc_ext:     _section("Exterior Condition", _conc_ext)
-        if _conc_int:     _section("Interior Condition", _conc_int)
-        if _conc_mech:    _section("Mechanical Condition", _conc_mech)
+        _sec("Summary",            _report_text)
+        _sec("Exterior Condition", _conc_ext)
+        _sec("Interior Condition", _conc_int)
+        _sec("Mechanical",         _conc_mech)
         if _leak_txt and _leak_txt not in ("none detected", "none", ""):
-            pdf.set_font("Helvetica", "B", 11)
-            pdf.set_text_color(198, 40, 40)
-            pdf.cell(0, 7, "⚠ Leak Assessment", ln=True)
-            pdf.set_draw_color(198, 40, 40)
-            pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-            pdf.ln(1)
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.multi_cell(0, 5, _leak_txt)
-            pdf.set_text_color(30, 30, 30)
-            pdf.ln(3)
+            _sec("Leak Assessment", _leak_txt)
         if _audio_raw:
-            _aud_lines = [f"{f.get('label','')} ({f.get('confidence','')}) {f.get('details','')}" for f in _audio_raw if f.get("label")]
-            if _aud_lines: _section("Audio Findings", "\n".join(_aud_lines))
+            _aud = "  /  ".join(
+                f"{f.get('label','')} ({f.get('confidence','')}) {f.get('details','')}"
+                for f in _audio_raw if f.get("label")
+            )
+            if _aud: _sec("Audio Findings", _aud)
         if _paint_susp != "none":
-            _section("Paint Analysis", f"Suspicion level: {_paint_susp}")
+            _sec("Paint Analysis", f"Suspicion level: {_paint_susp}")
         if _rc_list_rep:
-            _rc_text = ""
+            story.append(Paragraph("Issues Detected", h2_s))
+            story.append(HRFlowable(width='100%', thickness=0.3, color=gold_c, spaceAfter=2))
             for _rcode in _rc_list_rep:
                 _ri = REJECT_TABLE.get(_rcode, {})
-                _rt = _ri.get("title_en", _rcode)
-                _re2_ = _ri.get("expl_en", "")
-                _rc_text += f"{_rcode}: {_rt}\n  {_re2_}\n"
-            _section("Issues Detected", _rc_text)
+                _rt  = _safe(_ri.get("title_en", _rcode))
+                _rex = _safe(_ri.get("expl_en",  ""))
+                story.append(Paragraph(f"<b>{_rcode}: {_rt}</b> - {_rex}", body_s))
         if _yad2_rep and _yad2_rep.get("min_price"):
-            _section("Market Price", f"ILS {_yad2_rep['min_price']:,.0f} - {_yad2_rep['max_price']:,.0f}")
+            _sec("Market Price",
+                 f"ILS {_yad2_rep['min_price']:,.0f} - {_yad2_rep['max_price']:,.0f}")
 
         # ── Footer ────────────────────────────────────────────────────────
-        pdf.set_y(-20)
-        pdf.set_draw_color(200, 200, 200)
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_text_color(170, 170, 170)
-        pdf.cell(0, 5, "UsedCar Check  |  usedcar-check-if-the-car-is-worth-it.streamlit.app", ln=True, align="C")
+        story.append(Spacer(1, 8*mm))
+        story.append(HRFlowable(width='100%', thickness=0.3, color=colors.lightgrey))
+        story.append(Spacer(1, 2*mm))
+        story.append(Paragraph(
+            'UsedCar Check  |  usedcar-check-if-the-car-is-worth-it.streamlit.app', foot_s))
 
-        return bytes(pdf.output())
+        doc.build(story)
+        return buf.getvalue()
 
     try:
         _report_bytes = _build_pdf()

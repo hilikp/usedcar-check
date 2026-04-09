@@ -6,3 +6,4 @@ soundfile
 opencv-python-headless
 av
 fpdf2
+reportlab
