@@ -3751,9 +3751,9 @@ def step_vehicle_details():
         format_func=lambda x: t("select_make") if x == "" else x,
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        # ── Model dropdown (depends on make) ──────────────────────────────────
+    # ── Row 1 : Model | Trim ─────────────────────────────────────────────────
+    r1c1, r1c2 = st.columns(2)
+    with r1c1:
         if manufacturer and manufacturer in CAR_MAKES_MODELS:
             models_list = [""] + CAR_MAKES_MODELS[manufacturer]
             saved_model = d.get("model_name", "")
@@ -3770,7 +3770,7 @@ def step_vehicle_details():
                     for _mi, _mn in enumerate(models_list):
                         if _mn and (_sm_lower.startswith(_mn.lower()) or _mn.lower().startswith(_sm_lower)):
                             model_idx = _mi; break
-            model_name  = st.selectbox(
+            model_name = st.selectbox(
                 t("model"),
                 options=models_list,
                 index=model_idx,
@@ -3778,17 +3778,17 @@ def step_vehicle_details():
             )
         else:
             model_name = st.text_input(t("model"), value=d.get("model_name", ""), key="model_free")
+    with r1c2:
+        trim = st.text_input(t("trim"), value=d.get("trim", ""), placeholder=t("trim_ph"),
+                             key="trim_input", help=t("trim_help"))
 
-        year     = st.number_input(t("year"), min_value=1990, max_value=2026, step=1,
-                                   value=int(d.get("year", 2020)))
-        odometer = st.number_input(t("odometer"), min_value=0, max_value=2_000_000,
-                                   step=1000, value=int(d.get("odometer", 0)))
-
-    with col2:
-        trim = st.text_input(t("trim"), value=d.get("trim", ""), placeholder=t("trim_ph"), key="trim_input", help=t("trim_help"))
-
-        # ── Prior usage type ──────────────────────────────────────────────────
-        usage_opts = t("usage_type_opts")   # list of 4 labels
+    # ── Row 2 : Year | Prior Usage ────────────────────────────────────────────
+    r2c1, r2c2 = st.columns(2)
+    with r2c1:
+        year = st.number_input(t("year"), min_value=1990, max_value=2026, step=1,
+                               value=int(d.get("year", 2020)))
+    with r2c2:
+        usage_opts  = t("usage_type_opts")   # list of 4 labels
         saved_usage = int(d.get("usage_type", 0))
         usage_type  = st.selectbox(
             t("usage_type"),
@@ -3797,7 +3797,12 @@ def step_vehicle_details():
             format_func=lambda x: usage_opts[x],
         )
 
-        # ── Previous owners selectbox ─────────────────────────────────────────
+    # ── Row 3 : Odometer | Previous Owners ───────────────────────────────────
+    r3c1, r3c2 = st.columns(2)
+    with r3c1:
+        odometer = st.number_input(t("odometer"), min_value=0, max_value=2_000_000,
+                                   step=1000, value=int(d.get("odometer", 0)))
+    with r3c2:
         owner_opts  = t("prev_owners_opts")   # list of 4 labels
         saved_own   = int(d.get("prev_owners", 1))
         owner_idx   = min(saved_own - 1, 3)   # 1→0, 2→1, 3→2, 4+→3
