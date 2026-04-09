@@ -2923,121 +2923,275 @@ def render_result(result: dict):
 </body>
 </html>"""
 
-    # ── Generate PDF using reportlab (reliable, pure-Python, no system deps) ──
+    # ── Generate PDF using reportlab + DejaVu font (Hebrew support) ──────────
     def _build_pdf() -> bytes:
         from io import BytesIO
-        import re as _re_pdf
+        import re as _re_pdf, os as _os, unicodedata as _ud
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import mm
         from reportlab.lib import colors
         from reportlab.platypus import (
-            SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle,
+            SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
+            Table, TableStyle, KeepTogether,
         )
-        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
 
-        def _safe(txt: str) -> str:
-            """Strip HTML/entities and drop non-ASCII so reportlab built-in fonts work."""
+        # ── Font: DejaVu has full Hebrew glyphs; try common install paths ──
+        _FONT_CANDIDATES = [
+            # Ubuntu / Streamlit Cloud
+            ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+             '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+            # Debian variant
+            ('/usr/share/fonts/truetype/DejaVuSans.ttf',
+             '/usr/share/fonts/truetype/DejaVuSans-Bold.ttf'),
+            # Windows (Arial supports Hebrew)
+            ('C:/Windows/Fonts/arial.ttf', 'C:/Windows/Fonts/arialbd.ttf'),
+            ('C:/Windows/Fonts/tahoma.ttf', 'C:/Windows/Fonts/tahomabd.ttf'),
+        ]
+        fn, fb = 'Helvetica', 'Helvetica-Bold'
+        _has_unicode = False
+        for _fp, _bfp in _FONT_CANDIDATES:
+            if _os.path.exists(_fp):
+                try:
+                    pdfmetrics.registerFont(TTFont('_PDFUni',     _fp))
+                    pdfmetrics.registerFont(TTFont('_PDFUniBold', _bfp if _os.path.exists(_bfp) else _fp))
+                    fn, fb = '_PDFUni', '_PDFUniBold'
+                    _has_unicode = True
+                except Exception:
+                    pass
+                break
+
+        # ── Text helper: strip HTML, fix entities, handle RTL ──────────────
+        def _t(txt: str) -> str:
             txt = _re_pdf.sub(r'<[^>]+>', ' ', str(txt))
             txt = (txt.replace('&ndash;', '-').replace('&mdash;', '-')
-                      .replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS '))
+                      .replace('&nbsp;', ' ').replace('&#x20AA;', 'ILS ')
+                      .replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>'))
             txt = _re_pdf.sub(r'&[a-zA-Z0-9#]+;', '', txt)
-            return txt.encode('ascii', 'ignore').decode('ascii').strip()
+            if _has_unicode:
+                try:
+                    from bidi.algorithm import get_display
+                    txt = get_display(txt)
+                except Exception:
+                    pass
+                return txt.strip()
+            # Fallback: NFKD decomposition keeps accented Latin (Škoda→Skoda)
+            return _ud.normalize('NFKD', txt).encode('ascii', 'ignore').decode('ascii').strip()
 
-        gold_c    = colors.Color(200/255, 169/255, 106/255)
-        dark_c    = colors.Color(0.15, 0.15, 0.15)
-        muted_c   = colors.Color(0.45, 0.45, 0.45)
-        _vc_map   = {
-            "go":           colors.Color(0.18, 0.49, 0.20),
-            "no_go":        colors.Color(0.78, 0.16, 0.16),
-            "inconclusive": colors.Color(0.71, 0.42, 0.00),
+        # ── Bilingual section labels ────────────────────────────────────────
+        _he = (_lang_rep == "he")
+        _L  = {
+            "report_title": "USEDCAR CHECK - INSPECTION REPORT",
+            "plate":      "לוחית:" if _he else "Plate:",
+            "odo":        "ק\"מ:" if _he else "Odometer:",
+            "owners":     "יד:" if _he else "Owners:",
+            "date":       "תאריך:" if _he else "Date:",
+            "summary":    "סיכום" if _he else "Summary",
+            "exterior":   "מצב חיצוני" if _he else "Exterior Condition",
+            "interior":   "מצב פנים" if _he else "Interior Condition",
+            "mechanical": "מצב מכאני" if _he else "Mechanical",
+            "leak":       "דליפות - התראה" if _he else "Leak Assessment - Alert",
+            "audio":      "ממצאי שמע - מנוע" if _he else "Engine Audio Findings",
+            "paint":      "ניתוח צבע" if _he else "Paint Analysis",
+            "issues":     "בעיות שזוהו" if _he else "Issues Detected",
+            "price":      "מחירון שוק" if _he else "Market Price",
+            "ext_sc":     "ציון חיצוני" if _he else "Exterior Score",
+            "int_sc":     "ציון פנים" if _he else "Interior Score",
         }
-        verdict_bg = _vc_map.get(rec, colors.grey)
+        _vmap_pdf = {
+            "go":           "GO - Recommended" if not _he else "מומלץ לרכישה",
+            "no_go":        "NO-GO - Not Recommended" if not _he else "לא מומלץ לרכישה",
+            "inconclusive": "INCONCLUSIVE - Further Inspection Needed" if not _he else "תוצאה לא חד-משמעית",
+        }
 
-        hdr_s  = ParagraphStyle('hdr',  fontName='Helvetica-Bold', fontSize=9,  textColor=gold_c,  spaceAfter=2)
-        h1_s   = ParagraphStyle('h1',   fontName='Helvetica-Bold', fontSize=17, textColor=dark_c,  spaceAfter=3)
-        meta_s = ParagraphStyle('meta', fontName='Helvetica',      fontSize=9,  textColor=muted_c, spaceAfter=8)
-        h2_s   = ParagraphStyle('h2',   fontName='Helvetica-Bold', fontSize=11, textColor=dark_c,  spaceBefore=10, spaceAfter=2)
-        body_s = ParagraphStyle('body', fontName='Helvetica',      fontSize=9,  textColor=dark_c,  leading=13, spaceAfter=4)
-        verd_s = ParagraphStyle('verd', fontName='Helvetica-Bold', fontSize=14, textColor=colors.white, leading=20)
-        foot_s = ParagraphStyle('foot', fontName='Helvetica',      fontSize=8,  textColor=muted_c, alignment=TA_CENTER)
+        # ── Colours ────────────────────────────────────────────────────────
+        gold_c  = colors.Color(200/255, 169/255, 106/255)
+        dark_c  = colors.Color(0.12, 0.12, 0.12)
+        muted_c = colors.Color(0.45, 0.45, 0.45)
+        light_c = colors.Color(0.96, 0.96, 0.96)
+        red_c   = colors.Color(0.75, 0.10, 0.10)
+        _vc_bg  = {"go": colors.Color(0.14, 0.52, 0.16),
+                   "no_go": red_c,
+                   "inconclusive": colors.Color(0.68, 0.40, 0.00)}
+        verdict_bg = _vc_bg.get(rec, colors.grey)
 
-        buf = BytesIO()
-        W_pt = A4[0] - 40 * mm
+        # ── Style factory ──────────────────────────────────────────────────
+        def _s(name, bold=False, size=9, color=dark_c, **kw):
+            return ParagraphStyle(name, fontName=fb if bold else fn,
+                                  fontSize=size, textColor=color, **kw)
+
+        hdr_s  = _s('hdr',  True,  8,  gold_c, spaceAfter=1,  letterSpacing=0.8)
+        h1_s   = _s('h1',   True,  20, dark_c, spaceAfter=2,  leading=25)
+        meta_s = _s('meta', False, 9,  muted_c, spaceAfter=6)
+        h2_s   = _s('h2',   True,  11, dark_c, spaceBefore=8, spaceAfter=2)
+        body_s = _s('body', False, 9,  dark_c, leading=14,    spaceAfter=3)
+        alert_s= _s('alrt', False, 9,  red_c,  leading=14,    spaceAfter=3)
+        verd_s = _s('verd', True,  15, colors.white, leading=22, alignment=TA_CENTER)
+        foot_s = _s('foot', False, 8,  muted_c, alignment=TA_CENTER, spaceBefore=3)
+        sc_lbl = _s('scl',  True,  8,  muted_c, alignment=TA_CENTER, spaceAfter=0)
+        sc_val = _s('scv',  True,  18, dark_c,  alignment=TA_CENTER, leading=22)
+
+        # ── Document ───────────────────────────────────────────────────────
+        buf  = BytesIO()
+        W_pt = A4[0] - 40*mm
         doc  = SimpleDocTemplate(
             buf, pagesize=A4,
             leftMargin=20*mm, rightMargin=20*mm,
-            topMargin=20*mm, bottomMargin=20*mm,
-            title=f"UsedCar Check - {_safe(_make_s)} {_safe(_model_s)} {_year_s}",
+            topMargin=18*mm,  bottomMargin=18*mm,
+            title=f"UsedCar Check - {_t(_make_s)} {_t(_model_s)} {_year_s}",
         )
         story = []
 
-        # ── Header ────────────────────────────────────────────────────────
-        story.append(Paragraph('USEDCAR CHECK - INSPECTION REPORT', hdr_s))
-        story.append(HRFlowable(width='100%', thickness=0.5, color=gold_c, spaceAfter=4))
-        story.append(Paragraph(_safe(f"{_make_s} {_model_s} {_year_s}") or 'Vehicle', h1_s))
+        def _hr(c=gold_c, t=0.4):
+            return HRFlowable(width='100%', thickness=t, color=c, spaceAfter=3)
+
+        def _sec(title, body, alert=False):
+            clean = _t(body)
+            if not clean:
+                return
+            story.append(KeepTogether([
+                Paragraph(title, h2_s),
+                _hr(),
+                Paragraph(clean, alert_s if alert else body_s),
+                Spacer(1, 2*mm),
+            ]))
+
+        # ── Header ─────────────────────────────────────────────────────────
+        story.append(Paragraph(_L["report_title"], hdr_s))
+        story.append(_hr())
+        story.append(Spacer(1, 1*mm))
+        story.append(Paragraph(_t(f"{_make_s} {_model_s} {_year_s}") or 'Vehicle', h1_s))
 
         meta_parts = []
-        if _plate_s:  meta_parts.append(f"Plate: {_safe(str(_plate_s))}")
-        if _km_s:     meta_parts.append(f"Odometer: {_safe(str(_km_s))} km")
-        if _prev_own: meta_parts.append(f"Owners: {_safe(str(_prev_own))}")
-        meta_parts.append(f"Date: {_date_str}")
-        story.append(Paragraph("  |  ".join(meta_parts), meta_s))
+        if _plate_s:  meta_parts.append(f"{_L['plate']} {_t(str(_plate_s))}")
+        if _km_s:     meta_parts.append(f"{_L['odo']} {_t(str(_km_s))} km")
+        if _prev_own: meta_parts.append(f"{_L['owners']} {_t(str(_prev_own))}")
+        meta_parts.append(f"{_L['date']} {_date_str}")
+        story.append(Paragraph("   |   ".join(meta_parts), meta_s))
 
-        # ── Verdict box ───────────────────────────────────────────────────
-        _vmap = {"go": "GO - Recommended", "no_go": "NO-GO - Not Recommended",
-                 "inconclusive": "INCONCLUSIVE - Further Inspection Needed"}
-        vt = Table([[Paragraph(_vmap.get(rec, _safe(_pdf_verdict_lbl)), verd_s)]],
+        # ── Verdict ────────────────────────────────────────────────────────
+        vt = Table([[Paragraph(_vmap_pdf.get(rec, _t(_pdf_verdict_lbl)), verd_s)]],
                    colWidths=[W_pt])
         vt.setStyle(TableStyle([
             ('BACKGROUND',    (0,0), (-1,-1), verdict_bg),
-            ('LEFTPADDING',   (0,0), (-1,-1), 10),
-            ('RIGHTPADDING',  (0,0), (-1,-1), 10),
-            ('TOPPADDING',    (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING',   (0,0), (-1,-1), 14),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 14),
+            ('TOPPADDING',    (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
         ]))
         story.append(vt)
         story.append(Spacer(1, 5*mm))
 
-        def _sec(title: str, body: str):
-            clean = _safe(body)
-            if not clean: return
-            story.append(Paragraph(title, h2_s))
-            story.append(HRFlowable(width='100%', thickness=0.3, color=gold_c, spaceAfter=2))
-            story.append(Paragraph(clean, body_s))
+        # ── Scores ─────────────────────────────────────────────────────────
+        _ext_sc = result.get("exterior_score")
+        _int_sc = result.get("interior_score")
+        if _ext_sc is not None or _int_sc is not None:
+            half = W_pt / 2
+            sc_tbl = Table([
+                [Paragraph(_L["ext_sc"], sc_lbl), Paragraph(_L["int_sc"], sc_lbl)],
+                [Paragraph(f"{int(_ext_sc)}/100" if _ext_sc else "-", sc_val),
+                 Paragraph(f"{int(_int_sc)}/100" if _int_sc else "-", sc_val)],
+            ], colWidths=[half, half])
+            sc_tbl.setStyle(TableStyle([
+                ('BACKGROUND',    (0,0), (-1,-1), light_c),
+                ('GRID',          (0,0), (-1,-1), 0.3, gold_c),
+                ('LEFTPADDING',   (0,0), (-1,-1), 8),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 8),
+                ('TOPPADDING',    (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ]))
+            story.append(sc_tbl)
+            story.append(Spacer(1, 5*mm))
 
-        _sec("Summary",            _report_text)
-        _sec("Exterior Condition", _conc_ext)
-        _sec("Interior Condition", _conc_int)
-        _sec("Mechanical",         _conc_mech)
+        # ── Narrative sections ─────────────────────────────────────────────
+        _sec(_L["summary"],    _report_text)
+        _sec(_L["exterior"],   _conc_ext)
+        _sec(_L["interior"],   _conc_int)
+        _sec(_L["mechanical"], _conc_mech)
         if _leak_txt and _leak_txt not in ("none detected", "none", ""):
-            _sec("Leak Assessment", _leak_txt)
-        if _audio_raw:
-            _aud = "  /  ".join(
-                f"{f.get('label','')} ({f.get('confidence','')}) {f.get('details','')}"
-                for f in _audio_raw if f.get("label")
-            )
-            if _aud: _sec("Audio Findings", _aud)
-        if _paint_susp != "none":
-            _sec("Paint Analysis", f"Suspicion level: {_paint_susp}")
-        if _rc_list_rep:
-            story.append(Paragraph("Issues Detected", h2_s))
-            story.append(HRFlowable(width='100%', thickness=0.3, color=gold_c, spaceAfter=2))
-            for _rcode in _rc_list_rep:
-                _ri = REJECT_TABLE.get(_rcode, {})
-                _rt  = _safe(_ri.get("title_en", _rcode))
-                _rex = _safe(_ri.get("expl_en",  ""))
-                story.append(Paragraph(f"<b>{_rcode}: {_rt}</b> - {_rex}", body_s))
-        if _yad2_rep and _yad2_rep.get("min_price"):
-            _sec("Market Price",
-                 f"ILS {_yad2_rep['min_price']:,.0f} - {_yad2_rep['max_price']:,.0f}")
+            _sec(_L["leak"], _leak_txt, alert=True)
 
-        # ── Footer ────────────────────────────────────────────────────────
-        story.append(Spacer(1, 8*mm))
-        story.append(HRFlowable(width='100%', thickness=0.3, color=colors.lightgrey))
-        story.append(Spacer(1, 2*mm))
+        # ── Audio findings (human-readable, no raw dict) ────────────────────
+        if _audio_raw:
+            _aud_items = []
+            for f in _audio_raw:
+                if not f.get("label"):
+                    continue
+                lbl      = str(f["label"]).replace("_", " ").title()
+                conf_raw = f.get("confidence", "")
+                try:
+                    conf_pct = f"{float(conf_raw) * 100:.0f}%"
+                except Exception:
+                    conf_pct = str(conf_raw)
+                _aud_items.append(f"• {lbl}  ({conf_pct})")
+            if _aud_items:
+                story.append(KeepTogether([
+                    Paragraph(_L["audio"], h2_s),
+                    _hr(),
+                    *[Paragraph(item, body_s) for item in _aud_items],
+                    Spacer(1, 2*mm),
+                ]))
+
+        # ── Paint ──────────────────────────────────────────────────────────
+        if _paint_susp not in ("none", ""):
+            _susp_label = {
+                "low":    "חשד נמוך לצביעה" if _he else "Low paint-work suspicion",
+                "medium": "חשד בינוני לצביעה" if _he else "Moderate paint-work suspicion",
+                "high":   "חשד גבוה לצביעה" if _he else "High paint-work suspicion",
+            }.get(_paint_susp, _paint_susp)
+            _sec(_L["paint"], _susp_label)
+
+        # ── Issues detected (reject codes) ─────────────────────────────────
+        if _rc_list_rep:
+            rows = []
+            for _rcode in _rc_list_rep:
+                _ri   = REJECT_TABLE.get(_rcode, {})
+                _rt   = _t(_ri.get("title_he" if _he else "title_en", _rcode))
+                _rex  = _t(_ri.get("expl_he"  if _he else "expl_en",  ""))
+                _sev  = _ri.get("severity", "soft")
+                _scol = {"hard": red_c, "soft": colors.Color(0.65,0.38,0),
+                         "tech": colors.Color(0.10,0.34,0.65)}.get(_sev, dark_c)
+                rows.append([
+                    Paragraph(f"<b>{_rcode}</b>",
+                              _s('rcc', True, 9, _scol)),
+                    Paragraph(f"<b>{_rt}</b>",
+                              _s('rct', True, 9, dark_c)),
+                    Paragraph(_rex,
+                              _s('rce', False, 8, muted_c, leading=11)),
+                ])
+            story.append(KeepTogether([
+                Paragraph(_L["issues"], h2_s),
+                _hr(),
+            ]))
+            col_w = [W_pt * 0.11, W_pt * 0.31, W_pt * 0.58]
+            rc_tbl = Table(rows, colWidths=col_w)
+            rc_tbl.setStyle(TableStyle([
+                ('VALIGN',        (0,0), (-1,-1), 'TOP'),
+                ('LEFTPADDING',   (0,0), (-1,-1), 4),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 4),
+                ('TOPPADDING',    (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                ('ROWBACKGROUNDS',(0,0), (-1,-1), [colors.white, light_c]),
+                ('LINEBELOW',     (0,0), (-1,-1), 0.2,
+                 colors.Color(0.85, 0.85, 0.85)),
+            ]))
+            story.append(rc_tbl)
+            story.append(Spacer(1, 4*mm))
+
+        # ── Market price ───────────────────────────────────────────────────
+        if _yad2_rep and _yad2_rep.get("min_price"):
+            _sec(_L["price"],
+                 f"ILS {_yad2_rep['min_price']:,.0f} \u2013 {_yad2_rep['max_price']:,.0f}")
+
+        # ── Footer ─────────────────────────────────────────────────────────
+        story.append(Spacer(1, 10*mm))
+        story.append(_hr(colors.Color(0.80, 0.80, 0.80), 0.3))
         story.append(Paragraph(
-            'UsedCar Check  |  usedcar-check-if-the-car-is-worth-it.streamlit.app', foot_s))
+            'UsedCar Check  |  usedcar-check-if-the-car-is-worth-it.streamlit.app',
+            foot_s))
 
         doc.build(story)
         return buf.getvalue()
