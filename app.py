@@ -1039,6 +1039,40 @@ section[data-testid="stSidebar"] {{
     {rtl_css}
 }}
 
+/* ── Sidebar history buttons: compact, truncated, no uppercase ── */
+section[data-testid="stSidebar"] .stButton > button {{
+    font-size: 0.8rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.02em !important;
+    text-transform: none !important;
+    padding: 0.3rem 0.7rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    display: block !important;
+    background: var(--surface) !important;
+    color: var(--muted) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    text-align: {"right" if is_rtl else "left"} !important;
+}}
+section[data-testid="stSidebar"] .stButton > button:hover {{
+    border-color: var(--gold) !important;
+    color: var(--gold) !important;
+    opacity: 1 !important;
+}}
+/* Keep New Check button styled prominently */
+section[data-testid="stSidebar"] .stButton:first-of-type > button {{
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
+    color: #0C0C0C !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    border: none !important;
+}}
+
 /* Remove default Streamlit padding so hero can be full-width */
 .block-container {{ padding-top: 0.5rem !important; }}
 
@@ -3084,23 +3118,47 @@ def render_result(result: dict):
         )
         story = []
 
+        # ── Audio finding label translations ───────────────────────────────
+        _AUDIO_LABELS = {
+            "rod_knock_suspected":    ("חשד לדפיקות מנוע",      "Rod Knock Suspected"),
+            "valve_tick_suspected":   ("חשד לקישקוש שסתומים",   "Valve Tick Suspected"),
+            "belt_squeal_suspected":  ("חשד לציווח חגורה/גלגלת", "Belt Squeal Suspected"),
+            "exhaust_leak_suspected": ("חשד לדליפת פליטה",       "Exhaust Leak Suspected"),
+            "rough_idle_suspected":   ("חשד לסרק לא יציב",       "Rough Idle Suspected"),
+            "engine_sounds_normal":   ("קול המנוע תקין",          "Engine Sounds Normal"),
+            "unknown":                ("ממצא לא ידוע",             "Unknown"),
+        }
+
         def _hr(c=gold_c, t=0.5):
             return HRFlowable(width='100%', thickness=t, color=c, spaceAfter=3, spaceBefore=1)
 
-        def _thin_hr():
-            return HRFlowable(width='100%', thickness=0.2, color=mid_c, spaceAfter=2, spaceBefore=2)
+        def _sec_title_tbl(title_text, accent=gold_c):
+            """Render a section title as a dark band with a coloured bottom border."""
+            _title_s = _s(f'sh_{title_text[:6]}', True, 10, white_c,
+                          align=_ALIGN, leading=15)
+            _tbl = Table([[Paragraph(_t(title_text), _title_s)]], colWidths=[W_pt])
+            _tbl.setStyle(TableStyle([
+                ('BACKGROUND',    (0,0), (-1,-1), colors.Color(0.15, 0.15, 0.15)),
+                ('LINEBELOW',     (0,0), (-1,-1), 2.5, accent),
+                ('LEFTPADDING',   (0,0), (-1,-1), 10),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 10),
+                ('TOPPADDING',    (0,0), (-1,-1), 6),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ]))
+            return _tbl
 
-        def _sec(title, body, alert=False):
-            """Add a labelled section. Skips if body is empty after cleanup."""
+        def _sec(title, body, alert=False, accent=gold_c):
+            """Add a labelled section with styled header band. Skips if body empty."""
             clean = _t(body)
             if not clean:
                 return
             style = alert_s if alert else body_s
+            _accent = red_c if alert else accent
             story.append(KeepTogether([
-                Paragraph(_t(title), h2_s),
-                _hr(gold_c, 0.4),
+                _sec_title_tbl(title, _accent),
+                Spacer(1, 2*mm),
                 Paragraph(clean, style),
-                Spacer(1, 3*mm),
+                Spacer(1, 4*mm),
             ]))
 
         # ── HEADER ─────────────────────────────────────────────────────────
@@ -3193,10 +3251,8 @@ def render_result(result: dict):
                     Paragraph(f"<b>{_rt}</b>",    _s('rct', True, 9, dark_c)),
                     Paragraph(_rex,               _s('rce', False, 8, muted_c, leading=11)),
                 ])
-            story.append(KeepTogether([
-                Paragraph(_t(_L["issues"]), h2_s),
-                _hr(gold_c, 0.4),
-            ]))
+            story.append(_sec_title_tbl(_L["issues"], red_c))
+            story.append(Spacer(1, 2*mm))
             _ic_w = [W_pt * 0.11, W_pt * 0.30, W_pt * 0.59]
             _i_tbl = Table(_issue_rows, colWidths=_ic_w)
             _i_tbl.setStyle(TableStyle([
@@ -3223,21 +3279,29 @@ def render_result(result: dict):
         if _audio_raw:
             _aud_items = []
             for _af in _audio_raw:
-                if not _af.get("label"):
+                _raw_label = str(_af.get("label", ""))
+                if not _raw_label:
                     continue
-                _lbl = str(_af["label"]).replace("_", " ").title()
+                # Use translated label if available, else fallback to title-case
+                _lbl_pair = _AUDIO_LABELS.get(_raw_label)
+                if _lbl_pair:
+                    _lbl = _t(_lbl_pair[0]) if _he else _lbl_pair[1]
+                else:
+                    _lbl = _t(_raw_label.replace("_", " ").title()) if _he \
+                           else _raw_label.replace("_", " ").title()
                 try:
                     _cp = f"{float(_af.get('confidence', 0)) * 100:.0f}%"
                 except Exception:
                     _cp = str(_af.get("confidence", ""))
-                _aud_items.append(f"• {_lbl}  ({_cp})")
+                # Normal = green dot, issues = orange dot
+                _dot = "●" if _raw_label == "engine_sounds_normal" else "⚠"
+                _aud_items.append(f"{_dot}  {_lbl}  ({_cp})")
             if _aud_items:
-                story.append(KeepTogether([
-                    Paragraph(_t(_L["audio"]), h2_s),
-                    _hr(gold_c, 0.4),
-                    *[Paragraph(item, body_s) for item in _aud_items],
-                    Spacer(1, 3*mm),
-                ]))
+                story.append(_sec_title_tbl(_L["audio"]))
+                story.append(Spacer(1, 2*mm))
+                for _item in _aud_items:
+                    story.append(Paragraph(_item, bullet_s))
+                story.append(Spacer(1, 4*mm))
 
         # ── PAINT ANALYSIS ──────────────────────────────────────────────────
         if _paint_susp not in ("none", ""):
@@ -3264,12 +3328,11 @@ def render_result(result: dict):
                 if _stxt_clean:
                     _step_items.append(f"{_si}.  {_stxt_clean}")
             if _step_items:
-                story.append(KeepTogether([
-                    Paragraph(_t(_L["steps"]), h2_s),
-                    _hr(gold_c, 0.4),
-                    *[Paragraph(s, bullet_s) for s in _step_items],
-                    Spacer(1, 3*mm),
-                ]))
+                story.append(_sec_title_tbl(_L["steps"]))
+                story.append(Spacer(1, 2*mm))
+                for _s_item in _step_items:
+                    story.append(Paragraph(_s_item, bullet_s))
+                story.append(Spacer(1, 4*mm))
 
         # ── FOOTER ──────────────────────────────────────────────────────────
         story.append(Spacer(1, 8*mm))
@@ -3637,8 +3700,16 @@ def render_sidebar():
                 v_label, v_color, _ = verdict_meta(rec)
                 car  = check.get("car_label", check.get("check_id", ""))
                 date = check.get("created_at", "")[:10]
-                display = f"{car}  ·  {date}" if car else date
-                st.markdown(f"<div style='font-size:1.07rem;color:{v_color};margin-bottom:0.1rem;{rtl_css}'>{v_label}</div>", unsafe_allow_html=True)
+                # Compact display: truncate long car names so button fits sidebar
+                _car_short = (car[:20] + "…") if len(car) > 20 else car
+                _date_short = date[2:] if date else ""   # "26-04-09" saves space
+                display = f"{_car_short}  ·  {_date_short}" if _car_short else date
+                st.markdown(
+                    f"<div style='font-size:0.78rem;font-weight:700;letter-spacing:0.12em;"
+                    f"text-transform:uppercase;color:{v_color};margin:0.8rem 0 0.15rem;{rtl_css}'>"
+                    f"{v_label}</div>",
+                    unsafe_allow_html=True,
+                )
                 if st.button(display, key=f"past_{check['check_id']}", use_container_width=True):
                     st.session_state.result = check
                     st.session_state.step   = 3
