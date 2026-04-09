@@ -453,8 +453,8 @@ TR = {
         "of_10":            "/ 10",
         "paint_title":      "ניתוח צבע והיסטוריית תאונות/תיקונים",
         "paint_consistent": "הצבע אחיד | לא נמצאו חשדות לצביעה מחדש",
-        "paint_suspect":    "חשד לצביעה מחדש | {count} פאנל(ים) חריגים",
-        "paint_panel":      "פאנל",
+        "paint_suspect":    "חשד לצביעה מחדש | {count} חלק(י) רכב חריגים",
+        "paint_panel":      "חלק מרכב",
         "paint_diff":       "חריגת צבע",
         "paint_overspray":  "חשד לאוברספריי",
         "paint_orange_peel":"מרקם אורנג' פיל",
@@ -464,7 +464,7 @@ TR = {
         "paint_severity_high":   "🔴 חשד גבוה לתיקון גוף",
         "paint_severity_medium": "🟡 חשד בינוני לצביעה מחדש",
         "paint_severity_low":    "🟢 עקביות צבע תקינה",
-        "paint_note":       "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין פאנלים + בדיקה ויזואלית של AI",
+        "paint_note":       "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין חלקי הרכב + בדיקה ויזואלית של AI",
         "action_label":     "המלצת פעולה",
         "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית | לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
         "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות | ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
@@ -688,9 +688,9 @@ REJECT_TABLE: dict[str, dict] = {
             "expl_he":  "זוהה נזק משמעותי לגוף הרכב. הרכב לא מתאים לרכישה ללא בדיקה מקצועית.",
             "expl_en":  "Significant exterior damage was detected. This vehicle should not move forward without professional inspection."},
     "R02": {"severity": "soft",
-            "title_he": "חוסר עקביות בצבע / פאנלים",
+            "title_he": "חוסר עקביות בצבע / חלקי רכב",
             "title_en": "Paint or panel mismatch",
-            "expl_he":  "הרכב מראה סימני צביעה מחדש או החלפת פאנל, שעשויים להעיד על נזק קודם.",
+            "expl_he":  "הרכב מראה סימני צביעה מחדש או החלפת חלק מרכב, שעשויים להעיד על נזק קודם.",
             "expl_en":  "The car shows signs of repainting or panel replacement, which may indicate previous accident damage."},
     "R03": {"severity": "hard",
             "title_he": "חשד לדליפת נוזלים",
@@ -2850,50 +2850,90 @@ def render_result(result: dict):
     if _price_html:
         _body_sections += _sec("מחירון שוק" if is_rtl else "Market Price", _price_html)
 
-    _report_html = f"""<!DOCTYPE html>
-<html lang="{'he' if is_rtl else 'en'}" dir="{_dir_attr}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UsedCar Check | {_html_mod.escape(_make_s)} {_html_mod.escape(_model_s)} {_html_mod.escape(_year_s)}</title>
+    # ── PDF report — always generated in English for font compatibility ──────
+    # (xhtml2pdf uses standard Latin fonts; Hebrew fonts are not bundled)
+    _e = _html_mod.escape   # shorthand
+    _pdf_verdict_map = {"go": "GO — Recommended", "no_go": "NO-GO — Not Recommended", "inconclusive": "INCONCLUSIVE — Further Inspection Needed"}
+    _pdf_verdict_lbl = _pdf_verdict_map.get(rec, _verdict_label_s)
+    _pdf_rc_rows = ""
+    for _rcode in _rc_list_rep:
+        _ri = REJECT_TABLE.get(_rcode, {})
+        _rt = _ri.get("title_en", _rcode)
+        _re = _ri.get("expl_en", "")
+        _sev_colors = {"hard": "#c62828", "soft": "#b56a00", "tech": "#1565c0"}
+        _sc = _sev_colors.get(_ri.get("severity", "soft"), "#555")
+        _pdf_rc_rows += f"<tr><td style='color:{_sc};font-weight:bold;padding:4px 8px;'>{_e(_rcode)}</td><td style='padding:4px 8px;font-weight:600;'>{_e(_rt)}</td><td style='padding:4px 8px;color:#555;font-size:11px;'>{_e(_re)}</td></tr>"
+
+    def _pdf_sec(title, body):
+        if not body: return ""
+        return f"<h2 style='font-size:13px;margin-top:14px;padding-bottom:3px;border-bottom:1px solid #c8a96a;color:#333;'>{title}</h2>{body}"
+
+    _pdf_body = ""
+    if _report_text:  _pdf_body += _pdf_sec("Summary", f"<p style='font-size:11px;'>{_e(_report_text)}</p>")
+    if _conc_ext:     _pdf_body += _pdf_sec("Exterior", f"<p style='font-size:11px;'>{_e(_conc_ext)}</p>")
+    if _conc_int:     _pdf_body += _pdf_sec("Interior", f"<p style='font-size:11px;'>{_e(_conc_int)}</p>")
+    if _conc_mech:    _pdf_body += _pdf_sec("Mechanical", f"<p style='font-size:11px;'>{_e(_conc_mech)}</p>")
+    if _leak_txt and _leak_txt not in ("none detected", "none", ""):
+        _pdf_body += _pdf_sec("Leak Assessment", f"<p style='font-size:11px;color:#c62828;font-weight:600;'>{_e(_leak_txt)}</p>")
+    if _audio_raw:
+        _au = "".join(f"<li style='font-size:11px;'>{_e(str(f.get('label','')))} ({f.get('confidence','')}) {_e(str(f.get('details','')))}</li>" for f in _audio_raw if f.get("label"))
+        if _au: _pdf_body += _pdf_sec("Audio Findings", f"<ul>{_au}</ul>")
+    if _paint_susp != "none":
+        _pdf_body += _pdf_sec("Paint Analysis", f"<p style='font-size:11px;'>Suspicion level: {_e(_paint_susp)}</p>")
+    if _pdf_rc_rows:
+        _pdf_body += _pdf_sec("Issues Detected",
+            f"<table style='width:100%;border-collapse:collapse;'><thead><tr style='background:#f5f5f5;'>"
+            f"<th style='padding:4px 8px;text-align:left;font-size:11px;'>Code</th>"
+            f"<th style='padding:4px 8px;text-align:left;font-size:11px;'>Issue</th>"
+            f"<th style='padding:4px 8px;text-align:left;font-size:11px;'>Details</th>"
+            f"</tr></thead><tbody>{_pdf_rc_rows}</tbody></table>")
+    if _yad2_rep and _yad2_rep.get("min_price"):
+        _pdf_body += _pdf_sec("Market Price",
+            f"<p style='font-size:12px;'>ILS {_yad2_rep['min_price']:,.0f} &ndash; {_yad2_rep['max_price']:,.0f}</p>")
+
+    _pdf_html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
 <style>
-  @media print {{ .no-print {{ display:none; }} }}
-  body {{ font-family: Arial, Helvetica, sans-serif; background: #fff; color: #222;
-         padding: 2rem; max-width: 820px; margin: auto; direction: {_dir_attr}; line-height: 1.6; }}
-  h1 {{ font-size: 1.5rem; color: #c8a96a; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.2rem; }}
-  .car-name {{ font-size: 1.7rem; font-weight: 700; margin: 0.2rem 0 0.8rem; }}
-  .verdict-box {{ border-radius: 8px; padding: 1rem 1.5rem; margin: 1rem 0;
-                  background: {_verdict_hex}18; border: 2px solid {_verdict_hex}; }}
-  .verdict-label {{ font-size: 2rem; font-weight: 700; color: {_verdict_hex}; }}
-  .meta-row {{ display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.95rem; color: #555;
-               margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid #eee; }}
-  .meta-item span {{ font-weight: 600; color: #222; }}
-  .footer {{ margin-top: 2rem; font-size: 0.82rem; color: #aaa;
-             border-top: 1px solid #eee; padding-top: 0.6rem; text-align: center; }}
-  .print-hint {{ background: #fffbea; border: 1px solid #f0c040; border-radius: 6px;
-                 padding: 0.5rem 1rem; font-size: 0.88rem; margin-bottom: 1rem; }}
+  @page {{ size: A4; margin: 1.8cm; }}
+  body {{ font-family: Helvetica, Arial, sans-serif; color: #222; font-size: 12px; line-height: 1.55; }}
+  .header {{ border-bottom: 2px solid #c8a96a; padding-bottom: 8px; margin-bottom: 10px; }}
+  .app-name {{ font-size: 10px; color: #c8a96a; letter-spacing: 2px; text-transform: uppercase; }}
+  .car-name {{ font-size: 18px; font-weight: bold; margin: 2px 0 6px; }}
+  .meta {{ font-size: 10px; color: #666; margin-bottom: 4px; }}
+  .verdict-box {{ padding: 10px 14px; margin: 10px 0; border-left: 5px solid {_verdict_hex}; background: {_verdict_hex}12; }}
+  .verdict-lbl {{ font-size: 16px; font-weight: bold; color: {_verdict_hex}; }}
+  .footer {{ margin-top: 18px; padding-top: 6px; border-top: 1px solid #eee; font-size: 9px; color: #aaa; text-align: center; }}
 </style>
 </head>
 <body>
-<h1>UsedCar Check</h1>
-<div class="car-name">{_html_mod.escape(_make_s)} {_html_mod.escape(_model_s)} {_html_mod.escape(_year_s)}</div>
-<div class="meta-row">
-  <div class="meta-item">{'לוחית' if is_rtl else 'Plate'}: <span>{_html_mod.escape(str(_plate_s or '-'))}</span></div>
-  <div class="meta-item">{'ק"מ' if is_rtl else 'Odometer'}: <span>{_html_mod.escape(str(_km_s) if _km_s else '-'):} {'ק"מ' if is_rtl else 'km'}</span></div>
-  {'<div class="meta-item">בעלים: <span>' + _html_mod.escape(str(_prev_own)) + "</span></div>" if _prev_own else ''}
-  <div class="meta-item">{'תאריך' if is_rtl else 'Date'}: <span>{_date_str}</span></div>
+<div class="header">
+  <div class="app-name">UsedCar Check — Inspection Report</div>
+  <div class="car-name">{_e(_make_s)} {_e(_model_s)} {_e(_year_s)}</div>
+  <div class="meta">Plate: {_e(str(_plate_s or "—"))} &nbsp;|&nbsp; Odometer: {_e(str(_km_s) if _km_s else "—")} km &nbsp;|&nbsp; Date: {_date_str}</div>
 </div>
 <div class="verdict-box">
-  <div class="verdict-label">{_html_mod.escape(_verdict_label_s)}</div>
+  <div class="verdict-lbl">{_e(_pdf_verdict_lbl)}</div>
 </div>
-<div class="print-hint no-print">
-  {'להפקת PDF: לחץ Ctrl+P ← שמור כ-PDF' if is_rtl else 'To save as PDF: press Ctrl+P &rarr; Save as PDF'}
-</div>
-{_body_sections}
+{_pdf_body}
 <div class="footer">UsedCar Check &mdash; usedcar-check-if-the-car-is-worth-it.streamlit.app</div>
 </body>
 </html>"""
-    _report_bytes = _report_html.encode("utf-8")
+
+    # Convert HTML to PDF using xhtml2pdf
+    try:
+        import io as _io
+        from xhtml2pdf import pisa as _pisa
+        _pdf_buf = _io.BytesIO()
+        _pisa.CreatePDF(_pdf_html, dest=_pdf_buf, encoding="utf-8")
+        _report_bytes = _pdf_buf.getvalue()
+        _report_mime = "application/pdf"
+        _report_ext  = "pdf"
+    except Exception:
+        # Fallback to HTML if xhtml2pdf unavailable
+        _report_bytes = _pdf_html.encode("utf-8")
+        _report_mime = "text/html"
+        _report_ext  = "html"
 
     # ── WhatsApp message (rich summary) ──────────────────────────────────────
     _wa_lines = []
@@ -2934,8 +2974,8 @@ def render_result(result: dict):
         st.download_button(
             label=t("download_report"),
             data=_report_bytes,
-            file_name=f"car_check_{_year_s}_{_model_s}.html",
-            mime="text/html",
+            file_name=f"car_check_{_year_s}_{_model_s}.{_report_ext}",
+            mime=_report_mime,
             use_container_width=True,
         )
 
@@ -3696,8 +3736,8 @@ def _validate_photos(photo_files: list, manufacturer: str, model_name: str) -> l
             return []
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
-        # Sample up to 5 photos for the quick check
-        sample = photo_files[:5]
+        # Sample up to 8 photos — more coverage = better mixed-vehicle detection
+        sample = photo_files[:8]
         img_blocks = []
         for f in sample:
             try:
@@ -3715,24 +3755,28 @@ def _validate_photos(photo_files: list, manufacturer: str, model_name: str) -> l
         if not img_blocks:
             return []
         mfr_hint = f"{manufacturer} {model_name}".strip() or "unknown"
-        prompt = f"""You are validating a set of car photos uploaded by a user. The user selected vehicle: {mfr_hint}.
+        prompt = f"""You are a strict photo validator for a used-car inspection app. The user selected vehicle: {mfr_hint}.
 
-Look at ALL the images and answer ONLY with a JSON object (no markdown, no explanation):
+Examine ALL uploaded images carefully. Answer ONLY with a valid JSON object (no markdown, no prose):
 {{
-  "all_are_cars": true/false,           // false if any image is clearly NOT a car/vehicle photo
-  "same_vehicle": true/false,           // false if photos clearly show 2+ different vehicles
-  "brand_matches": true/false/null,     // false if a clearly visible car brand logo contradicts "{manufacturer}"; null if brand not visible
-  "detected_brand": "<brand name or null>"   // brand seen in photos, or null
+  "all_are_cars": true/false,
+  "same_vehicle": true/false,
+  "brand_matches": true/false/null,
+  "detected_brand": "<visible brand name, or null>",
+  "notes": "<brief reason if any field is false, else empty string>"
 }}
 
-Be lenient — only flag clear, obvious problems. If unsure, answer true/null."""
+Rules:
+- "all_are_cars": false if ANY image is clearly not a vehicle (e.g. a selfie, food, landscape, screenshot, document)
+- "same_vehicle": false if the images show MORE THAN ONE DISTINCT VEHICLE — different colors, body styles, or clearly different cars mixed in the same set. Look carefully at body shape, color, trim, and interior differences across photos.
+- "brand_matches": false ONLY if you can clearly see a brand logo (badge, emblem, steering wheel logo) that contradicts "{manufacturer}". Set to null if no logo is clearly visible.
+- Do NOT be lenient on "same_vehicle" — if something looks like two different cars, flag it."""
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=150,
+            max_tokens=200,
             messages=[{"role": "user", "content": img_blocks + [{"type": "text", "text": prompt}]}]
         )
         raw_json = resp.content[0].text.strip()
-        # strip markdown fences if present
         if raw_json.startswith("```"):
             raw_json = raw_json.split("```")[1].lstrip("json").strip()
         data = json.loads(raw_json)
@@ -3743,11 +3787,12 @@ Be lenient — only flag clear, obvious problems. If unsure, answer true/null.""
             warnings.append("two_vehicles")
         if data.get("brand_matches") is False and manufacturer:
             detected = data.get("detected_brand") or ""
-            if detected.lower() not in manufacturer.lower() and manufacturer.lower() not in detected.lower():
+            if detected and detected.lower() not in manufacturer.lower() and manufacturer.lower() not in detected.lower():
                 warnings.append(f"brand_mismatch:{manufacturer}")
         return warnings
-    except Exception:
-        return []   # never block the user on validation error
+    except Exception as _ve:
+        # Surface error as a gentle warning rather than silent fail
+        return [f"validation_error:{str(_ve)[:80]}"]
 
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
@@ -3862,6 +3907,8 @@ def step_photos():
                     elif _w.startswith("brand_mismatch:"):
                         _sel = _w.split(":", 1)[1]
                         st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
+                    elif _w.startswith("validation_error:"):
+                        pass  # silent — don't block user on API error
                 if not _block:
                     st.session_state.photos          = photos
                     st.session_state.interior_photos = interior_photos or []

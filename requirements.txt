@@ -5,3 +5,4 @@ scipy
 soundfile
 opencv-python-headless
 av
+xhtml2pdf
