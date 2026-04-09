@@ -804,9 +804,9 @@ _HE_STRINGS = {
 
 # Audio finding label → Hebrew display text
 _AUDIO_LABELS_HE = {
-    "rod_knock_suspected":    "חשד לדפיקות מנוע (מוטות/בוכנות)",
-    "valve_tick_suspected":   "חשד לרעש שסתומים / תפטירים",
-    "belt_squeal_suspected":  "חשד לחריקת רצועה",
+    "rod_knock_suspected":    "חשד לדפיקות מנוע",
+    "valve_tick_suspected":   "רעש מהשסתומים",
+    "belt_squeal_suspected":  "רעש מחגורת ההנעה",
     "exhaust_leak_suspected": "חשד לדליפת פליטה",
     "rough_idle_suspected":   "חשד לסרק לא יציב",
     "engine_sounds_normal":   "קול המנוע תקין",
@@ -3120,13 +3120,13 @@ def render_result(result: dict):
 
         # ── Audio finding label translations ───────────────────────────────
         _AUDIO_LABELS = {
-            "rod_knock_suspected":    ("חשד לדפיקות מנוע",      "Rod Knock Suspected"),
-            "valve_tick_suspected":   ("חשד לקישקוש שסתומים",   "Valve Tick Suspected"),
-            "belt_squeal_suspected":  ("חשד לציווח חגורה/גלגלת", "Belt Squeal Suspected"),
-            "exhaust_leak_suspected": ("חשד לדליפת פליטה",       "Exhaust Leak Suspected"),
-            "rough_idle_suspected":   ("חשד לסרק לא יציב",       "Rough Idle Suspected"),
-            "engine_sounds_normal":   ("קול המנוע תקין",          "Engine Sounds Normal"),
-            "unknown":                ("ממצא לא ידוע",             "Unknown"),
+            "rod_knock_suspected":    ("חשד לדפיקות מנוע",     "Rod Knock Suspected"),
+            "valve_tick_suspected":   ("רעש מהשסתומים",         "Valve Tick Suspected"),
+            "belt_squeal_suspected":  ("רעש מחגורת ההנעה",      "Belt Squeal Suspected"),
+            "exhaust_leak_suspected": ("חשד לדליפת פליטה",      "Exhaust Leak Suspected"),
+            "rough_idle_suspected":   ("חשד לסרק לא יציב",      "Rough Idle Suspected"),
+            "engine_sounds_normal":   ("קול המנוע תקין",         "Engine Sounds Normal"),
+            "unknown":                ("ממצא לא מזוהה",           "Unknown"),
         }
 
         def _hr(c=gold_c, t=0.5):
@@ -3321,12 +3321,20 @@ def render_result(result: dict):
         # ── RECOMMENDED NEXT STEPS ──────────────────────────────────────────
         _steps = result.get("next_steps", [])
         if _steps:
+            # Hebrew: use alef-bet bullets (א ב ג…) — RTL characters stay at the
+            # correct right-side position after bidi processing.
+            # English: use regular numbers.
+            _HEB_LETTERS = "אבגדהוזחטי"
             _step_items = []
-            for _si, _step in enumerate(_steps[:8], 1):
+            for _si, _step in enumerate(_steps[:8], 0):
                 _stxt = _step.get("text", "") if isinstance(_step, dict) else str(_step)
                 _stxt_clean = _t(_stxt)
                 if _stxt_clean:
-                    _step_items.append(f"{_si}.  {_stxt_clean}")
+                    if _he:
+                        _bullet = _HEB_LETTERS[min(_si, len(_HEB_LETTERS) - 1)] + "."
+                    else:
+                        _bullet = f"{_si + 1}."
+                    _step_items.append(f"{_bullet}  {_stxt_clean}")
             if _step_items:
                 story.append(_sec_title_tbl(_L["steps"]))
                 story.append(Spacer(1, 2*mm))
@@ -3621,12 +3629,18 @@ def login_screen():
         st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
 
         if st.button(t("enter_btn"), use_container_width=True):
-            if not email or "@" not in email or "." not in email.split("@")[-1]:
+            import re as _re_email
+            # Valid email: local@domain.tld  where tld >= 2 chars (e.g. .com .co.il .net)
+            _email_re = _re_email.compile(
+                r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
+            )
+            _email_clean = email.strip().lower() if email else ""
+            if not _email_re.match(_email_clean):
                 st.error(t("invalid_email"))
             else:
-                get_or_create_user(email.lower().strip())
+                get_or_create_user(_email_clean)
                 st.session_state.authenticated = True
-                st.session_state.email         = email.lower().strip()
+                st.session_state.email         = _email_clean
                 st.session_state.step          = 1
                 st.session_state.result        = None
                 st.rerun()
