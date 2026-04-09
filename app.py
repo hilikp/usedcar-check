@@ -386,12 +386,12 @@ TR = {
         "vehicle_photos":   "תמונות הרכב",
         "photos_hint":      "העלה 4–10 תמונות: חיצוני (כל הצדדים), תא המנוע, פנים, לוח מחוונים. ודא תאורה טובה ומצלמה יציבה.",
         "underbody_title":  "תמונת תחתית הרכב | אופציונלי",
-        "underbody_hint":   "תמונה של חלק התחתון של הרכב מסייעת לזיהוי דליפות אפשריות.",
+        "underbody_hint":   "מומלץ לצורך בדיקת נזילות שמן — צלם את חלק התחתון של הרכב.",
         "photos_count":     "תמונות נבחרו",
         "photos_min_error": "אנא העלה לפחות 4 תמונות.",
         "photos_max_error": "מקסימום 10 תמונות מותר.",
         "engine_audio":     "שמע מנוע",
-        "audio_hint":       "הקלט לפחות 15 שניות של מנוע פועל בסרק. קרב את המיקרופון לתא המנוע לתוצאות הטובות ביותר. ניתן להעלות גם קובץ וידאו (MP4 וכד׳).",
+        "audio_hint":       "הקלט לפחות 15 שניות של מנוע פועל בסרק. קרב את המיקרופון לתא המנוע לתוצאות הטובות ביותר. ניתן להעלות גם קובץ וידאו (MP4 וכד׳).\n⚡ לרכב חשמלי אין צורך בהקלטה — הדוח לרכב חשמלי הוא חלקי בלבד.",
         "audio_missing":    "אנא העלה הקלטת שמע של המנוע.",
         "analyse_btn":      "לחץ לביצוע ניתוח נתונים וקבלת דוח  ←",
         "analysing":        "מנתח | זה עשוי לקחת רגע ...",
@@ -571,12 +571,12 @@ TR = {
         "vehicle_photos":   "Vehicle Photos",
         "photos_hint":      "Upload 4–10 photos: exterior (all sides), engine bay, interior, dashboard. Ensure good lighting and a steady hand.",
         "underbody_title":  "Underbody Photo | Optional",
-        "underbody_hint":   "A photo of the underside of the vehicle helps detect possible fluid leaks.",
+        "underbody_hint":   "Recommended for oil leak detection — photograph the underside of the vehicle.",
         "photos_count":     "photo(s) selected",
         "photos_min_error": "Please upload at least 4 photos.",
         "photos_max_error": "Maximum 10 photos allowed.",
         "engine_audio":     "Engine Audio",
-        "audio_hint":       "Record at least 15 seconds of the engine running at idle. Hold the microphone near the engine bay for best results. You can also upload a video file (MP4, etc.).",
+        "audio_hint":       "Record at least 15 seconds of the engine running at idle. Hold the microphone near the engine bay for best results. You can also upload a video file (MP4, etc.).\n⚡ Electric vehicles: no engine recording needed — our report for EVs is partial only.",
         "audio_missing":    "Please upload an engine audio recording.",
         "analyse_btn":      "Analyse Vehicle  →",
         "analysing":        "Analysing | this may take a moment …",
@@ -2118,7 +2118,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
                 "Possible fluid stain detected by computer vision analysis — "
                 "oil-colour, dark-wet patch, or reflective area found in underbody image."
             )
-            ai_report["leak_assessment"] = _leak_cv_he if (_lang == "he") else _leak_cv_en
+            ai_report["leak_assessment"] = _leak_cv_he if (lang == "he") else _leak_cv_en
 
         # ── Reject code computation ──────────────────────────────────────────────────────────────────────
         _ai_codes = set(ai_report.get("reject_codes") or [])
