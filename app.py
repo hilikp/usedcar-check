@@ -256,52 +256,77 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
         suspicion = "none"  # 1-2 borderline hits — normal lighting variation
 
     # ── Cross-photo car identity check ──────────────────────────────────────────
-    # Compare dominant body colour (median a*b* in LAB) across all photos.
-    # If photos cluster into two distinct colour groups, the user likely mixed
-    # photos from two different cars.
-    #
-    # Threshold: 22 units in OpenCV 8-bit a*b* space (neutral = 128).
-    # Real colour differences (red vs blue, white vs red) produce distances of
-    # 40–65. Same car in different lighting → typically < 12.
-    _XPHOTO_THRESH = 22.0
+    # Strategy: for each photo extract the DOMINANT body hue via 2D histogram
+    # peak on a center crop (removes sky/road/background). Then compare using
+    # MAX PAIRWISE distance — immune to the 50/50 split problem that defeats
+    # median-based approaches. Blue vs green distance ≈ 28; same car under
+    # varied lighting ≈ 8–12. Threshold of 15 sits safely between the two.
+    _XPHOTO_THRESH = 15.0          # max pairwise trigger level in a*b* units
     _cross_photo: dict = {"warning": False, "outlier_photos": [], "hue_spread": 0.0}
-    _photo_sigs: list = []  # (filename, med_a, med_b)
+    _photo_sigs: list = []         # (filename, peak_a, peak_b)
 
     for _xp_path in photo_paths[:10]:
         try:
             _img_xp = cv2.imread(_xp_path)
             if _img_xp is None or _img_xp.shape[0] < 80 or _img_xp.shape[1] < 80:
                 continue
+            # Center crop: remove outer 20% on each side → car body, not sky/road
+            _h_xp, _w_xp = _img_xp.shape[:2]
+            _img_xp = _img_xp[_h_xp // 5: 4 * _h_xp // 5,
+                               _w_xp // 5: 4 * _w_xp // 5]
             _lab_xp = cv2.cvtColor(_img_xp, cv2.COLOR_BGR2LAB)
             _L_xp   = _lab_xp[:, :, 0]
-            _a_xp   = _lab_xp[:, :, 1].astype(np.float32)
-            _b_xp   = _lab_xp[:, :, 2].astype(np.float32)
-            # Keep mid-lightness pixels: exclude deep shadows and blown-out sky
-            _mask_xp = (_L_xp > 40) & (_L_xp < 215)
-            if int(_mask_xp.sum()) < 1000:
+            # Mid-lightness mask — avoids deep shadows and blown highlights
+            _mask_xp = ((_L_xp > 35) & (_L_xp < 220)).astype(np.uint8)
+            if int(_mask_xp.sum()) < 500:
                 continue
-            _photo_sigs.append((
-                Path(_xp_path).name,
-                float(np.median(_a_xp[_mask_xp])),
-                float(np.median(_b_xp[_mask_xp])),
-            ))
+            # 2D histogram peak in a*b* space (32 bins × 32 bins = 8 units/bin)
+            # Peak bin = dominant car-body hue, much more focused than median
+            _hist2d = cv2.calcHist([_lab_xp], [1, 2], _mask_xp,
+                                   [32, 32], [0, 256, 0, 256])
+            _, _, _, _mloc = cv2.minMaxLoc(_hist2d)
+            # minMaxLoc returns (col, row); col=b axis, row=a axis
+            _peak_a = (_mloc[1] + 0.5) * 8.0
+            _peak_b = (_mloc[0] + 0.5) * 8.0
+            _photo_sigs.append((Path(_xp_path).name, _peak_a, _peak_b))
         except Exception:
             continue
 
     if len(_photo_sigs) >= 3:
         _a_arr = np.array([s[1] for s in _photo_sigs], dtype=np.float32)
         _b_arr = np.array([s[2] for s in _photo_sigs], dtype=np.float32)
-        _cons_a = float(np.median(_a_arr))
-        _cons_b = float(np.median(_b_arr))
-        _dists  = np.sqrt((_a_arr - _cons_a) ** 2 + (_b_arr - _cons_b) ** 2)
-        _hue_spread = float(np.max(_dists))
-        _outliers   = [_photo_sigs[i][0] for i in range(len(_photo_sigs))
-                       if float(_dists[i]) > _XPHOTO_THRESH]
-        _cross_photo = {
-            "warning":        len(_outliers) >= 1,
-            "outlier_photos": _outliers,
-            "hue_spread":     round(_hue_spread, 1),
-        }
+        _n_xp  = len(_photo_sigs)
+
+        # Max pairwise distance — catches 50/50 splits that fool median
+        _max_dist = 0.0
+        _far_i, _far_j = 0, 0
+        for _pi in range(_n_xp):
+            for _pj in range(_pi + 1, _n_xp):
+                _d = float(np.sqrt((_a_arr[_pi] - _a_arr[_pj]) ** 2
+                                   + (_b_arr[_pi] - _b_arr[_pj]) ** 2))
+                if _d > _max_dist:
+                    _max_dist = _d
+                    _far_i, _far_j = _pi, _pj
+
+        if _max_dist > _XPHOTO_THRESH:
+            # Split all photos into two poles anchored on the most-distant pair
+            # The minority group is the "outlier" group to report to the user
+            _pole_a = np.array([_a_arr[_far_i], _a_arr[_far_j]])
+            _pole_b = np.array([_b_arr[_far_i], _b_arr[_far_j]])
+            _groups: list[list] = [[], []]
+            for _xi in range(_n_xp):
+                _d0 = float(np.sqrt((_a_arr[_xi] - _pole_a[0]) ** 2
+                                    + (_b_arr[_xi] - _pole_b[0]) ** 2))
+                _d1 = float(np.sqrt((_a_arr[_xi] - _pole_a[1]) ** 2
+                                    + (_b_arr[_xi] - _pole_b[1]) ** 2))
+                _groups[0 if _d0 <= _d1 else 1].append(_photo_sigs[_xi][0])
+            # Report the smaller group as "suspects" (could be ≥ 1 photo)
+            _minority = _groups[0] if len(_groups[0]) <= len(_groups[1]) else _groups[1]
+            _cross_photo = {
+                "warning":        True,
+                "outlier_photos": _minority,
+                "hue_spread":     round(_max_dist, 1),
+            }
 
     return {
         "anomalies":      anomalies,
