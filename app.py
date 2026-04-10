@@ -3345,6 +3345,12 @@ def render_result(result: dict):
             }
             _sp_he, _sp_en = _susp_map.get(_paint_susp, (_paint_susp, _paint_susp))
             _sec(_L["paint"], _sp_he if _he else _sp_en)
+        else:
+            _no_paint_he = ("על פי התמונות שסופקו, לא זוהתה צביעה מחדש או תיקון פחח. "
+                            "מומלץ לאמת זאת בבדיקה במוסך מורשה.")
+            _no_paint_en = ("Based on the pictures provided, we did not detect any repainting or body repairs. "
+                            "Still recommended to verify at an authorised garage or inspection centre.")
+            _sec(_L["paint"], _no_paint_he if _he else _no_paint_en)
 
         # ── MARKET PRICE ────────────────────────────────────────────────────
         if _yad2_rep and _yad2_rep.get("min_price"):
@@ -3508,7 +3514,7 @@ def render_result(result: dict):
         f"<div style='font-size:1rem;color:var(--text);margin-bottom:0.6rem;'>{_r02_note}</div>"
         f"<div style='font-size:0.97rem;color:var(--muted);margin-bottom:0.5rem;'>{t('damage_history_hint')}</div>"
         f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.5rem;'>"
-        f"<a href='https://www.check-car.co.il' target='_blank' rel='noopener' "
+        f"<a href='{'https://www.check-car.co.il/report/' + str(_plate_s) + '/' if _plate_s else 'https://www.check-car.co.il'}' target='_blank' rel='noopener' "
         f"style='display:inline-block;background:rgba(106,143,170,0.12);color:#6A8FAA;"
         f"border:1px solid rgba(106,143,170,0.4);border-radius:5px;padding:0.4rem 1rem;"
         f"font-size:0.97rem;text-decoration:none;'>check-car.co.il</a>"
