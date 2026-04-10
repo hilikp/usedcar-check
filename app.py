@@ -161,6 +161,13 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
 
     return findings, duration, metrics
 
+class MixedCarsError(Exception):
+    """Raised when uploaded photos appear to belong to more than one vehicle."""
+    def __init__(self, outlier_photos: list, hue_spread: float):
+        self.outlier_photos = outlier_photos
+        self.hue_spread     = hue_spread
+        super().__init__("Photos appear to be from multiple different cars")
+
 # ─── Paint consistency analysis ──────────────────────────────────────────────
 def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
     """
@@ -546,6 +553,9 @@ TR = {
         "paint_note":           "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין חלקי הרכב + בדיקה ויזואלית של AI",
         "mixed_cars_warning":   "⚠️ זוהו תמונות הנראות שייכות לרכבים שונים — הצבע הדומיננטי שונה בין קבוצות תמונות. אנא ודא שכל התמונות שהועלו הן של אותו רכב.",
         "mixed_cars_outliers":  "תמונות חשודות: {names}",
+        "mixed_cars_block_title":  "🚫 תמונות מרכבים שונים זוהו",
+        "mixed_cars_block_body":   "נראה שהועלו תמונות של יותר מרכב אחד. לא ניתן להמשיך בניתוח. אנא חזור ועלה מחדש תמונות של אותו הרכב בלבד.",
+        "mixed_cars_block_btn":    "← חזור להעלאת תמונות",
         "action_label":     "המלצת פעולה",
         "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית | לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
         "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות | ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
@@ -733,6 +743,9 @@ TR = {
         "paint_note":           "Based on LAB color histogram comparison between panels + AI visual inspection",
         "mixed_cars_warning":   "⚠️ Photos appear to be from different cars — dominant body colour differs between image groups. Please verify that all uploaded photos are of the same vehicle.",
         "mixed_cars_outliers":  "Suspected photos: {names}",
+        "mixed_cars_block_title":  "🚫 Photos from different cars detected",
+        "mixed_cars_block_body":   "It looks like photos from more than one vehicle were uploaded. Analysis cannot continue. Please go back and upload photos of the same vehicle only.",
+        "mixed_cars_block_btn":    "← Back to photo upload",
         "action_label":     "Action Recommendation",
         "action_green":     "The vehicle looks clean visually | no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
         "action_yellow":    "Engine noise risk detected. No paint or leak issues found | the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
@@ -2016,6 +2029,16 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         if ap.suffix.lower() in _VIDEO_EXTS:
             ap = _extract_audio_from_video(ap, tmp)
 
+        # ── Cross-photo car identity check — EARLY EXIT ──────────────────────
+        # Run before any AI calls so we don't waste quota on mixed-car uploads.
+        _early_paint = _analyze_paint_consistency(photo_paths)
+        _early_cross = _early_paint.get("cross_photo", {})
+        if _early_cross.get("warning"):
+            raise MixedCarsError(
+                _early_cross.get("outlier_photos", []),
+                _early_cross.get("hue_spread", 0.0),
+            )
+
         audio_findings, audio_dur, audio_metrics = _analyze_audio(str(ap))
 
         # ── Video frame extraction ────────────────────────────────────────────
@@ -2124,7 +2147,10 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             decision.top_reasons = _mech_issues + _filtered_reasons
 
         # ── Paint consistency (OpenCV LAB histogram comparison) ───────────────
-        paint_data = _analyze_paint_consistency(photo_paths + video_frame_paths)
+        # Reuse the early result (already ran above); re-run only if video frames
+        # were extracted so panel anomalies cover all visual material
+        paint_data = (_analyze_paint_consistency(photo_paths + video_frame_paths)
+                      if video_frame_paths else _early_paint)
 
         # ── NHTSA recall & complaint data ─────────────────────────────────────
         nhtsa_data = _fetch_nhtsa_data(
@@ -4569,7 +4595,33 @@ def step_photos():
                     _prog_bar.progress(1.0)
                     _prog_text.empty()
                     if _error_box[0]:
-                        st.error(f"{t('analysis_failed')}: {_error_box[0]}")
+                        if isinstance(_error_box[0], MixedCarsError):
+                            # Clear all uploaded files and send user back to step 2
+                            st.session_state.pop("photos",           None)
+                            st.session_state.pop("interior_photos",  None)
+                            st.session_state.pop("underbody",        None)
+                            st.session_state.pop("vehicle_video",    None)
+                            st.session_state.pop("audio_file",       None)
+                            _mce = _error_box[0]
+                            _names_str = ", ".join(_mce.outlier_photos[:4]) if _mce.outlier_photos else ""
+                            st.markdown(
+                                f"<div style='background:rgba(176,64,64,0.15);border:2px solid #B04040;"
+                                f"border-radius:10px;padding:1.2rem 1.5rem;margin:1rem 0;{rtl_css}'>"
+                                f"<div style='font-size:1.25rem;font-weight:700;color:#D05050;margin-bottom:0.5rem;'>"
+                                f"{t('mixed_cars_block_title')}</div>"
+                                f"<div style='font-size:1.05rem;color:var(--text);margin-bottom:0.4rem;'>"
+                                f"{t('mixed_cars_block_body')}</div>"
+                                + (f"<div style='font-size:0.92rem;color:var(--muted);'>"
+                                   f"{t('mixed_cars_outliers').format(names=_names_str)}</div>"
+                                   if _names_str else "")
+                                + "</div>",
+                                unsafe_allow_html=True,
+                            )
+                            if st.button(t("mixed_cars_block_btn"), use_container_width=True):
+                                st.session_state.step = 2
+                                st.rerun()
+                        else:
+                            st.error(f"{t('analysis_failed')}: {_error_box[0]}")
                     else:
                         decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data, reject_codes = _result_box[0]
                         result = {
