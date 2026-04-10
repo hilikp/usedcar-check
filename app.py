@@ -4518,6 +4518,23 @@ Rules:
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
+    # ── Mixed-cars error banner (redirected back from analysis) ───────────────
+    _mce_info = st.session_state.pop("mixed_cars_error", None)
+    if _mce_info:
+        _names_str = ", ".join(_mce_info.get("outlier_photos", [])[:4])
+        st.markdown(
+            f"<div style='background:rgba(176,64,64,0.15);border:2px solid #B04040;"
+            f"border-radius:10px;padding:1.1rem 1.4rem;margin-bottom:1rem;{rtl_css}'>"
+            f"<div style='font-size:1.2rem;font-weight:700;color:#D05050;margin-bottom:0.4rem;'>"
+            f"{t('mixed_cars_block_title')}</div>"
+            f"<div style='font-size:1.02rem;color:var(--text);margin-bottom:0.3rem;'>"
+            f"{t('mixed_cars_block_body')}</div>"
+            + (f"<div style='font-size:0.9rem;color:var(--muted);'>"
+               f"{t('mixed_cars_outliers').format(names=_names_str)}</div>" if _names_str else "")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
     # ── Refine mode banner ────────────────────────────────────────────────────
     if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
         st.markdown(
@@ -4711,30 +4728,18 @@ def step_photos():
                     _prog_text.empty()
                     if _error_box[0]:
                         if isinstance(_error_box[0], MixedCarsError):
-                            # Clear all uploaded files and send user back to step 2
-                            st.session_state.pop("photos",           None)
-                            st.session_state.pop("interior_photos",  None)
-                            st.session_state.pop("underbody",        None)
-                            st.session_state.pop("vehicle_video",    None)
-                            st.session_state.pop("audio_file",       None)
+                            # Clear all uploaded media — keep car_details (plate, model, year)
+                            for _k in ("photos", "interior_photos", "underbody",
+                                       "vehicle_video", "audio_file"):
+                                st.session_state.pop(_k, None)
+                            # Store the error message so step_photos() can show it on reload
                             _mce = _error_box[0]
-                            _names_str = ", ".join(_mce.outlier_photos[:4]) if _mce.outlier_photos else ""
-                            st.markdown(
-                                f"<div style='background:rgba(176,64,64,0.15);border:2px solid #B04040;"
-                                f"border-radius:10px;padding:1.2rem 1.5rem;margin:1rem 0;{rtl_css}'>"
-                                f"<div style='font-size:1.25rem;font-weight:700;color:#D05050;margin-bottom:0.5rem;'>"
-                                f"{t('mixed_cars_block_title')}</div>"
-                                f"<div style='font-size:1.05rem;color:var(--text);margin-bottom:0.4rem;'>"
-                                f"{t('mixed_cars_block_body')}</div>"
-                                + (f"<div style='font-size:0.92rem;color:var(--muted);'>"
-                                   f"{t('mixed_cars_outliers').format(names=_names_str)}</div>"
-                                   if _names_str else "")
-                                + "</div>",
-                                unsafe_allow_html=True,
-                            )
-                            if st.button(t("mixed_cars_block_btn"), use_container_width=True):
-                                st.session_state.step = 2
-                                st.rerun()
+                            st.session_state["mixed_cars_error"] = {
+                                "outlier_photos": _mce.outlier_photos,
+                                "hue_spread":     _mce.hue_spread,
+                            }
+                            st.session_state.step = 2
+                            st.rerun()
                         else:
                             st.error(f"{t('analysis_failed')}: {_error_box[0]}")
                     else:
