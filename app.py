@@ -3168,26 +3168,27 @@ def render_result(result: dict):
 
         def _bullet_row(text: str) -> Table:
             """
-            Render one bullet item as a 2-column table row so the bullet (•)
-            always sits on the correct side regardless of text direction.
-            Hebrew (RTL): bullet on the RIGHT  [text | •]
-            English (LTR): bullet on the LEFT  [• | text]
+            Render one bullet item as a 2-column table:
+              Hebrew RTL: [text cell | • cell]   bullet on the RIGHT
+              English LTR: [• cell | text cell]  bullet on the LEFT
+            text is passed RAW (not yet bidi-processed); _t() is applied here once.
             """
             _dot_s = _s('dot', True, 10, gold_c, align=TA_CENTER, leading=14)
             _txt_s = _s('btxt', False, 9, dark_c, align=_ALIGN, leading=14)
             _dot_cell = Paragraph("•", _dot_s)
+            # Apply _t() to the text ONCE here — callers must NOT pre-process with _t()
             _txt_cell = Paragraph(_t(text), _txt_s)
             if _rtl_pdf:
                 _cells = [[_txt_cell, _dot_cell]]
-                _widths = [W_pt - 12*mm, 12*mm]
+                _widths = [W_pt - 10*mm, 10*mm]
             else:
                 _cells = [[_dot_cell, _txt_cell]]
-                _widths = [12*mm, W_pt - 12*mm]
+                _widths = [10*mm, W_pt - 10*mm]
             _tbl = Table(_cells, colWidths=_widths)
             _tbl.setStyle(TableStyle([
                 ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING',   (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+                ('LEFTPADDING',   (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING',  (0, 0), (-1, -1), 2),
                 ('TOPPADDING',    (0, 0), (-1, -1), 1),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ]))
@@ -3202,23 +3203,18 @@ def render_result(result: dict):
         _car_title = _t(f"{_make_s} {_model_s} {_year_s}") or "Vehicle"
         story.append(Paragraph(_car_title, h1_s))
 
-        # Meta line
+        # Meta line — build with raw strings, apply _t() ONCE to the whole line
         _meta_parts = []
-        if _plate_s:  _meta_parts.append(f"{_L['plate']} {_t(str(_plate_s))}")
-        if _km_s:     _meta_parts.append(f"{_L['odo']} {_t(str(_km_s))} km")
-        if _prev_own: _meta_parts.append(f"{_L['owners']} {_t(str(_prev_own))}")
+        if _plate_s:  _meta_parts.append(f"{_L['plate']} {str(_plate_s)}")
+        if _km_s:     _meta_parts.append(f"{_L['odo']} {str(_km_s)} km")
+        if _prev_own: _meta_parts.append(f"{_L['owners']} {str(_prev_own)}")
         _meta_parts.append(f"{_L['date']} {_date_str}")
-        story.append(Paragraph("   |   ".join(_meta_parts), meta_s))
+        story.append(Paragraph(_t("   |   ".join(_meta_parts)), meta_s))
         story.append(Spacer(1, 3*mm))
 
         # ── VERDICT BOX ────────────────────────────────────────────────────
-        _verdict_text = _vmap_pdf.get(rec, _t(_pdf_verdict_lbl))
-        if _he:
-            try:
-                from bidi.algorithm import get_display
-                _verdict_text = get_display(_verdict_text)
-            except Exception:
-                pass
+        # _vmap_pdf values are raw Hebrew/English; pass through _t() exactly once
+        _verdict_text = _t(_vmap_pdf.get(rec, _pdf_verdict_lbl))
         vt = Table([[Paragraph(_verdict_text, verd_s)]], colWidths=[W_pt])
         vt.setStyle(TableStyle([
             ('BACKGROUND',    (0,0), (-1,-1), verdict_bg),
@@ -3240,17 +3236,17 @@ def render_result(result: dict):
         _sc_lbl_row, _sc_val_row, _sc_cols = [], [], []
         if _conf_str:
             _sc_cols.append(W_pt / 3)
-            _sc_lbl_row.append(Paragraph(_L["conf"], sc_lbl))
+            _sc_lbl_row.append(Paragraph(_t(_L["conf"]), sc_lbl))
             _sc_val_row.append(Paragraph(
-                _t(_conf_str) if _he else _conf_str,
+                _t(_conf_str),
                 _s('cfv', True, 13, _conf_color, align=TA_CENTER, leading=18)))
         if _ext_sc is not None:
             _sc_cols.append(W_pt / 3)
-            _sc_lbl_row.append(Paragraph(_L["ext_sc"], sc_lbl))
+            _sc_lbl_row.append(Paragraph(_t(_L["ext_sc"]), sc_lbl))
             _sc_val_row.append(Paragraph(f"{int(_ext_sc)}/100", sc_val))
         if _int_sc is not None:
             _sc_cols.append(W_pt / 3)
-            _sc_lbl_row.append(Paragraph(_L["int_sc"], sc_lbl))
+            _sc_lbl_row.append(Paragraph(_t(_L["int_sc"]), sc_lbl))
             _sc_val_row.append(Paragraph(f"{int(_int_sc)}/100", sc_val))
 
         if _sc_cols:
@@ -3322,18 +3318,17 @@ def render_result(result: dict):
                 if not _raw_label:
                     continue
                 # Use translated label if available, else fallback to title-case
+                # IMPORTANT: do NOT call _t() here — _bullet_row calls _t() exactly once
                 _lbl_pair = _AUDIO_LABELS.get(_raw_label)
                 if _lbl_pair:
-                    _lbl = _t(_lbl_pair[0]) if _he else _lbl_pair[1]
+                    _lbl_raw = _lbl_pair[0] if _he else _lbl_pair[1]
                 else:
-                    _lbl = _t(_raw_label.replace("_", " ").title()) if _he \
-                           else _raw_label.replace("_", " ").title()
+                    _lbl_raw = _raw_label.replace("_", " ").title()
                 try:
                     _cp = f"{float(_af.get('confidence', 0)) * 100:.0f}%"
                 except Exception:
                     _cp = str(_af.get("confidence", ""))
-                # Normal = green dot, issues = orange dot
-                _aud_items.append(f"{_lbl}  ({_cp})")
+                _aud_items.append(f"{_lbl_raw}  ({_cp})")
             if _aud_items:
                 story.append(_sec_title_tbl(_L["audio"]))
                 story.append(Spacer(1, 2*mm))
