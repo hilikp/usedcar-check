@@ -1065,6 +1065,114 @@ def _backfill_mailing_list():
 
 _backfill_mailing_list()
 
+# ─── Google Sheets persistence ────────────────────────────────────────────────
+# Writes are "fire and forget" in a background thread — the local JSON/CSV
+# remains the source of truth for reads, so a Sheets outage never breaks the app.
+#
+# Expected Streamlit secrets (under [gsheets]):
+#   [gsheets]
+#   spreadsheet_id = "1ABCdef..."          # from the sheet URL
+#   type = "service_account"
+#   project_id = "..."
+#   private_key_id = "..."
+#   private_key = "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n"
+#   client_email = "usedcar@project.iam.gserviceaccount.com"
+#   client_id = "..."
+#   auth_uri = "https://accounts.google.com/o/oauth2/auth"
+#   token_uri = "https://oauth2.googleapis.com/token"
+#   auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+#   client_x509_cert_url = "..."
+
+_GS_ENABLED   = False   # flipped to True when credentials are found
+_GS_CLIENT    = None    # gspread client (shared)
+_GS_SHEET_ID  = ""      # spreadsheet ID from secrets
+
+# Tab names inside the spreadsheet
+_GS_TAB_MAILING = "mailing_list"
+_GS_TAB_CHECKS  = "checks_log"
+_GS_MAILING_HDR = ["email", "first_seen", "check_count"]
+_GS_CHECKS_HDR  = ["check_id", "email", "car_label", "verdict", "confidence",
+                    "odometer_km", "year", "plate", "created_at"]
+
+def _gs_init():
+    """Initialise gspread client once. Returns True on success."""
+    global _GS_ENABLED, _GS_CLIENT, _GS_SHEET_ID
+    if _GS_ENABLED:
+        return True
+    try:
+        _cfg = st.secrets.get("gsheets", {})
+        if not _cfg or not _cfg.get("private_key"):
+            return False
+        import gspread
+        from google.oauth2.service_account import Credentials as _SAC
+        _scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.file",
+        ]
+        _creds = _SAC.from_service_account_info(dict(_cfg), scopes=_scopes)
+        _GS_CLIENT   = gspread.authorize(_creds)
+        _GS_SHEET_ID = _cfg.get("spreadsheet_id", "")
+        _GS_ENABLED  = True
+        return True
+    except Exception:
+        return False
+
+def _gs_get_or_create_tab(sh, title: str, headers: list) -> object:
+    """Return a worksheet by name, creating it with headers if missing."""
+    try:
+        ws = sh.worksheet(title)
+    except Exception:
+        ws = sh.add_worksheet(title=title, rows=2000, cols=len(headers))
+        ws.append_row(headers, value_input_option="RAW")
+    return ws
+
+def _gs_upsert_mailing(email: str, first_seen: str, check_count: int = 0):
+    """Add or update one row in the mailing_list tab (keyed on email)."""
+    if not _gs_init():
+        return
+    try:
+        sh  = _GS_CLIENT.open_by_key(_GS_SHEET_ID)
+        ws  = _gs_get_or_create_tab(sh, _GS_TAB_MAILING, _GS_MAILING_HDR)
+        all_rows = ws.get_all_values()
+        # Find existing row (skip header at index 0)
+        for idx, row in enumerate(all_rows[1:], start=2):
+            if row and row[0].lower() == email.lower():
+                ws.update(f"A{idx}:C{idx}",
+                          [[email, first_seen, str(check_count)]])
+                return
+        # New email — append
+        ws.append_row([email, first_seen, str(check_count)],
+                      value_input_option="RAW")
+    except Exception:
+        pass   # never break the app for a Sheets write failure
+
+def _gs_append_check(check_id: str, email: str, result: dict):
+    """Append one row to the checks_log tab."""
+    if not _gs_init():
+        return
+    try:
+        sh  = _GS_CLIENT.open_by_key(_GS_SHEET_ID)
+        ws  = _gs_get_or_create_tab(sh, _GS_TAB_CHECKS, _GS_CHECKS_HDR)
+        d   = result.get("car_details", {})
+        ws.append_row([
+            check_id,
+            email,
+            result.get("car_label", ""),
+            result.get("recommendation", ""),
+            result.get("confidence", ""),
+            str(d.get("odometer", "")),
+            str(d.get("year", "")),
+            str(d.get("plate", "")),
+            result.get("created_at", ""),
+        ], value_input_option="RAW")
+    except Exception:
+        pass
+
+def _gs_fire(fn, *args, **kwargs):
+    """Run a Google Sheets write in a background thread (non-blocking)."""
+    import threading
+    threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True).start()
+
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="UsedCar Check",
@@ -1465,7 +1573,9 @@ def get_or_create_user(email: str):
         first_seen = datetime.now().isoformat()
         users[email] = {"created_at": first_seen, "checks": []}
         save_users(users)
-        _append_mailing_list(email, first_seen)   # ← add to CSV mailing list
+        _append_mailing_list(email, first_seen)
+        # Persist to Google Sheets (background, non-blocking)
+        _gs_fire(_gs_upsert_mailing, email, first_seen, 0)
     return users[email]
 
 def save_check(email: str, result: dict) -> str:
@@ -1478,6 +1588,11 @@ def save_check(email: str, result: dict) -> str:
     users.setdefault(email, {"created_at": datetime.now().isoformat(), "checks": []})
     users[email]["checks"].append(check_id)
     save_users(users)
+    # Update mailing list check_count + append check row (background)
+    _check_count = len(users[email]["checks"])
+    _first_seen  = users[email].get("created_at", result["created_at"])
+    _gs_fire(_gs_upsert_mailing, email, _first_seen, _check_count)
+    _gs_fire(_gs_append_check, check_id, email, result)
     return check_id
 
 def load_check(check_id: str) -> dict | None:
