@@ -161,13 +161,6 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
 
     return findings, duration, metrics
 
-class MixedCarsError(Exception):
-    """Raised when uploaded photos appear to belong to more than one vehicle."""
-    def __init__(self, outlier_photos: list, hue_spread: float):
-        self.outlier_photos = outlier_photos
-        self.hue_spread     = hue_spread
-        super().__init__("Photos appear to be from multiple different cars")
-
 # ─── Paint consistency analysis ──────────────────────────────────────────────
 def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
     """
@@ -262,84 +255,10 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
     else:
         suspicion = "none"  # 1-2 borderline hits — normal lighting variation
 
-    # ── Cross-photo car identity check ──────────────────────────────────────────
-    # Strategy: for each photo extract the DOMINANT body hue via 2D histogram
-    # peak on a center crop (removes sky/road/background). Then compare using
-    # MAX PAIRWISE distance — immune to the 50/50 split problem that defeats
-    # median-based approaches. Blue vs green distance ≈ 28; same car under
-    # varied lighting ≈ 8–12. Threshold of 15 sits safely between the two.
-    _XPHOTO_THRESH = 15.0          # max pairwise trigger level in a*b* units
-    _cross_photo: dict = {"warning": False, "outlier_photos": [], "hue_spread": 0.0}
-    _photo_sigs: list = []         # (filename, peak_a, peak_b)
-
-    for _xp_path in photo_paths[:10]:
-        try:
-            _img_xp = cv2.imread(_xp_path)
-            if _img_xp is None or _img_xp.shape[0] < 80 or _img_xp.shape[1] < 80:
-                continue
-            # Center crop: remove outer 20% on each side → car body, not sky/road
-            _h_xp, _w_xp = _img_xp.shape[:2]
-            _img_xp = _img_xp[_h_xp // 5: 4 * _h_xp // 5,
-                               _w_xp // 5: 4 * _w_xp // 5]
-            _lab_xp = cv2.cvtColor(_img_xp, cv2.COLOR_BGR2LAB)
-            _L_xp   = _lab_xp[:, :, 0]
-            # Mid-lightness mask — avoids deep shadows and blown highlights
-            _mask_xp = ((_L_xp > 35) & (_L_xp < 220)).astype(np.uint8)
-            if int(_mask_xp.sum()) < 500:
-                continue
-            # 2D histogram peak in a*b* space (32 bins × 32 bins = 8 units/bin)
-            # Peak bin = dominant car-body hue, much more focused than median
-            _hist2d = cv2.calcHist([_lab_xp], [1, 2], _mask_xp,
-                                   [32, 32], [0, 256, 0, 256])
-            _, _, _, _mloc = cv2.minMaxLoc(_hist2d)
-            # minMaxLoc returns (col, row); col=b axis, row=a axis
-            _peak_a = (_mloc[1] + 0.5) * 8.0
-            _peak_b = (_mloc[0] + 0.5) * 8.0
-            _photo_sigs.append((Path(_xp_path).name, _peak_a, _peak_b))
-        except Exception:
-            continue
-
-    if len(_photo_sigs) >= 3:
-        _a_arr = np.array([s[1] for s in _photo_sigs], dtype=np.float32)
-        _b_arr = np.array([s[2] for s in _photo_sigs], dtype=np.float32)
-        _n_xp  = len(_photo_sigs)
-
-        # Max pairwise distance — catches 50/50 splits that fool median
-        _max_dist = 0.0
-        _far_i, _far_j = 0, 0
-        for _pi in range(_n_xp):
-            for _pj in range(_pi + 1, _n_xp):
-                _d = float(np.sqrt((_a_arr[_pi] - _a_arr[_pj]) ** 2
-                                   + (_b_arr[_pi] - _b_arr[_pj]) ** 2))
-                if _d > _max_dist:
-                    _max_dist = _d
-                    _far_i, _far_j = _pi, _pj
-
-        if _max_dist > _XPHOTO_THRESH:
-            # Split all photos into two poles anchored on the most-distant pair
-            # The minority group is the "outlier" group to report to the user
-            _pole_a = np.array([_a_arr[_far_i], _a_arr[_far_j]])
-            _pole_b = np.array([_b_arr[_far_i], _b_arr[_far_j]])
-            _groups: list[list] = [[], []]
-            for _xi in range(_n_xp):
-                _d0 = float(np.sqrt((_a_arr[_xi] - _pole_a[0]) ** 2
-                                    + (_b_arr[_xi] - _pole_b[0]) ** 2))
-                _d1 = float(np.sqrt((_a_arr[_xi] - _pole_a[1]) ** 2
-                                    + (_b_arr[_xi] - _pole_b[1]) ** 2))
-                _groups[0 if _d0 <= _d1 else 1].append(_photo_sigs[_xi][0])
-            # Report the smaller group as "suspects" (could be ≥ 1 photo)
-            _minority = _groups[0] if len(_groups[0]) <= len(_groups[1]) else _groups[1]
-            _cross_photo = {
-                "warning":        True,
-                "outlier_photos": _minority,
-                "hue_spread":     round(_max_dist, 1),
-            }
-
     return {
         "anomalies":      anomalies,
         "suspicion":      suspicion,
         "panels_checked": panels_checked,
-        "cross_photo":    _cross_photo,
     }
 
 # ─── NHTSA Safety Data ────────────────────────────────────────────────────────
@@ -551,11 +470,6 @@ TR = {
         "paint_severity_medium": "🟡 חשד בינוני לצביעה מחדש",
         "paint_severity_low":    "🟢 עקביות צבע תקינה",
         "paint_note":           "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין חלקי הרכב + בדיקה ויזואלית של AI",
-        "mixed_cars_warning":   "⚠️ זוהו תמונות הנראות שייכות לרכבים שונים — הצבע הדומיננטי שונה בין קבוצות תמונות. אנא ודא שכל התמונות שהועלו הן של אותו רכב.",
-        "mixed_cars_outliers":  "תמונות חשודות: {names}",
-        "mixed_cars_block_title":  "🚫 תמונות מרכבים שונים זוהו",
-        "mixed_cars_block_body":   "נראה שהועלו תמונות של יותר מרכב אחד. לא ניתן להמשיך בניתוח. אנא חזור ועלה מחדש תמונות של אותו הרכב בלבד.",
-        "mixed_cars_block_btn":    "← חזור להעלאת תמונות",
         "action_label":     "המלצת פעולה",
         "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית | לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
         "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות | ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
@@ -741,11 +655,6 @@ TR = {
         "paint_severity_medium": "🟡 Moderate repaint suspicion",
         "paint_severity_low":    "🟢 Paint consistency normal",
         "paint_note":           "Based on LAB color histogram comparison between panels + AI visual inspection",
-        "mixed_cars_warning":   "⚠️ Photos appear to be from different cars — dominant body colour differs between image groups. Please verify that all uploaded photos are of the same vehicle.",
-        "mixed_cars_outliers":  "Suspected photos: {names}",
-        "mixed_cars_block_title":  "🚫 Photos from different cars detected",
-        "mixed_cars_block_body":   "It looks like photos from more than one vehicle were uploaded. Analysis cannot continue. Please go back and upload photos of the same vehicle only.",
-        "mixed_cars_block_btn":    "← Back to photo upload",
         "action_label":     "Action Recommendation",
         "action_green":     "The vehicle looks clean visually | no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
         "action_yellow":    "Engine noise risk detected. No paint or leak issues found | the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
@@ -2102,16 +2011,6 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         if ap.suffix.lower() in _VIDEO_EXTS:
             ap = _extract_audio_from_video(ap, tmp)
 
-        # ── Cross-photo car identity check — EARLY EXIT ──────────────────────
-        # Run before any AI calls so we don't waste quota on mixed-car uploads.
-        _early_paint = _analyze_paint_consistency(photo_paths)
-        _early_cross = _early_paint.get("cross_photo", {})
-        if _early_cross.get("warning"):
-            raise MixedCarsError(
-                _early_cross.get("outlier_photos", []),
-                _early_cross.get("hue_spread", 0.0),
-            )
-
         audio_findings, audio_dur, audio_metrics = _analyze_audio(str(ap))
 
         # ── Video frame extraction ────────────────────────────────────────────
@@ -2220,10 +2119,7 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             decision.top_reasons = _mech_issues + _filtered_reasons
 
         # ── Paint consistency (OpenCV LAB histogram comparison) ───────────────
-        # Reuse the early result (already ran above); re-run only if video frames
-        # were extracted so panel anomalies cover all visual material
-        paint_data = (_analyze_paint_consistency(photo_paths + video_frame_paths)
-                      if video_frame_paths else _early_paint)
+        paint_data = _analyze_paint_consistency(photo_paths + video_frame_paths)
 
         # ── NHTSA recall & complaint data ─────────────────────────────────────
         nhtsa_data = _fetch_nhtsa_data(
@@ -2755,21 +2651,6 @@ def render_result(result: dict):
     suspicion      = paint_data.get("suspicion", "none")
 
     section_label("paint_title")
-
-    # Mixed-cars warning (cross-photo colour consistency check)
-    _cross_photo = paint_data.get("cross_photo", {})
-    if _cross_photo.get("warning"):
-        _outlier_names = _cross_photo.get("outlier_photos", [])
-        _names_str = ", ".join(_outlier_names[:4]) if _outlier_names else ""
-        st.markdown(
-            f"<div style='background:rgba(176,64,64,0.13);border:1.5px solid #B04040;"
-            f"border-radius:7px;padding:0.75rem 1.1rem;margin:0.4rem 0 0.7rem;{rtl_css}'>"
-            f"<span style='font-size:1.05rem;font-weight:600;color:#D05050;'>{t('mixed_cars_warning')}</span>"
-            + (f"<br><span style='font-size:0.92rem;color:var(--muted);'>{t('mixed_cars_outliers').format(names=_names_str)}</span>"
-               if _names_str else "")
-            + "</div>",
-            unsafe_allow_html=True,
-        )
 
     # Overall suspicion pill
     if suspicion == "high":
@@ -4476,23 +4357,6 @@ Rules:
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
-    # ── Mixed-cars error banner (redirected back from analysis) ───────────────
-    _mce_info = st.session_state.pop("mixed_cars_error", None)
-    if _mce_info:
-        _names_str = ", ".join(_mce_info.get("outlier_photos", [])[:4])
-        st.markdown(
-            f"<div style='background:rgba(176,64,64,0.15);border:2px solid #B04040;"
-            f"border-radius:10px;padding:1.1rem 1.4rem;margin-bottom:1rem;{rtl_css}'>"
-            f"<div style='font-size:1.2rem;font-weight:700;color:#D05050;margin-bottom:0.4rem;'>"
-            f"{t('mixed_cars_block_title')}</div>"
-            f"<div style='font-size:1.02rem;color:var(--text);margin-bottom:0.3rem;'>"
-            f"{t('mixed_cars_block_body')}</div>"
-            + (f"<div style='font-size:0.9rem;color:var(--muted);'>"
-               f"{t('mixed_cars_outliers').format(names=_names_str)}</div>" if _names_str else "")
-            + "</div>",
-            unsafe_allow_html=True,
-        )
-
     # ── Refine mode banner ────────────────────────────────────────────────────
     if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
         st.markdown(
@@ -4685,21 +4549,7 @@ def step_photos():
                     _prog_bar.progress(1.0)
                     _prog_text.empty()
                     if _error_box[0]:
-                        if isinstance(_error_box[0], MixedCarsError):
-                            # Clear all uploaded media — keep car_details (plate, model, year)
-                            for _k in ("photos", "interior_photos", "underbody",
-                                       "vehicle_video", "audio_file"):
-                                st.session_state.pop(_k, None)
-                            # Store the error message so step_photos() can show it on reload
-                            _mce = _error_box[0]
-                            st.session_state["mixed_cars_error"] = {
-                                "outlier_photos": _mce.outlier_photos,
-                                "hue_spread":     _mce.hue_spread,
-                            }
-                            st.session_state.step = 2
-                            st.rerun()
-                        else:
-                            st.error(f"{t('analysis_failed')}: {_error_box[0]}")
+                        st.error(f"{t('analysis_failed')}: {_error_box[0]}")
                     else:
                         decision, audio_dur, ai_report, nhtsa_data, audio_metrics, audio_findings_raw, paint_data, yad2_price_data, reject_codes = _result_box[0]
                         result = {
