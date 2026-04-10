@@ -255,10 +255,59 @@ def _analyze_paint_consistency(photo_paths: list[str]) -> dict:
     else:
         suspicion = "none"  # 1-2 borderline hits — normal lighting variation
 
+    # ── Cross-photo car identity check ──────────────────────────────────────────
+    # Compare dominant body colour (median a*b* in LAB) across all photos.
+    # If photos cluster into two distinct colour groups, the user likely mixed
+    # photos from two different cars.
+    #
+    # Threshold: 22 units in OpenCV 8-bit a*b* space (neutral = 128).
+    # Real colour differences (red vs blue, white vs red) produce distances of
+    # 40–65. Same car in different lighting → typically < 12.
+    _XPHOTO_THRESH = 22.0
+    _cross_photo: dict = {"warning": False, "outlier_photos": [], "hue_spread": 0.0}
+    _photo_sigs: list = []  # (filename, med_a, med_b)
+
+    for _xp_path in photo_paths[:10]:
+        try:
+            _img_xp = cv2.imread(_xp_path)
+            if _img_xp is None or _img_xp.shape[0] < 80 or _img_xp.shape[1] < 80:
+                continue
+            _lab_xp = cv2.cvtColor(_img_xp, cv2.COLOR_BGR2LAB)
+            _L_xp   = _lab_xp[:, :, 0]
+            _a_xp   = _lab_xp[:, :, 1].astype(np.float32)
+            _b_xp   = _lab_xp[:, :, 2].astype(np.float32)
+            # Keep mid-lightness pixels: exclude deep shadows and blown-out sky
+            _mask_xp = (_L_xp > 40) & (_L_xp < 215)
+            if int(_mask_xp.sum()) < 1000:
+                continue
+            _photo_sigs.append((
+                Path(_xp_path).name,
+                float(np.median(_a_xp[_mask_xp])),
+                float(np.median(_b_xp[_mask_xp])),
+            ))
+        except Exception:
+            continue
+
+    if len(_photo_sigs) >= 3:
+        _a_arr = np.array([s[1] for s in _photo_sigs], dtype=np.float32)
+        _b_arr = np.array([s[2] for s in _photo_sigs], dtype=np.float32)
+        _cons_a = float(np.median(_a_arr))
+        _cons_b = float(np.median(_b_arr))
+        _dists  = np.sqrt((_a_arr - _cons_a) ** 2 + (_b_arr - _cons_b) ** 2)
+        _hue_spread = float(np.max(_dists))
+        _outliers   = [_photo_sigs[i][0] for i in range(len(_photo_sigs))
+                       if float(_dists[i]) > _XPHOTO_THRESH]
+        _cross_photo = {
+            "warning":        len(_outliers) >= 1,
+            "outlier_photos": _outliers,
+            "hue_spread":     round(_hue_spread, 1),
+        }
+
     return {
         "anomalies":      anomalies,
         "suspicion":      suspicion,
         "panels_checked": panels_checked,
+        "cross_photo":    _cross_photo,
     }
 
 # ─── NHTSA Safety Data ────────────────────────────────────────────────────────
@@ -469,7 +518,9 @@ TR = {
         "paint_severity_high":   "🔴 חשד גבוה לתיקון גוף",
         "paint_severity_medium": "🟡 חשד בינוני לצביעה מחדש",
         "paint_severity_low":    "🟢 עקביות צבע תקינה",
-        "paint_note":       "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין חלקי הרכב + בדיקה ויזואלית של AI",
+        "paint_note":           "ניתוח מבוסס השוואת היסטוגרמת צבע LAB בין חלקי הרכב + בדיקה ויזואלית של AI",
+        "mixed_cars_warning":   "⚠️ זוהו תמונות הנראות שייכות לרכבים שונים — הצבע הדומיננטי שונה בין קבוצות תמונות. אנא ודא שכל התמונות שהועלו הן של אותו רכב.",
+        "mixed_cars_outliers":  "תמונות חשודות: {names}",
         "action_label":     "המלצת פעולה",
         "action_green":     "הרכב נראה תקין בבדיקה הוויזואלית | לא זוהו בעיות צבע, דליפות או רעשי מנוע. ייתכן שמדובר ברכישה טובה, אך חובה להגיע לבדיקת רכב מוסמכת לפני חתימה על כל עסקה.",
         "action_yellow":    "זוהה סיכון קולי במנוע. לא זוהו בעיות צבע או דליפות | ייתכן שמדובר ברכב שניתן לתקן. חובה להגיע לבדיקת רכב מוסמכת לפני כל שיקול רכישה.",
@@ -654,7 +705,9 @@ TR = {
         "paint_severity_high":   "🔴 High suspicion of body repair",
         "paint_severity_medium": "🟡 Moderate repaint suspicion",
         "paint_severity_low":    "🟢 Paint consistency normal",
-        "paint_note":       "Based on LAB color histogram comparison between panels + AI visual inspection",
+        "paint_note":           "Based on LAB color histogram comparison between panels + AI visual inspection",
+        "mixed_cars_warning":   "⚠️ Photos appear to be from different cars — dominant body colour differs between image groups. Please verify that all uploaded photos are of the same vehicle.",
+        "mixed_cars_outliers":  "Suspected photos: {names}",
         "action_label":     "Action Recommendation",
         "action_green":     "The vehicle looks clean visually | no paint issues, leaks or engine problems detected. This could be a good buy, but an official inspection at a certified mechanic is mandatory before signing any deal.",
         "action_yellow":    "Engine noise risk detected. No paint or leak issues found | the car may be fixable. You must take it to a certified inspection center before making any purchase decision.",
@@ -2578,6 +2631,21 @@ def render_result(result: dict):
     suspicion      = paint_data.get("suspicion", "none")
 
     section_label("paint_title")
+
+    # Mixed-cars warning (cross-photo colour consistency check)
+    _cross_photo = paint_data.get("cross_photo", {})
+    if _cross_photo.get("warning"):
+        _outlier_names = _cross_photo.get("outlier_photos", [])
+        _names_str = ", ".join(_outlier_names[:4]) if _outlier_names else ""
+        st.markdown(
+            f"<div style='background:rgba(176,64,64,0.13);border:1.5px solid #B04040;"
+            f"border-radius:7px;padding:0.75rem 1.1rem;margin:0.4rem 0 0.7rem;{rtl_css}'>"
+            f"<span style='font-size:1.05rem;font-weight:600;color:#D05050;'>{t('mixed_cars_warning')}</span>"
+            + (f"<br><span style='font-size:0.92rem;color:var(--muted);'>{t('mixed_cars_outliers').format(names=_names_str)}</span>"
+               if _names_str else "")
+            + "</div>",
+            unsafe_allow_html=True,
+        )
 
     # Overall suspicion pill
     if suspicion == "high":
