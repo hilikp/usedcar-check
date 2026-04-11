@@ -3882,6 +3882,20 @@ def login_screen():
                 <span style='font-size:1.02rem;color:var(--text);line-height:1.5;'>{t(_wyg)}</span>
             </div>""", unsafe_allow_html=True)
 
+        _wyg_tagline = (
+            "בשורה התחתונה - תחסכו זמן ועוגמת נפש<br>ותגיעו עם רכב מתאים לבדיקת מוסך"
+            if st.session_state.lang == "he"
+            else "Bottom line - save time and frustration,<br>and arrive at the garage with the right car"
+        )
+        st.markdown(f"""
+        <div style='margin-top:0.9rem;padding:0.75rem 1rem;
+                    background:rgba(200,169,106,0.08);border-radius:8px;
+                    border-right:3px solid #C8A96A;{_disc_rtl}'>
+            <span style='font-size:1.02rem;color:var(--gold);font-weight:600;line-height:1.6;'>
+                {_wyg_tagline}
+            </span>
+        </div>""", unsafe_allow_html=True)
+
     with _sample_col:
         st.markdown(f"<div style='font-size:1.4rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;{_disc_rtl}'>{t('sample_title')}</div>", unsafe_allow_html=True)
         st.markdown(f"""
