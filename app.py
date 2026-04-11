@@ -452,7 +452,9 @@ TR = {
         "photos_max_error": "מקסימום 10 תמונות מותר.",
         "engine_audio":     "שמע מנוע",
         "audio_hint":       "הקלט לפחות 15 שניות של מנוע פועל בסרק. קרב את המיקרופון לתא המנוע לתוצאות הטובות ביותר. ניתן להעלות גם קובץ וידאו (MP4 וכד׳).\n⚡ לרכב חשמלי אין צורך בהקלטה — הדוח לרכב חשמלי הוא חלקי בלבד.",
-        "audio_missing":    "אנא העלה הקלטת שמע של המנוע.",
+        "audio_missing":    "אנא העלה הקלטת שמע של המנוע, או סמן שמדובר ברכב חשמלי.",
+        "ev_checkbox":      "⚡ זהו רכב חשמלי — אין צורך בהקלטת מנוע",
+        "ev_partial_notice":"⚡ בדיקה חלקית — הדוח לא יכלול ניתוח קול מנוע",
         "analyse_btn":      "לחץ לביצוע ניתוח נתונים וקבלת דוח  ←",
         "analysing":        "מנתח | זה עשוי לקחת רגע ...",
         "analysis_failed":  "הניתוח נכשל",
@@ -678,7 +680,9 @@ TR = {
         "photos_max_error": "Maximum 10 photos allowed.",
         "engine_audio":     "Engine Audio",
         "audio_hint":       "Record at least 15 seconds of the engine running at idle. Hold the microphone near the engine bay for best results. You can also upload a video file (MP4, etc.).\n⚡ Electric vehicles: no engine recording needed — our report for EVs is partial only.",
-        "audio_missing":    "Please upload an engine audio recording.",
+        "audio_missing":    "Please upload an engine audio recording, or tick the electric vehicle box.",
+        "ev_checkbox":      "⚡ This is an electric vehicle — no engine recording needed",
+        "ev_partial_notice":"⚡ Partial check — the report will not include engine audio analysis",
         "analyse_btn":      "Analyse Vehicle  →",
         "analysing":        "Analysing | this may take a moment …",
         "analysis_failed":  "Analysis failed",
@@ -2107,12 +2111,15 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
             up = tmp / f"underbody{ext}"
             up.write_bytes(underbody_file.getvalue())
             underbody_path = str(up)
-        ap = tmp / f"audio{Path(audio_file.name).suffix or '.wav'}"
-        ap.write_bytes(audio_file.getvalue())
-        if ap.suffix.lower() in _VIDEO_EXTS:
-            ap = _extract_audio_from_video(ap, tmp)
-
-        audio_findings, audio_dur, audio_metrics = _analyze_audio(str(ap))
+        if audio_file is not None:
+            ap = tmp / f"audio{Path(audio_file.name).suffix or '.wav'}"
+            ap.write_bytes(audio_file.getvalue())
+            if ap.suffix.lower() in _VIDEO_EXTS:
+                ap = _extract_audio_from_video(ap, tmp)
+            audio_findings, audio_dur, audio_metrics = _analyze_audio(str(ap))
+        else:
+            # Electric vehicle — no audio provided, skip audio analysis
+            audio_findings, audio_dur, audio_metrics = [], 0.0, {}
 
         # ── Video frame extraction ────────────────────────────────────────────
         video_frame_paths: list[str] = []
@@ -4710,6 +4717,16 @@ def step_photos():
         st.markdown(f"<p style='font-size:1.01rem;color:#4A7A4A;margin-top:0.3rem;'>🎙 {audio.name}</p>",
                     unsafe_allow_html=True)
 
+    # ── EV checkbox ───────────────────────────────────────────────────────────
+    _ev_mode = st.checkbox(t("ev_checkbox"), key="ev_mode",
+                           value=st.session_state.get("ev_mode", False))
+    if _ev_mode:
+        st.markdown(
+            f"<div style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.35);"
+            f"border-radius:6px;padding:0.55rem 1rem;margin-top:0.3rem;font-size:0.97rem;"
+            f"color:#C8A96A;{rtl_css}'>{t('ev_partial_notice')}</div>",
+            unsafe_allow_html=True)
+
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -4721,7 +4738,7 @@ def step_photos():
                 st.error("אנא העלה לפחות 3 תמונות חיצוניות." if is_rtl else "Please upload at least 3 exterior photos.")
             elif len(photos) > 8:
                 st.error("מקסימום 8 תמונות חיצוניות." if is_rtl else "Maximum 8 exterior photos.")
-            elif not audio:
+            elif not audio and not _ev_mode:
                 st.error(t("audio_missing"))
             else:
                 # ── Image validation (quick Haiku check) ──────────────────
@@ -4772,10 +4789,14 @@ def step_photos():
                     _interior  = list(interior_photos or [])
                     _underbody = underbody
                     _video     = vehicle_video
+                    _is_ev     = bool(_ev_mode)
+                    _audio_arg = None if _is_ev and not audio else audio
                     _stages = [
                         (0.10, "מנתח תמונות חיצוניות של הרכב..."        if _lang=="he" else "Analysing exterior photos..."),
                         (0.22, "בודק מצב הפנים והלוח..."                if _lang=="he" else "Checking interior & dashboard..."),
-                        (0.36, "מעבד הקלטת קול המנוע..."                if _lang=="he" else "Processing engine audio..."),
+                        (0.36, "⚡ רכב חשמלי — מדלג על ניתוח שמע..."   if (_lang=="he" and _is_ev) else
+                               "⚡ Electric vehicle — skipping audio..."  if _is_ev else
+                               "מעבד הקלטת קול המנוע..."                if _lang=="he" else "Processing engine audio..."),
                         (0.50, "מנתח עקביות צבע לוחות הרכב..."          if _lang=="he" else "Analysing paint panel consistency..."),
                         (0.63, "מאחזר נתוני ריקול ובטיחות (NHTSA)..."   if _lang=="he" else "Fetching safety & recall data (NHTSA)..."),
                         (0.78, "מייצר דוח מקצועי מבוסס AI..."           if _lang=="he" else "Generating AI professional report..."),
@@ -4786,7 +4807,7 @@ def step_photos():
                     def _worker():
                         try:
                             _result_box[0] = run_analysis(
-                                d, _photos, audio, _underbody, _video, _interior,
+                                d, _photos, _audio_arg, _underbody, _video, _interior,
                             )
                         except Exception as _e:
                             _error_box[0] = _e
