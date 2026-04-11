@@ -319,7 +319,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית לפני שמוציאים כסף על מכון",
+        "app_subtitle":     "בדיקה ראשונית לפני שמוציאים<br>כסף על מכון",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
@@ -3785,6 +3785,7 @@ def login_screen():
         st.session_state.lang = "en"; st.rerun()
 
     # ── Hero banner ───────────────────────────────────────────────────────────
+    _hero_dir = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
     st.markdown(f"""
     <div class='login-hero-wrap' style="
         background:
@@ -3798,16 +3799,16 @@ def login_screen():
     ">
         <div class='login-hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:3.8rem;
                     letter-spacing:0.08em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.1;
-                    {_disc_rtl}'>
+                    text-align:center;{_hero_dir}'>
             {t("app_subtitle")}
         </div>
         <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#C8A96A,transparent);
                     margin:1.2rem auto;'></div>
         <div style='font-size:1.15rem;color:rgba(240,235,224,0.82);max-width:580px;margin:0 auto 1.8rem;
-                    line-height:1.6;{_disc_rtl}'>
+                    line-height:1.6;text-align:center;{_hero_dir}'>
             {t("app_hero_sub")}
         </div>
-        <div style='font-size:0.95rem;color:rgba(200,169,106,0.75);font-style:italic;{_disc_rtl}'>
+        <div style='font-size:0.95rem;color:rgba(200,169,106,0.75);font-style:italic;text-align:center;{_hero_dir}'>
             {t("app_hero_trust")}
         </div>
     </div>
