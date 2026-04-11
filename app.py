@@ -3841,10 +3841,10 @@ def login_screen():
         _trust_short = "בדיקה ראשונית בלבד" if st.session_state.lang == "he" else "Initial screening only"
         st.markdown(
             f"<p style='font-size:0.88rem;color:var(--muted);text-align:center;"
-            f"margin-top:0.3rem;'>{_trust_short}</p>",
+            f"margin-top:0.3rem;margin-bottom:0;'>{_trust_short}</p>",
             unsafe_allow_html=True)
 
-    st.markdown("<div style='height:2rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.25rem;'></div>", unsafe_allow_html=True)
 
     # ── How it works ─────────────────────────────────────────────────────────
     st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:var(--gold);margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
