@@ -1153,7 +1153,7 @@ rtl_css = "direction:rtl;text-align:right;" if is_rtl else ""
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Jost:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;600&display=swap');
 
 :root {{
     --gold:      #C8A96A;
@@ -1174,7 +1174,7 @@ header {{ display: none !important; }}
 
 html, body, .stApp {{
     background-color: var(--bg) !important;
-    font-family: 'Jost', sans-serif;
+    font-family: 'Manrope', 'Heebo', sans-serif;
     color: var(--text) !important;
     {rtl_css}
 }}
@@ -1227,7 +1227,7 @@ input, textarea, .stTextInput input, .stNumberInput input {{
     border: 1px solid var(--border) !important;
     color: var(--text) !important;
     border-radius: 2px !important;
-    font-family: 'Jost', sans-serif !important;
+    font-family: 'Manrope', 'Heebo', sans-serif !important;
     {"text-align:right !important;" if is_rtl else ""}
 }}
 
@@ -1236,7 +1236,7 @@ input, textarea, .stTextInput input, .stNumberInput input {{
     color: #0C0C0C !important;
     border: none !important;
     border-radius: 2px !important;
-    font-family: 'Jost', sans-serif !important;
+    font-family: 'Manrope', 'Heebo', sans-serif !important;
     font-weight: 500 !important;
     letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
@@ -3797,8 +3797,8 @@ def login_screen():
         margin-bottom: 0.5rem;
         text-align: center;
     ">
-        <div class='login-hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:3.8rem;
-                    letter-spacing:0.08em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.1;
+        <div class='login-hero-title' style='font-family:"Manrope","Heebo",sans-serif;font-weight:800;font-size:3.4rem;
+                    letter-spacing:-0.01em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.15;
                     text-align:center;{_hero_dir}'>
             {t("app_subtitle")}
         </div>
@@ -3887,7 +3887,7 @@ def login_screen():
             {t('trust_title')}
         </div>
         <div style='display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.5rem;'>
-            {''.join([f"<div style='font-size:0.97rem;color:var(--muted);'>{'✓' if i < 2 else '—'}&nbsp; {t(k)}</div>"
+            {''.join([f"<div style='font-size:0.97rem;color:var(--muted);'>{'✓' if i < 2 else '✗'}&nbsp; {t(k)}</div>"
                 for i, k in enumerate(['trust1','trust2','trust3','trust4'])])}
         </div>
     </div>""", unsafe_allow_html=True)
