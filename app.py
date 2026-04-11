@@ -3887,10 +3887,11 @@ def login_screen():
             if st.session_state.lang == "he"
             else "Bottom line - save time and frustration,<br>and arrive at the garage with the right car"
         )
+        _wyg_dir = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
         st.markdown(f"""
         <div style='margin-top:0.9rem;padding:0.85rem 1rem;
                     background:rgba(200,169,106,0.08);border-radius:8px;
-                    border-right:3px solid #C8A96A;text-align:center;{_disc_rtl}'>
+                    border-right:3px solid #C8A96A;text-align:center;{_wyg_dir}'>
             <span style='font-size:1.15rem;color:var(--gold);font-weight:600;line-height:1.7;'>
                 {_wyg_tagline}
             </span>
