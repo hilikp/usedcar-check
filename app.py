@@ -392,7 +392,7 @@ TR = {
         "ownership_govt":        "ממשלתי",
         "ownership_company":     "עסקי / חברה",
         "ownership_warn":        "⚠️ הרכב רשום כ-{type} | אמת מול המוכר לפני רכישה",
-        "license_expired_warn":  "🚨 רישיון הרכב פג תוקף — הרכב אינו רשוי לנסיעה בדרכים",
+        "license_expired_warn":  "🚨 רישיון הרכב פג תוקף — הרכב אינו מורשה לנסיעה בכבישי ישראל",
         "first_road_reg":        "עלייה לכביש",
         "last_inspection":       "טסט אחרון",
         "reg_valid_until":       "רישיון בתוקף עד",
