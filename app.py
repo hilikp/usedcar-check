@@ -3814,7 +3814,37 @@ def login_screen():
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+    # ── Top CTA form (right below hero) ──────────────────────────────────────
+    def _submit_login(email_val, err_key):
+        import re as _re2
+        _pat = _re2.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        _clean = email_val.strip().lower() if email_val else ""
+        if not _pat.match(_clean):
+            st.session_state[err_key] = t("invalid_email")
+        else:
+            st.session_state.pop(err_key, None)
+            get_or_create_user(_clean)
+            st.session_state.authenticated = True
+            st.session_state.email         = _clean
+            st.session_state.step          = 1
+            st.session_state.result        = None
+            st.rerun()
+
+    _tc1, _tc2, _tc3 = st.columns([2, 4, 2])
+    with _tc2:
+        _top_email = st.text_input("", placeholder="your@email.com",
+                                   key="login_email_top", label_visibility="collapsed")
+        if st.button(t("enter_btn"), use_container_width=True, key="login_btn_top"):
+            _submit_login(_top_email, "login_err_top")
+        if st.session_state.get("login_err_top"):
+            st.error(st.session_state["login_err_top"])
+        _trust_short = "בדיקה ראשונית בלבד" if st.session_state.lang == "he" else "Initial screening only"
+        st.markdown(
+            f"<p style='font-size:0.88rem;color:var(--muted);text-align:center;"
+            f"margin-top:0.3rem;'>{_trust_short}</p>",
+            unsafe_allow_html=True)
+
+    st.markdown("<div style='height:2rem;'></div>", unsafe_allow_html=True)
 
     # ── How it works ─────────────────────────────────────────────────────────
     st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:var(--gold);margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
@@ -3909,21 +3939,12 @@ def login_screen():
             <div style='font-size:0.97rem;color:var(--muted);margin-top:0.3rem;'>{t('email_save_hint')}</div>
         </div>""", unsafe_allow_html=True)
 
-        email = st.text_input("", placeholder="your@email.com", key="login_email",
-                              label_visibility="collapsed")
-        if st.button(t("enter_btn"), use_container_width=True):
-            import re as _re_email
-            _email_re = _re_email.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
-            _email_clean = email.strip().lower() if email else ""
-            if not _email_re.match(_email_clean):
-                st.error(t("invalid_email"))
-            else:
-                get_or_create_user(_email_clean)
-                st.session_state.authenticated = True
-                st.session_state.email         = _email_clean
-                st.session_state.step          = 1
-                st.session_state.result        = None
-                st.rerun()
+        _bot_email = st.text_input("", placeholder="your@email.com", key="login_email",
+                                   label_visibility="collapsed")
+        if st.button(t("enter_btn"), use_container_width=True, key="login_btn_bot"):
+            _submit_login(_bot_email, "login_err_bot")
+        if st.session_state.get("login_err_bot"):
+            st.error(st.session_state["login_err_bot"])
 
         st.markdown(f"<p style='font-size:0.9rem;color:var(--muted);text-align:center;margin-top:0.5rem;'>{t('email_hint')}</p>", unsafe_allow_html=True)
 
