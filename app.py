@@ -392,6 +392,7 @@ TR = {
         "ownership_govt":        "ממשלתי",
         "ownership_company":     "עסקי / חברה",
         "ownership_warn":        "⚠️ הרכב רשום כ-{type} | אמת מול המוכר לפני רכישה",
+        "license_expired_warn":  "🚨 רישיון הרכב פג תוקף — הרכב אינו רשוי לנסיעה בדרכים",
         "first_road_reg":        "עלייה לכביש",
         "last_inspection":       "טסט אחרון",
         "reg_valid_until":       "רישיון בתוקף עד",
@@ -616,6 +617,7 @@ TR = {
         "ownership_govt":        "Government",
         "ownership_company":     "Business / Company",
         "ownership_warn":        "⚠️ This vehicle is registered as {type} | verify with the seller before purchase",
+        "license_expired_warn":  "🚨 Vehicle license has expired — this car is not legally permitted on public roads",
         "first_road_reg":        "First on Road",
         "last_inspection":       "Last Inspection",
         "reg_valid_until":       "License Valid Until",
@@ -2612,7 +2614,25 @@ def render_result(result: dict):
 
         _first_road_fmt = _fmt_date(_reg.get("first_road", ""))
         _last_test_fmt  = _fmt_date(_reg.get("last_test", ""))
-        _valid_fmt      = _fmt_date(_reg.get("valid_until", ""))
+        _valid_raw      = _reg.get("valid_until", "")
+        _valid_fmt      = _fmt_date(_valid_raw)
+
+        # Check if license is expired
+        _license_expired = False
+        try:
+            from datetime import date as _dt_date
+            if _valid_raw:
+                _exp_date = _dt_date.fromisoformat(str(_valid_raw)[:10])
+                _license_expired = _exp_date < _dt_date.today()
+        except Exception:
+            pass
+
+        # If expired, render the date in red
+        _valid_display = (
+            f"<span style='color:#e05555;font-weight:700;'>⚠ {_valid_fmt}</span>"
+            if _license_expired else _valid_fmt
+        )
+
         _color_he       = _reg.get("color_he", "") or "—"
         _fuel_he        = _reg.get("fuel_he",  "") or "—"
         _trim_val       = _reg.get("trim",     "") or ""
@@ -2632,11 +2652,21 @@ def render_result(result: dict):
                      f"<span style='color:{_own_fc};font-weight:700;'>{_own_text}</span>")
             + _reg_row(t("first_road_reg"),  _first_road_fmt)
             + _reg_row(t("last_inspection"), _last_test_fmt)
-            + _reg_row(t("reg_valid_until"), _valid_fmt)
+            + _reg_row(t("reg_valid_until"), _valid_display)
             + _reg_row(t("car_color"),       _color_he)
             + _reg_row(t("fuel_type"),       _fuel_he)
             + (_reg_row("Trim", _trim_val) if _trim_val else "")
         )
+
+        # Expired license warning banner
+        _license_expired_html = ""
+        if _license_expired:
+            _license_expired_html = (
+                f"<div style='background:rgba(176,64,64,0.15);border:1.5px solid #B04040;"
+                f"border-radius:6px;padding:0.65rem 1rem;margin-top:0.7rem;font-size:1.05rem;"
+                f"color:#e05555;font-weight:700;line-height:1.5;{rtl_css}'>"
+                f"{t('license_expired_warn')}</div>"
+            )
 
         st.markdown(
             f"<div class='mobile-card' style='background:rgba(200,169,106,0.05);border:1px solid rgba(200,169,106,0.22);"
@@ -2645,6 +2675,7 @@ def render_result(result: dict):
             f"margin-bottom:0.6rem;'>🏛 {t('registry_title')}</div>"
             f"{_rows_html}"
             f"{_own_warn_html}"
+            f"{_license_expired_html}"
             f"<div style='font-size:0.85rem;color:var(--muted);margin-top:0.6rem;'>◦ {t('registry_source')}</div>"
             f"</div>",
             unsafe_allow_html=True,
