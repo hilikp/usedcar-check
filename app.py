@@ -319,13 +319,52 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "האמת על הרכב | לפני שהוא שלך",
-        "app_subtitle_main":"ניתוח חכם. החלטה בטוחה.",
+        "app_subtitle":     "בדיקה ראשונית לפני שמוציאים כסף על מכון",
+        "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
+        "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
+        "app_hero_cta":     "התחל בדיקה חינמית",
+        "app_hero_trust":   "בדיקה ראשונית בלבד — לא מחליפה מכונאי או מכון בדיקה",
+        "how_it_works":     "איך זה עובד",
+        "hiw_step1":        "מעלים תמונות של הרכב",
+        "hiw_step1_desc":   "חוץ, פנים, תא מנוע וגלגלים — כמה שיותר זוויות",
+        "hiw_step2":        "מעלים הקלטת מנוע",
+        "hiw_step2_desc":   "30–60 שניות של מנוע פועל בסרק מספיקות",
+        "hiw_step3":        "מקבלים חוות דעת ראשונית",
+        "hiw_step3_desc":   "סיכום ברור עם דגלים ירוקים, צהובים ואדומים",
+        "what_you_get":     "מה תקבלו",
+        "wyg1":             "אינדיקציה ראשונית על מצב הרכב",
+        "wyg2":             "סימנים אפשריים לבעיות חיצוניות או רעשי מנוע חריגים",
+        "wyg3":             "סיכום פשוט וברור — ללא עמוד טכני",
+        "wyg4":             "עזרה בהחלטה אם שווה להתקדם לבדיקה מקצועית",
+        "sample_title":     "דוגמה לתוצאה",
+        "sample_badge":     "צהוב — כדאי לבדוק",
+        "sample_summary":   "לא זוהו סימנים חמורים מיידיים, אבל יש כמה נקודות שכדאי לוודא לפני שממשיכים.",
+        "sample_found":     "מה זוהה",
+        "sample_next":      "מה כדאי לעשות עכשיו",
+        "sample_next_txt":  "אם המחיר מתאים — אפשר לשקול להמשיך לבדיקה מקצועית במכון.",
+        "trust_title":      "חשוב לדעת",
+        "trust1":           "מתאים למי שרוצה סינון ראשוני לפני מכון בדיקה",
+        "trust2":           "עוזר להשוות בין כמה רכבים לפני שמשקיעים בבדיקה",
+        "trust3":           "לא מחליף בדיקה של מכונאי מוסמך או מכון בדיקה",
+        "trust4":           "לא יכול לזהות כל תקלה מכנית או בעיית שלדה",
+        "faq_title":        "שאלות נפוצות",
+        "faq_q1":           "האם זה מחליף בדיקת מכון?",
+        "faq_a1":           "לא. זוהי בדיקה ראשונית בלבד. היא נועדה לעזור לך להחליט אם שווה להמשיך לבדיקה מקצועית — לא להחליף אותה.",
+        "faq_q2":           "עד כמה זה מדויק?",
+        "faq_a2":           "הבדיקה מבוססת על ניתוח תמונות וקול ומספקת אינדיקציה ראשונית. היא עשויה לזהות סימנים ברורים אך אינה תחליף לבדיקה פיזית.",
+        "faq_q3":           "איזה תמונות כדאי להעלות?",
+        "faq_a3":           "כל הצדדים החיצוניים, תא המנוע, הפנים, לוח המחוונים, הגלגלים — בתאורה טובה ובלי פילטרים.",
+        "faq_q4":           "איך מקליטים מנוע נכון?",
+        "faq_a4":           "הניחו את הטלפון קרוב לתא המנוע, הדליקו את המנוע, והקליטו 30–60 שניות של סרק. אל תאיצו.",
+        "faq_q5":           "האם המידע שלי נשמר?",
+        "faq_a5":           "האימייל שלך נשמר כדי שתוכל לגשת להיסטוריית הבדיקות שלך. לא משתפים מידע עם צדדים שלישיים.",
         "email_label":      "כתובת אימייל",
+        "email_save_hint":  "השאירו אימייל כדי לשמור את תוצאות הבדיקה ולגשת אליהן מאוחר יותר",
         "password_label":   "קוד גישה",
-        "enter_btn":        "כניסה",
-        "email_hint":       "האימייל שלך משמש לגישה להיסטוריית הבדיקות שלך.",
+        "enter_btn":        "התחל בדיקה חינמית",
+        "email_hint":       "לא חובה — אבל עוזר לשמור את הבדיקה ולחזור אליה.",
         "disclaimer":       "אתר זה מספק סיוע בסיסי בלבד לרוכשי רכב משומש. הגולש/ת הוא/היא האחראי/ת הבלעדי/ת להחלטה בדבר רכישת הרכב. האתר ומפתחיו אינם אחראים בשום צורה ואופן לכל החלטה שגויה או נזק הנובע משימוש בשירות. ההחלטה הסופית לגבי רכישת רכב צריכה להתקבל בהתבסס על חוות דעת מקצועית בכתב ממכונאי מוסמך, או לאחר בדיקת הרכב במכון בדיקה מורשה לבדיקות רכב לפני קנייה או מכירה.",
+        "disclaimer_short": "הבדיקה מספקת אינדיקציה ראשונית בלבד ואינה מחליפה חוות דעת מקצועית.",
         "disclaimer_accept":"בהזנת האימייל שלך אתה מאשר/ת את תנאי השימוש של האתר.",
         "invalid_code":     "קוד גישה שגוי.",
         "invalid_email":    "אנא הזן כתובת אימייל תקינה.",
@@ -410,12 +449,12 @@ TR = {
         "high":             "גבוה",
         "medium":           "בינוני",
         "low":              "נמוך",
-        "feat1":            "ניתוח תמונות חכם",
-        "feat1_desc":       "זיהוי בעיות חיצוניות ופנימיות",
+        "feat1":            "ניתוח תמונות",
+        "feat1_desc":       "זיהוי סימנים חיצוניים ופנימיים חריגים",
         "feat2":            "ניתוח קול מנוע",
         "feat2_desc":       "זיהוי רעשים חריגים בזמן מנוע פועל בסרק",
-        "feat3":            "פסיקה מיידית | קנה / אל תקנה",
-        "feat3_desc":       "GO או NO-GO בהתבסס על כל הנתונים",
+        "feat3":            "חוות דעת ראשונית",
+        "feat3_desc":       "סיכום ברור — כדאי לבדוק יותר לעומק, או לא",
         "own_single_good":  "בעלים יחיד במשך {age} שנים | סימן חיובי לתחזוקה טובה",
         "own_red_flag":     "{owners} בעלים ב-{age} שנים בלבד | החלפות תכופות: דגל אדום",
         "own_concern":      "ממוצע {avg:.1f} שנים לבעלים | קצר מהמצופה",
@@ -504,13 +543,52 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "The full picture | before you commit",
-        "app_subtitle_main":"Smart Analysis. Confident Decision.",
+        "app_subtitle":     "Initial screening before paying for an inspection",
+        "app_subtitle_main":"First impression. Smarter decision.",
+        "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
+        "app_hero_cta":     "Start free check",
+        "app_hero_trust":   "Initial screening only — does not replace a mechanic or inspection centre",
+        "how_it_works":     "How it works",
+        "hiw_step1":        "Upload car photos",
+        "hiw_step1_desc":   "Exterior, interior, engine bay and wheels — as many angles as possible",
+        "hiw_step2":        "Upload engine recording",
+        "hiw_step2_desc":   "30–60 seconds of the engine idling is enough",
+        "hiw_step3":        "Get an initial assessment",
+        "hiw_step3_desc":   "A clear summary with green, yellow and red flags",
+        "what_you_get":     "What you get",
+        "wyg1":             "An initial indication of the car's condition",
+        "wyg2":             "Possible signs of exterior issues or abnormal engine sounds",
+        "wyg3":             "A simple, jargon-free summary",
+        "wyg4":             "Help deciding whether it's worth a professional inspection",
+        "sample_title":     "Sample result",
+        "sample_badge":     "Yellow — worth checking",
+        "sample_summary":   "No immediate serious signs detected, but a few points worth verifying before proceeding.",
+        "sample_found":     "What was detected",
+        "sample_next":      "What to do next",
+        "sample_next_txt":  "If the price is right — consider proceeding to a professional inspection.",
+        "trust_title":      "Good to know",
+        "trust1":           "Suitable for initial screening before a formal inspection",
+        "trust2":           "Helps compare multiple cars before investing in checks",
+        "trust3":           "Does not replace a certified mechanic or inspection centre",
+        "trust4":           "Cannot detect every mechanical or structural issue",
+        "faq_title":        "FAQ",
+        "faq_q1":           "Does this replace a formal inspection?",
+        "faq_a1":           "No. This is an initial screening only. It helps you decide whether to proceed to a professional inspection — not replace it.",
+        "faq_q2":           "How accurate is it?",
+        "faq_a2":           "The check is based on photo and audio analysis and provides an initial indication. It may detect clear signs but is not a substitute for a physical inspection.",
+        "faq_q3":           "What photos should I upload?",
+        "faq_a3":           "All exterior sides, engine bay, interior, dashboard, wheels — in good lighting without filters.",
+        "faq_q4":           "How do I record the engine correctly?",
+        "faq_a4":           "Place your phone near the engine bay, start the engine, and record 30–60 seconds at idle. Do not rev.",
+        "faq_q5":           "Is my data saved?",
+        "faq_a5":           "Your email is saved so you can access your check history. We do not share your data with third parties.",
         "email_label":      "Email Address",
+        "email_save_hint":  "Leave your email to save your results and access them later",
         "password_label":   "Access Code",
-        "enter_btn":        "Enter",
-        "email_hint":       "Your email is used to access your check history.",
+        "enter_btn":        "Start free check",
+        "email_hint":       "Optional — but helps save your check for later.",
         "disclaimer":       "This website provides basic assistance only to used car buyers. The user bears sole and exclusive responsibility for the decision to purchase any vehicle. The website and its developers bear no responsibility whatsoever for any wrong decision or damage resulting from use of this service. The final decision regarding a vehicle purchase must be based on a written professional opinion from a certified mechanic, or following inspection at an authorized vehicle testing facility.",
+        "disclaimer_short": "This check provides an initial indication only and does not replace professional advice.",
         "disclaimer_accept":"By entering your email you accept the website's terms of use.",
         "invalid_code":     "Invalid access code.",
         "invalid_email":    "Please enter a valid email address.",
@@ -595,12 +673,12 @@ TR = {
         "high":             "HIGH",
         "medium":           "MEDIUM",
         "low":              "LOW",
-        "feat1":            "Smart Photo Analysis",
-        "feat1_desc":       "Detect exterior & interior issues",
+        "feat1":            "Photo Analysis",
+        "feat1_desc":       "Spot unusual exterior & interior signs",
         "feat2":            "Engine Sound Analysis",
         "feat2_desc":       "Identify abnormal sounds at idle",
-        "feat3":            "Instant GO / NO-GO Verdict",
-        "feat3_desc":       "Clear decision based on all data points",
+        "feat3":            "Initial Assessment",
+        "feat3_desc":       "Clear summary — worth checking further, or not",
         "own_single_good":  "Single owner for {age} years | positive sign of good maintenance",
         "own_red_flag":     "{owners} owners in just {age} years | frequent changes are a red flag",
         "own_concern":      "Average {avg:.1f} years per owner | shorter than expected",
@@ -3659,84 +3737,151 @@ def step_indicator(current: int):
 
 # ─── Login screen ─────────────────────────────────────────────────────────────
 def login_screen():
-    # ── Hero banner with car image (flags embedded inside) ───────────────────
-    st.markdown(f"""
-    <div class='login-hero-wrap' style="
-        background:
-            linear-gradient(to bottom, rgba(12,12,12,0.2) 0%, rgba(12,12,12,0.7) 55%, rgba(12,12,12,1) 100%),
-            url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80')
-            center 40% / cover no-repeat;
-        border-radius: 8px;
-        padding: 5rem 2rem 5.5rem;
-        margin-bottom: 0.5rem;
-        text-align: center;
-        position: relative;
-    ">
-        <div class='login-hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:5.5rem;
-                    letter-spacing:0.22em;color:#C8A96A;text-transform:uppercase;
-                    text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.05;'>
-            {t("app_title")}
-        </div>
-        <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#C8A96A,transparent);
-                    margin:1.2rem auto;'></div>
-        <div class='login-hero-subtitle' style='font-size:1.7rem;letter-spacing:0.1em;color:rgba(240,235,224,0.85);font-style:italic;'>
-            {t("app_subtitle")}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    _disc_rtl = "direction:rtl;text-align:right;" if st.session_state.lang == "he" else "direction:ltr;text-align:left;"
 
-    # ── Two-column layout: features left, login right ────────────────────────
-    col_feat, col_gap, col_form = st.columns([5, 1, 4])
-
-    with col_feat:
-        st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
-        for feat_key, desc_key, icon in [
-            ("feat1", "feat1_desc", "📸"),
-            ("feat2", "feat2_desc", "🎙"),
-            ("feat3", "feat3_desc", "✓"),
-        ]:
-            st.markdown(f"""
-            <div class='feat-card'>
-                <div style='display:flex;align-items:center;gap:0.9rem;{rtl_css}'>
-                    <div style='font-size:1.6rem;'>{icon}</div>
-                    <div>
-                        <div style='font-size:1.3rem;color:var(--gold);font-weight:500;'>{t(feat_key)}</div>
-                        <div style='font-size:1.14rem;color:var(--muted);margin-top:0.2rem;'>{t(desc_key)}</div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with col_form:
-        st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
-
-        # Language toggle — flag radio (markdown images work on all OS)
-        _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
-        _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
+    # ── Language toggle (top right) ───────────────────────────────────────────
+    _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
+    _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
+    _tcol1, _tcol2 = st.columns([8, 1])
+    with _tcol2:
         _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
                                index=0 if st.session_state.lang == "he" else 1,
                                horizontal=True, label_visibility="collapsed",
                                key="login_lang_radio")
-        if _login_lang == _FLAG_IL and st.session_state.lang != "he":
-            st.session_state.lang = "he"; st.rerun()
-        elif _login_lang == _FLAG_US and st.session_state.lang != "en":
-            st.session_state.lang = "en"; st.rerun()
+    if _login_lang == _FLAG_IL and st.session_state.lang != "he":
+        st.session_state.lang = "he"; st.rerun()
+    elif _login_lang == _FLAG_US and st.session_state.lang != "en":
+        st.session_state.lang = "en"; st.rerun()
 
-        st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+    # ── Hero banner ───────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class='login-hero-wrap' style="
+        background:
+            linear-gradient(to bottom, rgba(12,12,12,0.15) 0%, rgba(12,12,12,0.65) 50%, rgba(12,12,12,1) 100%),
+            url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80')
+            center 40% / cover no-repeat;
+        border-radius: 10px;
+        padding: 4rem 2rem 4.5rem;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    ">
+        <div class='login-hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:3.8rem;
+                    letter-spacing:0.08em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.1;
+                    {_disc_rtl}'>
+            {t("app_subtitle")}
+        </div>
+        <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#C8A96A,transparent);
+                    margin:1.2rem auto;'></div>
+        <div style='font-size:1.15rem;color:rgba(240,235,224,0.82);max-width:580px;margin:0 auto 1.8rem;
+                    line-height:1.6;{_disc_rtl}'>
+            {t("app_hero_sub")}
+        </div>
+        <div style='font-size:0.95rem;color:rgba(200,169,106,0.75);font-style:italic;{_disc_rtl}'>
+            {t("app_hero_trust")}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Custom labels rendered ABOVE the field — label_visibility="collapsed" prevents
-        # Streamlit's own label from sitting inside or on top of the typed text
-        st.markdown(f"<p style='font-size:1rem;color:var(--muted);margin:0 0 0.2rem;{rtl_css}'>{t('email_label')}</p>", unsafe_allow_html=True)
-        email = st.text_input("", placeholder="your@email.com", key="login_email", label_visibility="collapsed")
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
+    # ── How it works ─────────────────────────────────────────────────────────
+    st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:var(--gold);margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
+    _hiw_col1, _hiw_col2, _hiw_col3 = st.columns(3)
+    for _col, _num, _icon, _step_k, _desc_k in [
+        (_hiw_col1, "1", "📸", "hiw_step1", "hiw_step1_desc"),
+        (_hiw_col2, "2", "🎙", "hiw_step2", "hiw_step2_desc"),
+        (_hiw_col3, "3", "✅", "hiw_step3", "hiw_step3_desc"),
+    ]:
+        with _col:
+            st.markdown(f"""
+            <div style='background:var(--elevated);border-radius:10px;padding:1.2rem 1rem;
+                        text-align:center;height:100%;'>
+                <div style='font-size:2rem;margin-bottom:0.5rem;'>{_icon}</div>
+                <div style='font-size:0.75rem;color:var(--gold);letter-spacing:0.12em;
+                            text-transform:uppercase;margin-bottom:0.3rem;'>
+                    {t('hiw_step' + _num)}
+                </div>
+                <div style='font-size:0.92rem;color:var(--muted);line-height:1.5;'>
+                    {t('hiw_step' + _num + '_desc')}
+                </div>
+            </div>""", unsafe_allow_html=True)
 
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── What you get + Sample result ─────────────────────────────────────────
+    _wyg_col, _gap_col, _sample_col = st.columns([4, 1, 5])
+
+    with _wyg_col:
+        st.markdown(f"<div style='font-size:1.4rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;{_disc_rtl}'>{t('what_you_get')}</div>", unsafe_allow_html=True)
+        for _wyg in ["wyg1", "wyg2", "wyg3", "wyg4"]:
+            st.markdown(f"""
+            <div style='display:flex;align-items:flex-start;gap:0.7rem;margin-bottom:0.7rem;{_disc_rtl}'>
+                <span style='color:var(--gold);font-size:1.1rem;margin-top:0.1rem;'>◦</span>
+                <span style='font-size:1.02rem;color:var(--text);line-height:1.5;'>{t(_wyg)}</span>
+            </div>""", unsafe_allow_html=True)
+
+    with _sample_col:
+        st.markdown(f"<div style='font-size:1.4rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;{_disc_rtl}'>{t('sample_title')}</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='background:var(--elevated);border-radius:10px;padding:1.2rem 1.4rem;
+                    border-left:4px solid #C8A96A;{_disc_rtl}'>
+            <div style='display:inline-block;background:rgba(200,169,106,0.18);color:#C8A96A;
+                        font-weight:700;font-size:1rem;padding:0.3rem 0.9rem;
+                        border-radius:20px;margin-bottom:0.8rem;'>
+                🟡 {t('sample_badge')}
+            </div>
+            <div style='font-size:0.97rem;color:var(--text);margin-bottom:0.9rem;
+                        line-height:1.55;'>{t('sample_summary')}</div>
+            <div style='font-size:0.82rem;color:var(--gold);font-weight:600;
+                        margin-bottom:0.4rem;'>{t('sample_found')}:</div>
+            {''.join([f"<div style='font-size:0.9rem;color:var(--muted);margin-bottom:0.3rem;'>• {item}</div>"
+                for item in (
+                    ["רעש קל לא סדיר במנוע", "סימני בלאי בפנים", "ללא נזק חיצוני ברור"]
+                    if st.session_state.lang == "he"
+                    else ["Slight irregular engine noise", "Interior wear signs", "No clear exterior damage"]
+                )])}
+            <div style='font-size:0.82rem;color:var(--gold);font-weight:600;
+                        margin:0.7rem 0 0.3rem;'>{t('sample_next')}:</div>
+            <div style='font-size:0.9rem;color:var(--muted);'>{t('sample_next_txt')}</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Trust section ─────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div style='background:rgba(200,169,106,0.06);border:1px solid rgba(200,169,106,0.2);
+                border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1.5rem;{_disc_rtl}'>
+        <div style='font-size:1.2rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;'>
+            {t('trust_title')}
+        </div>
+        <div style='display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.5rem;'>
+            {''.join([f"<div style='font-size:0.97rem;color:var(--muted);'>{'✓' if i < 2 else '—'}&nbsp; {t(k)}</div>"
+                for i, k in enumerate(['trust1','trust2','trust3','trust4'])])}
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── FAQ ───────────────────────────────────────────────────────────────────
+    st.markdown(f"<div style='font-size:1.4rem;font-weight:600;color:var(--gold);margin-bottom:0.6rem;{_disc_rtl}'>{t('faq_title')}</div>", unsafe_allow_html=True)
+    for _qi in range(1, 6):
+        with st.expander(t(f"faq_q{_qi}")):
+            st.markdown(f"<div style='font-size:1rem;color:var(--muted);line-height:1.6;{_disc_rtl}'>{t(f'faq_a{_qi}')}</div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Email form ────────────────────────────────────────────────────────────
+    _form_col1, _form_col2, _form_col3 = st.columns([2, 4, 2])
+    with _form_col2:
+        st.markdown(f"""
+        <div style='text-align:center;margin-bottom:0.8rem;{_disc_rtl}'>
+            <div style='font-size:1.3rem;font-weight:600;color:var(--text);'>{t('app_hero_cta')}</div>
+            <div style='font-size:0.97rem;color:var(--muted);margin-top:0.3rem;'>{t('email_save_hint')}</div>
+        </div>""", unsafe_allow_html=True)
+
+        email = st.text_input("", placeholder="your@email.com", key="login_email",
+                              label_visibility="collapsed")
         if st.button(t("enter_btn"), use_container_width=True):
             import re as _re_email
-            # Valid email: local@domain.tld  where tld >= 2 chars (e.g. .com .co.il .net)
-            _email_re = _re_email.compile(
-                r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
-            )
+            _email_re = _re_email.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
             _email_clean = email.strip().lower() if email else ""
             if not _email_re.match(_email_clean):
                 st.error(t("invalid_email"))
@@ -3748,26 +3893,14 @@ def login_screen():
                 st.session_state.result        = None
                 st.rerun()
 
-        st.markdown(
-            f"<p style='font-size:1.04rem;color:var(--muted);text-align:center;margin-top:0.8rem;'>{t('email_hint')}</p>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<p style='font-size:0.9rem;color:var(--muted);text-align:center;margin-top:0.5rem;'>{t('email_hint')}</p>", unsafe_allow_html=True)
 
-        _disc_rtl = "direction:rtl;text-align:right;" if st.session_state.lang == "he" else "direction:ltr;text-align:left;"
-        st.markdown(f"""
-        <div style='margin-top:1.4rem;padding:0.9rem 1.1rem;
-                    border:1px solid var(--gold);border-radius:8px;
-                    background:rgba(212,175,55,0.06);'>
-            <p style='font-size:0.78rem;color:var(--muted);line-height:1.55;
-                      margin:0 0 0.55rem;{_disc_rtl}'>
-                {t('disclaimer')}
-            </p>
-            <p style='font-size:0.76rem;color:var(--gold);margin:0;
-                      font-style:italic;{_disc_rtl}'>
-                {t('disclaimer_accept')}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Disclaimer (collapsible) ──────────────────────────────────────────────
+    st.markdown(f"<div style='text-align:center;font-size:0.9rem;color:var(--muted);margin-bottom:0.4rem;{_disc_rtl}'>{t('disclaimer_short')}</div>", unsafe_allow_html=True)
+    with st.expander("📋 " + ("תנאי שימוש מלאים" if st.session_state.lang == "he" else "Full terms of use"), expanded=False):
+        st.markdown(f"<div style='font-size:0.82rem;color:var(--muted);line-height:1.6;{_disc_rtl}'>{t('disclaimer')}<br><br><em>{t('disclaimer_accept')}</em></div>", unsafe_allow_html=True)
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar():
