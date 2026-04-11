@@ -3888,10 +3888,10 @@ def login_screen():
             else "Bottom line - save time and frustration,<br>and arrive at the garage with the right car"
         )
         st.markdown(f"""
-        <div style='margin-top:0.9rem;padding:0.75rem 1rem;
+        <div style='margin-top:0.9rem;padding:0.85rem 1rem;
                     background:rgba(200,169,106,0.08);border-radius:8px;
-                    border-right:3px solid #C8A96A;{_disc_rtl}'>
-            <span style='font-size:1.02rem;color:var(--gold);font-weight:600;line-height:1.6;'>
+                    border-right:3px solid #C8A96A;text-align:center;{_disc_rtl}'>
+            <span style='font-size:1.15rem;color:var(--gold);font-weight:600;line-height:1.7;'>
                 {_wyg_tagline}
             </span>
         </div>""", unsafe_allow_html=True)
