@@ -2391,6 +2391,17 @@ def render_result(result: dict):
     date      = result.get("created_at", "")[:10]
     align     = "right" if is_rtl else "center"
 
+    # ── Pre-compute license expiry so action block can use it ─────────────────
+    _reg_early    = result.get("plate_registry") or {}
+    _valid_raw_e  = _reg_early.get("valid_until", "")
+    _license_expired_early = False
+    try:
+        from datetime import date as _dt_date2
+        if _valid_raw_e:
+            _license_expired_early = _dt_date2.fromisoformat(str(_valid_raw_e)[:10]) < _dt_date2.today()
+    except Exception:
+        pass
+
     verdict_icons = {"go": "✓", "no_go": "✕", "inconclusive": "?"}
     icon = verdict_icons.get(rec, "◈")
 
@@ -2574,13 +2585,36 @@ def render_result(result: dict):
         _action_border = "#4A7A4A"
         _action_icon = "✅"
 
+    # Expired license overrides everything — hardest stop
+    if _license_expired_early:
+        _action_key    = "action_red"
+        _action_bg     = "rgba(176,64,64,0.18)"
+        _action_border = "#B04040"
+        _action_icon   = "🚫"
+
+    _expired_addon = ""
+    if _license_expired_early:
+        _expired_addon = (
+            "<div style='margin-top:0.85rem;padding:0.7rem 1rem;"
+            "background:rgba(176,64,64,0.18);border-radius:6px;"
+            "border-right:3px solid #e05555;'>"
+            "<span style='color:#e05555;font-weight:700;font-size:1.1rem;'>"
+            + ("🚨 רישיון הרכב פג תוקף — הרכב אינו מורשה לנסיעה בכבישי ישראל.<br>"
+               "מומלץ בחום לוותר על רכישה זו עד שהמוכר יסדיר את הרישוי מחדש."
+               if st.session_state.get("lang", "he") == "he" else
+               "🚨 This vehicle's license has expired — it is not legally permitted on Israeli roads.<br>"
+               "We strongly recommend walking away from this purchase until the seller renews the registration.")
+            + "</span></div>"
+        )
+
     st.markdown(
         f"<div class='mobile-card' style='background:{_action_bg};border:1.5px solid {_action_border};"
         f"border-radius:8px;padding:1.1rem 1.4rem;margin:0.4rem 0 1.2rem;{rtl_css}'>"
         f"<div style='font-size:1rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;"
         f"margin-bottom:0.4rem;'>{_action_icon}&nbsp; {t('action_label')}</div>"
         f"<div style='font-size:1.2rem;line-height:1.65;font-weight:500;color:var(--text);'>"
-        f"{t(_action_key)}</div></div>",
+        f"{t(_action_key)}</div>"
+        f"{_expired_addon}</div>",
         unsafe_allow_html=True,
     )
 
