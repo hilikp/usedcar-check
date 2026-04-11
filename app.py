@@ -3,8 +3,27 @@ import sys
 import json
 import uuid
 import tempfile
+import threading
+import time as _time_mod
 from datetime import datetime
 from pathlib import Path
+
+# ─── Rate limiter (tracks analysis requests per 60-second window) ──────────────
+_rate_lock   = threading.Lock()
+_req_times   = []          # timestamps of recent analysis submissions
+RATE_LIMIT   = 10          # max requests per 60s before showing queue notice
+
+def _record_req():
+    now = _time_mod.time()
+    with _rate_lock:
+        _req_times.append(now)
+
+def _is_busy():
+    now = _time_mod.time()
+    with _rate_lock:
+        recent = [t for t in _req_times if now - t < 60]
+        _req_times[:] = recent
+        return len(recent) > RATE_LIMIT
 
 # ─── Path setup ───────────────────────────────────────────────────────────────
 _ROOT = Path(__file__).parent
@@ -368,6 +387,7 @@ TR = {
         "disclaimer_accept":"בהזנת האימייל שלך אתה מאשר/ת את תנאי השימוש של האתר.",
         "invalid_code":     "קוד גישה שגוי.",
         "invalid_email":    "אנא הזן כתובת אימייל תקינה.",
+        "queue_notice":     "🕐 המערכת עמוסה כרגע — הבקשה שלך בתור ותטופל תוך מספר דקות. אנא המתן.",
         "plate_label":      "מספר לוחית רישוי",
         "plate_hint":       "הזן מספר רישוי לטעינה אוטומטית של פרטי הרכב ממשרד התחבורה",
         "plate_lookup_btn": "טעינה ↓",
@@ -593,6 +613,7 @@ TR = {
         "disclaimer_accept":"By entering your email you accept the website's terms of use.",
         "invalid_code":     "Invalid access code.",
         "invalid_email":    "Please enter a valid email address.",
+        "queue_notice":     "🕐 The system is currently busy — your request is in the queue and will be processed within a few minutes. Please wait.",
         "plate_label":      "License Plate",
         "plate_hint":       "Enter plate number to auto-fill details from the Transport Ministry",
         "plate_lookup_btn": "Auto-Fill",
@@ -4694,6 +4715,18 @@ def step_photos():
                     st.session_state.underbody       = underbody
                     st.session_state.vehicle_video   = vehicle_video
                     st.session_state.audio_file      = audio
+                    # ── Rate limit check ──────────────────────────────────
+                    _queue_placeholder = st.empty()
+                    if _is_busy():
+                        _rtl_q = "direction:rtl;text-align:right;" if st.session_state.get("lang","he") == "he" else ""
+                        _queue_placeholder.markdown(
+                            f"<div style='background:rgba(200,169,106,0.10);border:1px solid #C8A96A;"
+                            f"border-radius:8px;padding:0.85rem 1.2rem;margin-bottom:0.8rem;{_rtl_q}'>"
+                            f"<span style='color:#C8A96A;font-size:1.05rem;font-weight:600;'>"
+                            f"{t('queue_notice')}</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                    _record_req()
                     # ── Run analysis ──────────────────────────────────────
                     d = st.session_state.car_details
                     car_label = f"{d.get('year','')} {d.get('manufacturer','')} {d.get('model_name','')}".strip()
@@ -4749,6 +4782,7 @@ def step_photos():
                         _time.sleep(0.4); _elapsed += 0.4; _render_stage(_elapsed)
                     _prog_bar.progress(1.0)
                     _prog_text.empty()
+                    _queue_placeholder.empty()
                     if _error_box[0]:
                         st.error(f"{t('analysis_failed')}: {_error_box[0]}")
                     else:
