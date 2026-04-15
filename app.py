@@ -70,10 +70,16 @@ def _extract_audio_from_video(src: Path, tmp_dir: Path) -> Path:
     return out_path
 
 def _analyze_audio(path: str) -> tuple[list, float, dict]:
-    """Enhanced audio analysis — 6 named findings + full acoustic metrics dict."""
+    """
+    Enhanced audio analysis — MFCC + spectral flux + 8 named findings.
+    New vs v1: dynamic noise floor, MFCC features (13 coeff), delta-MFCC
+    temporal instability, spectral flux variability, 3 new fault types
+    (misfire, bearing wear, timing chain rattle), graded confidence scores.
+    """
     import soundfile as sf
     import numpy as np
     from scipy import signal as sp_signal
+    from scipy.fftpack import dct as _dct
 
     data, sr = sf.read(path, always_2d=False)
     if data.ndim > 1:
@@ -82,15 +88,14 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
     duration = len(data) / sr
 
     if len(data) < sr * 2:
-        empty_metrics = {"reason": "audio_too_short", "duration_s": round(duration, 2)}
-        return [_AudioFinding("unknown", 0.2, {"reason": "audio_too_short"})], duration, empty_metrics
+        return [_AudioFinding("unknown", 0.2, {"reason": "audio_too_short"})], duration, \
+               {"reason": "audio_too_short", "duration_s": round(duration, 2)}
 
     if sr != 22050:
-        target = int(len(data) * 22050 / sr)
-        data = sp_signal.resample(data, target)
+        data = sp_signal.resample(data, int(len(data) * 22050 / sr))
         sr = 22050
 
-    # ── Per-chunk RMS (0.5-second chunks) ────────────────────────────────────
+    # ── Per-chunk RMS (0.5 s chunks) ─────────────────────────────────────────
     chunk_size = sr // 2
     chunks   = [data[i: i + chunk_size] for i in range(0, len(data) - chunk_size, chunk_size)]
     rms_vals = np.array([np.sqrt(np.mean(c ** 2)) for c in chunks])
@@ -98,7 +103,11 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
     rms_cv   = float(rms_vals.var()) / (rms_mean ** 2 + 1e-9)
     zcr_mean = float(np.mean(np.abs(np.diff(np.sign(data)))) / 2)
 
-    # ── Power spectrum (first 10 s) + band energies ───────────────────────────
+    # ── Dynamic noise floor: median of quietest 10 % of chunks ───────────────
+    noise_floor = float(np.percentile(rms_vals, 10)) if len(rms_vals) >= 5 else rms_mean * 0.5
+    snr_estimate = (rms_mean / (noise_floor + 1e-9))   # higher = cleaner recording
+
+    # ── Power spectrum (first 10 s) + band energies ──────────────────────────
     clip    = data[:sr * 10] if len(data) > sr * 10 else data
     freqs   = np.fft.rfftfreq(len(clip), 1.0 / sr)
     power   = np.abs(np.fft.rfft(clip)) ** 2
@@ -108,10 +117,11 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
         m = (freqs >= lo) & (freqs < hi)
         return float(power[m].sum() / total_p)
 
-    bass_energy   = _band(20,   250)
-    mid_energy    = _band(250,  2000)
-    treble_energy = _band(2000, 8000)
-    tick_energy   = _band(800,  3500)   # valve/tappet tick range
+    bass_energy    = _band(20,   250)
+    mid_energy     = _band(250,  2000)
+    treble_energy  = _band(2000, 8000)
+    tick_energy    = _band(800,  3500)   # valve/tappet tick range
+    bearing_band   = _band(1500, 4000)   # bearing wear noise range
     spectral_centroid = float(np.sum(freqs * np.sqrt(power)) / (np.sqrt(power).sum() + 1e-10))
 
     # ── Autocorrelation periodicity at idle-RPM lags (600–1200 RPM) ──────────
@@ -119,7 +129,7 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
     ac_norm = ac_clip / (np.max(np.abs(ac_clip)) + 1e-9)
     acorr   = np.correlate(ac_norm, ac_norm, mode="full")[len(ac_norm) - 1:]
     acorr  /= (acorr[0] + 1e-9)
-    lag_lo, lag_hi = int(sr * 0.05), int(sr * 0.1)   # 600–1200 RPM window
+    lag_lo, lag_hi = int(sr * 0.05), int(sr * 0.1)
     periodicity_score = float(acorr[lag_lo: lag_hi].max()) if lag_hi < len(acorr) else 0.0
 
     # ── Bass frame variability (periodic bass impulses = knock) ──────────────
@@ -132,51 +142,143 @@ def _analyze_audio(path: str) -> tuple[list, float, dict]:
     bass_frame_mean = float(np.mean(bass_per_frame)) if bass_per_frame else 1.0
     bass_cv = float(np.var(bass_per_frame)) / (bass_frame_mean ** 2 + 1e-9) if bass_per_frame else 0.0
 
+    # ── Spectral flux: frame-to-frame spectrum change ─────────────────────────
+    _hop, _nfft = 512, 2048
+    sf_vals, prev_spec = [], None
+    for i in range(0, len(data) - _nfft, _hop):
+        spec = np.abs(np.fft.rfft(data[i:i + _nfft] * np.hanning(_nfft)))
+        if prev_spec is not None:
+            sf_vals.append(float(np.sum((spec - prev_spec) ** 2)))
+        prev_spec = spec
+    flux_mean = float(np.mean(sf_vals)) if sf_vals else 0.0
+    flux_std  = float(np.std(sf_vals))  if sf_vals else 0.0
+    flux_cv   = flux_std / (flux_mean + 1e-10)   # high = intermittent bursts
+
+    # ── MFCC computation (13 coefficients, no librosa) ────────────────────────
+    def _hz2mel(h): return 2595 * np.log10(1 + h / 700)
+    def _mel2hz(m): return 700 * (10 ** (m / 2595) - 1)
+
+    _NM, _NB, _NF, _HM = 13, 40, 2048, 512
+    pre = np.append(data[0], data[1:] - 0.97 * data[:-1])   # pre-emphasis
+    pframes = []
+    for i in range(0, len(pre) - _NF, _HM):
+        pframes.append((np.abs(np.fft.rfft(pre[i:i + _NF] * np.hamming(_NF), n=_NF)) ** 2) / _NF)
+
+    if pframes:
+        pframes = np.array(pframes)                          # (T, F)
+        fq  = np.fft.rfftfreq(_NF, 1.0 / sr)
+        mlo, mhi = _hz2mel(20), _hz2mel(min(sr // 2, 8000))
+        mpts = _mel2hz(np.linspace(mlo, mhi, _NB + 2))
+        bins = np.clip(np.floor(mpts / (sr / _NF)).astype(int), 0, len(fq) - 1)
+        fb   = np.zeros((_NB, len(fq)))
+        for m in range(1, _NB + 1):
+            s, c, e = bins[m-1], bins[m], bins[m+1]
+            if c > s: fb[m-1, s:c] = (np.arange(s, c) - s) / (c - s)
+            if e > c: fb[m-1, c:e] = (e - np.arange(c, e)) / (e - c)
+        mfcc_all = _dct(np.log(pframes @ fb.T + 1e-10),
+                        type=2, axis=1, norm='ortho')[:, :_NM]  # (T, 13)
+        mfcc_mean = mfcc_all.mean(axis=0)
+        mfcc_std  = mfcc_all.std(axis=0)
+        delta_std = np.diff(mfcc_all, axis=0).std(axis=0) if len(mfcc_all) > 2 else np.zeros(_NM)
+    else:
+        mfcc_mean = mfcc_std = delta_std = np.zeros(_NM)
+
+    # Summary MFCC statistics used in detections
+    mfcc_low_std       = float(mfcc_std[:4].mean())    # temporal variation, lower cepstrum
+    mfcc_mid_std       = float(mfcc_std[4:8].mean())   # temporal variation, mid cepstrum
+    mfcc_delta_low_std = float(delta_std[:4].mean())   # rate of change → misfire indicator
+    mfcc2_mean         = float(mfcc_mean[1])           # spectral slope
+
     metrics = {
-        "rms_mean":          round(rms_mean, 4),
-        "rms_cv":            round(rms_cv, 3),
-        "bass_energy":       round(bass_energy, 3),
-        "mid_energy":        round(mid_energy, 3),
-        "treble_energy":     round(treble_energy, 3),
-        "tick_energy":       round(tick_energy, 3),
-        "spectral_centroid": round(spectral_centroid, 1),
-        "zcr_mean":          round(zcr_mean, 4),
-        "periodicity_score": round(periodicity_score, 3),
-        "bass_cv":           round(bass_cv, 3),
-        "duration_s":        round(duration, 2),
+        "rms_mean":           round(rms_mean, 4),
+        "rms_cv":             round(rms_cv, 3),
+        "noise_floor":        round(noise_floor, 5),
+        "snr_estimate":       round(snr_estimate, 2),
+        "bass_energy":        round(bass_energy, 3),
+        "mid_energy":         round(mid_energy, 3),
+        "treble_energy":      round(treble_energy, 3),
+        "tick_energy":        round(tick_energy, 3),
+        "bearing_band":       round(bearing_band, 3),
+        "spectral_centroid":  round(spectral_centroid, 1),
+        "zcr_mean":           round(zcr_mean, 4),
+        "periodicity_score":  round(periodicity_score, 3),
+        "bass_cv":            round(bass_cv, 3),
+        "flux_cv":            round(flux_cv, 3),
+        "mfcc_low_std":       round(mfcc_low_std, 3),
+        "mfcc_mid_std":       round(mfcc_mid_std, 3),
+        "mfcc_delta_low_std": round(mfcc_delta_low_std, 3),
+        "mfcc2_mean":         round(mfcc2_mean, 3),
+        "duration_s":         round(duration, 2),
     }
 
-    # ── 6 named findings (lowered thresholds — phone recordings have lower SNR)
+    # ── Detections ────────────────────────────────────────────────────────────
     findings: list[_AudioFinding] = []
 
-    # Rod knock: periodic low-frequency impulses
+    # 1. Rod knock — periodic low-frequency impulses (most severe)
     if periodicity_score > 0.35 and bass_cv > 0.4 and bass_energy > 0.12:
-        findings.append(_AudioFinding("rod_knock_suspected", 0.70,
+        conf = min(0.92, 0.65 + (periodicity_score - 0.35) * 0.6 + (bass_cv - 0.4) * 0.3)
+        findings.append(_AudioFinding("rod_knock_suspected", round(conf, 2),
             {"periodicity": periodicity_score, "bass_cv": bass_cv, "bass_energy": bass_energy}))
 
-    # Valve/tappet tick: elevated tick-range energy (800-3500 Hz) with any periodicity
+    # 2. Valve/tappet tick — elevated 800-3500 Hz + any periodicity
     if tick_energy > 0.08 and (treble_energy > 0.06 or periodicity_score > 0.10):
-        findings.append(_AudioFinding("valve_tick_suspected", 0.60,
+        conf = min(0.85, 0.55 + (tick_energy - 0.08) * 1.8 + mfcc_low_std * 0.05)
+        findings.append(_AudioFinding("valve_tick_suspected", round(conf, 2),
             {"tick_energy": tick_energy, "treble_energy": treble_energy, "centroid_hz": spectral_centroid}))
 
-    # Belt squeal: very high-frequency with high zero-crossing rate
+    # 3. Belt squeal — very high frequency + high zero-crossing rate
     if treble_energy > 0.14 and zcr_mean > 0.08 and spectral_centroid > 3000:
-        findings.append(_AudioFinding("belt_squeal_suspected", 0.55,
+        conf = min(0.82, 0.52 + (treble_energy - 0.14) * 2.2)
+        findings.append(_AudioFinding("belt_squeal_suspected", round(conf, 2),
             {"treble_energy": treble_energy, "zcr": zcr_mean, "centroid_hz": spectral_centroid}))
 
-    # Exhaust leak: heavy low-frequency energy with variable amplitude
+    # 4. Exhaust leak — heavy bass + variable amplitude + low centroid
     if bass_energy > 0.30 and rms_cv > 0.5 and spectral_centroid < 1800:
-        findings.append(_AudioFinding("exhaust_leak_suspected", 0.55,
+        conf = min(0.82, 0.52 + (bass_energy - 0.30) * 0.9)
+        findings.append(_AudioFinding("exhaust_leak_suspected", round(conf, 2),
             {"bass_energy": bass_energy, "rms_cv": rms_cv, "centroid_hz": spectral_centroid}))
 
-    # Rough idle: high amplitude variation, not periodic
-    if rms_cv > 0.6 and rms_mean > 0.008 and periodicity_score < 0.35:
-        findings.append(_AudioFinding("rough_idle_suspected", 0.55,
-            {"rms_cv": rms_cv, "rms_mean": rms_mean, "periodicity": periodicity_score}))
+    # 5. Rough idle — high amplitude variation, non-periodic, MFCC confirms instability
+    if rms_cv > 0.6 and rms_mean > 0.008 and periodicity_score < 0.35 and mfcc_low_std > 0.4:
+        conf = min(0.80, 0.50 + (rms_cv - 0.6) * 0.6 + mfcc_low_std * 0.04)
+        findings.append(_AudioFinding("rough_idle_suspected", round(conf, 2),
+            {"rms_cv": rms_cv, "rms_mean": rms_mean, "periodicity": periodicity_score,
+             "mfcc_var": round(mfcc_low_std, 3)}))
+
+    # 6. NEW — Misfire — irregular firing events detected via MFCC delta instability
+    #    Signature: high delta-MFCC variance (spectral content changing rapidly per frame)
+    #    combined with amplitude variation but WITHOUT clear periodicity
+    if (mfcc_delta_low_std > 1.5 and rms_cv > 0.45 and
+            periodicity_score < 0.30 and rms_mean > 0.006):
+        conf = min(0.78, 0.50 + (mfcc_delta_low_std - 1.5) * 0.07 + (rms_cv - 0.45) * 0.2)
+        findings.append(_AudioFinding("misfire_suspected", round(conf, 2),
+            {"mfcc_delta_std": round(mfcc_delta_low_std, 3), "rms_cv": rms_cv,
+             "periodicity": periodicity_score}))
+
+    # 7. NEW — Bearing wear — steady broadband noise in 1.5-4 kHz, low flux variability
+    #    Signature: consistent elevated mid-high energy (not impulsive/periodic like tick)
+    if (bearing_band > 0.20 and flux_cv < 0.85 and
+            tick_energy < 0.10 and periodicity_score < 0.25 and
+            1400 < spectral_centroid < 3600):
+        conf = min(0.72, 0.46 + (bearing_band - 0.20) * 1.1)
+        findings.append(_AudioFinding("bearing_wear_suspected", round(conf, 2),
+            {"bearing_band": bearing_band, "flux_cv": round(flux_cv, 3),
+             "centroid_hz": spectral_centroid}))
+
+    # 8. NEW — Timing chain/belt rattle — intermittent metallic bursts
+    #    Signature: high spectral flux variability (bursts) + elevated tick range
+    #    + MFCC mid-range temporal variation confirms the intermittent character
+    if (flux_cv > 1.3 and tick_energy > 0.065 and
+            mfcc_mid_std > 0.75 and spectral_centroid > 1100):
+        conf = min(0.72, 0.46 + (flux_cv - 1.3) * 0.09 + (mfcc_mid_std - 0.75) * 0.05)
+        findings.append(_AudioFinding("timing_chain_rattle_suspected", round(conf, 2),
+            {"flux_cv": round(flux_cv, 3), "tick_energy": tick_energy,
+             "mfcc_mid_var": round(mfcc_mid_std, 3)}))
 
     if not findings:
-        findings.append(_AudioFinding("engine_sounds_normal", 0.65,
-            {"rms_cv": rms_cv, "periodicity": periodicity_score, "centroid_hz": spectral_centroid}))
+        findings.append(_AudioFinding("engine_sounds_normal", 0.68,
+            {"rms_cv": rms_cv, "periodicity": periodicity_score,
+             "centroid_hz": spectral_centroid, "snr": round(snr_estimate, 2)}))
 
     return findings, duration, metrics
 
@@ -909,13 +1011,16 @@ _HE_STRINGS = {
 
 # Audio finding label → Hebrew display text
 _AUDIO_LABELS_HE = {
-    "rod_knock_suspected":    "חשד לדפיקות מנוע",
-    "valve_tick_suspected":   "רעש מהשסתומים",
-    "belt_squeal_suspected":  "רעש מחגורת ההנעה",
-    "exhaust_leak_suspected": "חשד לדליפת פליטה",
-    "rough_idle_suspected":   "חשד לסרק לא יציב",
-    "engine_sounds_normal":   "קול המנוע תקין",
-    "unknown":                "ממצא לא מזוהה",
+    "rod_knock_suspected":           "חשד לדפיקות מנוע",
+    "valve_tick_suspected":          "רעש מהשסתומים",
+    "belt_squeal_suspected":         "רעש מחגורת ההנעה",
+    "exhaust_leak_suspected":        "חשד לדליפת פליטה",
+    "rough_idle_suspected":          "חשד לסרק לא יציב",
+    "misfire_suspected":             "חשד לתקלת הצתה (מיספייר)",
+    "bearing_wear_suspected":        "חשד לבלאי מסבים",
+    "timing_chain_rattle_suspected": "חשד לרעידות שרשרת תזמון",
+    "engine_sounds_normal":          "קול המנוע תקין",
+    "unknown":                       "ממצא לא מזוהה",
 }
 
 def _tr_backend(text: str) -> str:
@@ -1815,14 +1920,18 @@ def _generate_comprehensive_report(
     audio_block = ""
     if audio_metrics and "reason" not in audio_metrics:
         audio_block = (
-            f"\nEngine Audio Metrics (scipy spectral analysis of uploaded engine recording):\n"
-            f"  tick_energy (800-3500 Hz valve/tappet range): {audio_metrics.get('tick_energy', 0):.3f}  — >0.08 = valve noise risk\n"
-            f"  treble_energy (2000-8000 Hz): {audio_metrics.get('treble_energy', 0):.3f}  — >0.06 = high-frequency noise present\n"
+            f"\nEngine Audio Metrics (MFCC + spectral analysis of uploaded recording):\n"
+            f"  tick_energy (800-3500 Hz valve/tappet): {audio_metrics.get('tick_energy', 0):.3f}  — >0.08 = valve noise risk\n"
+            f"  treble_energy (2000-8000 Hz): {audio_metrics.get('treble_energy', 0):.3f}  — >0.06 = high-frequency noise\n"
             f"  bass_energy (20-250 Hz): {audio_metrics.get('bass_energy', 0):.3f}  — >0.30 + rms_cv>0.5 = exhaust/bottom-end risk\n"
-            f"  periodicity_score (autocorrelation): {audio_metrics.get('periodicity_score', 0):.3f}  — >0.35 = knock/tick rhythm detected\n"
+            f"  bearing_band (1500-4000 Hz): {audio_metrics.get('bearing_band', 0):.3f}  — >0.20 = bearing wear signature\n"
+            f"  periodicity_score (autocorrelation): {audio_metrics.get('periodicity_score', 0):.3f}  — >0.35 = rhythmic knock detected\n"
             f"  rms_cv (amplitude variation): {audio_metrics.get('rms_cv', 0):.3f}  — >0.6 = unstable/rough idle\n"
-            f"  spectral_centroid: {audio_metrics.get('spectral_centroid', 0):.0f} Hz\n"
-            f"  bass_cv: {audio_metrics.get('bass_cv', 0):.3f}\n"
+            f"  flux_cv (spectral flux variability): {audio_metrics.get('flux_cv', 0):.3f}  — >1.3 = intermittent bursts (rattle/misfire)\n"
+            f"  mfcc_delta_low_std (temporal instability): {audio_metrics.get('mfcc_delta_low_std', 0):.3f}  — >1.5 = misfire / irregular firing\n"
+            f"  mfcc_low_std (spectral variation): {audio_metrics.get('mfcc_low_std', 0):.3f}  — >0.4 = unstable engine character\n"
+            f"  snr_estimate: {audio_metrics.get('snr_estimate', 0):.1f}  — recording quality (higher = cleaner)\n"
+            f"  spectral_centroid: {audio_metrics.get('spectral_centroid', 0):.0f} Hz  |  bass_cv: {audio_metrics.get('bass_cv', 0):.3f}\n"
             f"  INSTRUCTION: Write an honest, specific engine-health sentence based on these raw numbers. "
             f"If tick_energy > 0.08, explicitly mention possible valve/tappet noise and recommend inspection. "
             f"If treble_energy > 0.06, note elevated high-frequency content. "
@@ -1985,7 +2094,8 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
     leak_raw     = (result.get("leak_assessment") or "none detected").lower()
     audio_labels = {f.get("label","") for f in (result.get("audio_findings_raw") or [])}
     bad_audio    = {"rod_knock_suspected","valve_tick_suspected","belt_squeal_suspected",
-                    "exhaust_leak_suspected","rough_idle_suspected"}
+                    "exhaust_leak_suspected","rough_idle_suspected",
+                    "misfire_suspected","bearing_wear_suspected","timing_chain_rattle_suspected"}
     has_paint    = paint_susp in ("medium","high")
     has_leak     = leak_raw != "none detected"
     has_audio    = bool(audio_labels & bad_audio)
@@ -2177,8 +2287,9 @@ def run_analysis(car_details, photo_files, audio_file, underbody_file=None, vide
         # ── Force verdict down based on hard mechanical signals ───────────────
         # Match the exact label emitted by analyze_underbody_image
         _LEAK_LABELS   = {"possible_underbody_fluid_stain", "oil_leak", "coolant_leak"}
-        _KNOCK_LABELS  = {"rod_knock_suspected", "exhaust_leak_suspected"}
-        _WARN_LABELS   = {"valve_tick_suspected", "belt_squeal_suspected", "rough_idle_suspected"}
+        _KNOCK_LABELS  = {"rod_knock_suspected", "exhaust_leak_suspected", "misfire_suspected"}
+        _WARN_LABELS   = {"valve_tick_suspected", "belt_squeal_suspected", "rough_idle_suspected",
+                          "bearing_wear_suspected", "timing_chain_rattle_suspected"}
 
         has_underbody_leak_cv = any(
             f.get("label", "").lower() in _LEAK_LABELS
@@ -2559,8 +2670,9 @@ def render_result(result: dict):
     _leak_raw    = (result.get("leak_assessment") or "none detected").lower()
     _audio_labels = {f.get("label","") for f in (result.get("audio_findings_raw") or [])}
     _bad_audio   = {"rod_knock_suspected", "valve_tick_suspected",
-                    "belt_squeal_suspected", "exhaust_leak_suspected", "rough_idle_suspected"}
-    _severe_audio = {"rod_knock_suspected"}
+                    "belt_squeal_suspected", "exhaust_leak_suspected", "rough_idle_suspected",
+                    "misfire_suspected", "bearing_wear_suspected", "timing_chain_rattle_suspected"}
+    _severe_audio = {"rod_knock_suspected", "misfire_suspected"}
 
     _has_paint_issue = _paint_susp in ("medium", "high")
     _has_leak        = _leak_raw != "none detected"
@@ -2915,13 +3027,16 @@ def render_result(result: dict):
             unsafe_allow_html=True,
         )
         _finding_style = {
-            "rod_knock_suspected":    ("🔴", "#B04040"),
-            "valve_tick_suspected":   ("🟠", "#C8803A"),
-            "belt_squeal_suspected":  ("🟠", "#C8803A"),
-            "exhaust_leak_suspected": ("🟠", "#C8803A"),
-            "rough_idle_suspected":   ("🟡", "#C8A96A"),
-            "engine_sounds_normal":   ("🟢", "#4A7A4A"),
-            "unknown":                ("⚪", "#9A9080"),
+            "rod_knock_suspected":           ("🔴", "#B04040"),
+            "valve_tick_suspected":          ("🟠", "#C8803A"),
+            "belt_squeal_suspected":         ("🟠", "#C8803A"),
+            "exhaust_leak_suspected":        ("🟠", "#C8803A"),
+            "rough_idle_suspected":          ("🟡", "#C8A96A"),
+            "misfire_suspected":             ("🔴", "#B04040"),
+            "bearing_wear_suspected":        ("🟠", "#C8803A"),
+            "timing_chain_rattle_suspected": ("🟠", "#C8803A"),
+            "engine_sounds_normal":          ("🟢", "#4A7A4A"),
+            "unknown":                       ("⚪", "#9A9080"),
         }
         for f in audio_raw:
             lbl       = f.get("label", "unknown")
@@ -3369,13 +3484,16 @@ def render_result(result: dict):
 
         # ── Audio finding label translations ───────────────────────────────
         _AUDIO_LABELS = {
-            "rod_knock_suspected":    ("חשד לדפיקות מנוע",     "Rod Knock Suspected"),
-            "valve_tick_suspected":   ("רעש מהשסתומים",         "Valve Tick Suspected"),
-            "belt_squeal_suspected":  ("רעש מחגורת ההנעה",      "Belt Squeal Suspected"),
-            "exhaust_leak_suspected": ("חשד לדליפת פליטה",      "Exhaust Leak Suspected"),
-            "rough_idle_suspected":   ("חשד לסרק לא יציב",      "Rough Idle Suspected"),
-            "engine_sounds_normal":   ("קול המנוע תקין",         "Engine Sounds Normal"),
-            "unknown":                ("ממצא לא מזוהה",           "Unknown"),
+            "rod_knock_suspected":           ("חשד לדפיקות מנוע",          "Rod Knock Suspected"),
+            "valve_tick_suspected":          ("רעש מהשסתומים",              "Valve Tick Suspected"),
+            "belt_squeal_suspected":         ("רעש מחגורת ההנעה",           "Belt Squeal Suspected"),
+            "exhaust_leak_suspected":        ("חשד לדליפת פליטה",           "Exhaust Leak Suspected"),
+            "rough_idle_suspected":          ("חשד לסרק לא יציב",           "Rough Idle Suspected"),
+            "misfire_suspected":             ("חשד לתקלת הצתה",             "Misfire Suspected"),
+            "bearing_wear_suspected":        ("חשד לבלאי מסבים",            "Bearing Wear Suspected"),
+            "timing_chain_rattle_suspected": ("חשד לרעידות שרשרת תזמון",   "Timing Chain Rattle Suspected"),
+            "engine_sounds_normal":          ("קול המנוע תקין",              "Engine Sounds Normal"),
+            "unknown":                       ("ממצא לא מזוהה",               "Unknown"),
         }
 
         def _hr(c=gold_c, t=0.5):
