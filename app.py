@@ -1277,6 +1277,20 @@ for key, default in {
     if key not in st.session_state:
         st.session_state[key] = default
 
+# ─── Session persistence via URL query param ──────────────────────────────────
+# If WebSocket reconnects and wipes session_state, restore auth from ?_u= param
+# so the user doesn't get kicked back to the login page mid-session.
+if not st.session_state.authenticated:
+    try:
+        import re as _re_auth
+        _qp_email = st.query_params.get("_u", "")
+        if _qp_email and _re_auth.match(
+                r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', _qp_email):
+            st.session_state.authenticated = True
+            st.session_state.email         = _qp_email
+    except Exception:
+        pass
+
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 is_rtl  = st.session_state.lang == "he"
 rtl_css = "direction:rtl;text-align:right;" if is_rtl else ""
@@ -4008,6 +4022,11 @@ def login_screen():
             st.session_state.email         = _clean
             st.session_state.step          = 1
             st.session_state.result        = None
+            # Persist auth in URL so reconnects don't kick user back to login
+            try:
+                st.query_params["_u"] = _clean
+            except Exception:
+                pass
             st.rerun()
 
     _tc1, _tc2, _tc3 = st.columns([2, 4, 2])
@@ -4217,6 +4236,10 @@ def render_sidebar():
         if st.button(t("sign_out"), use_container_width=True):
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
+            try:
+                st.query_params.clear()
+            except Exception:
+                pass
             st.rerun()
 
 # ─── Ministry of Transport plate lookup ──────────────────────────────────────
