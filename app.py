@@ -1258,6 +1258,19 @@ st.set_page_config(
     initial_sidebar_state="auto",   # collapses automatically on mobile
 )
 
+# ─── Open Graph / social preview meta tags ────────────────────────────────────
+st.markdown("""
+    <meta property="og:title" content="UsedCar Check - בדיקת רכב משומש חכמה">
+    <meta property="og:description" content="העלה תמונות, שמע מנוע ותמונות תחתית הרכב - ותקבל המלצת קנה / אל תקנה מבוססת AI תוך שניות.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://usedcar-check-if-the-car-is-worth-it.streamlit.app">
+    <meta property="og:image" content="https://raw.githubusercontent.com/hilikp/usedcar-check/main/og-image.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="UsedCar Check - בדיקת רכב משומש חכמה">
+    <meta name="twitter:description" content="העלה תמונות, שמע מנוע ותמונות תחתית הרכב - ותקבל המלצת קנה / אל תקנה מבוססת AI תוך שניות.">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/hilikp/usedcar-check/main/og-image.jpg">
+""", unsafe_allow_html=True)
+
 # ─── Session state init ───────────────────────────────────────────────────────
 for key, default in {
     "authenticated": False,
