@@ -440,7 +440,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
+        "app_subtitle":     "בדיקה ראשונית <span style='background:#C8A96A;color:#0C0C0C;padding:2px 10px;border-radius:4px;font-weight:900;font-size:0.9em;letter-spacing:0.05em;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
