@@ -8,6 +8,8 @@ import time as _time_mod
 from datetime import datetime
 from pathlib import Path
 
+
+
 # ─── Rate limiter (tracks analysis requests per 60-second window) ──────────────
 _rate_lock   = threading.Lock()
 _req_times   = []          # timestamps of recent analysis submissions
@@ -1209,6 +1211,21 @@ def _sb_init():
         return _SB_CLIENT
     except Exception:
         return None
+
+def _save_feedback(name: str, comment: str, reply_email: str) -> bool:
+    try:
+        sb = _sb_init()
+        if not sb:
+            return False
+        sb.table("feedback").insert({
+            "name":        name or "אנונימי",
+            "comment":     comment,
+            "reply_email": reply_email or None,
+        }).execute()
+        return True
+    except Exception:
+        return False
+
 
 def _sb_upsert_user(email: str, first_seen: str, check_count: int = 0):
     """Insert or update one row in the users table."""
@@ -3943,6 +3960,38 @@ def render_result(result: dict):
             st.session_state.refine_mode     = True
             st.session_state.step            = 2
             st.rerun()
+
+    # ── Feedback ──────────────────────────────────────────────────────────────
+    gold_divider()
+    _fb_title = "💬 ספר לנו מה חשבת" if is_rtl else "💬 Share your feedback"
+    _fb_desc  = ("בכדי לשפר ולהתאים את יכולות המערכת נשמח לשמוע פידבק ממך — מוזמן לכתוב לנו, "
+                 "ואם תרצה שנשיב אפשר גם למסור מייל (לא חובה)") if is_rtl else \
+                ("To help us improve the system, we'd love to hear your feedback — "
+                 "feel free to write to us, and if you'd like a reply you can leave your email (optional)")
+    st.markdown(
+        f"<div style='font-size:1.2rem;font-family:Cormorant Garamond,serif;font-weight:600;"
+        f"letter-spacing:0.1em;color:var(--gold);margin-bottom:0.4rem;{rtl_css}'>{_fb_title}</div>"
+        f"<p style='font-size:1rem;color:var(--muted);margin-bottom:0.8rem;{rtl_css}'>{_fb_desc}</p>",
+        unsafe_allow_html=True,
+    )
+    _fb_name    = st.text_input("שם פרטי / First name", key="fb_name", placeholder="ישראל / Israel")
+    _fb_comment = st.text_area("פידבק / Feedback", key="fb_comment", height=120,
+                               placeholder="מה עבד טוב? מה אפשר לשפר? / What worked well? What could be better?")
+    _fb_email   = st.text_input("מייל לתגובה (לא חובה) / Reply email (optional)", key="fb_email", placeholder="example@gmail.com")
+
+    if st.button("📨 שלח פידבק / Send feedback", key="fb_submit", use_container_width=False):
+        if not _fb_comment.strip():
+            st.warning("אנא כתוב משהו לפני השליחה / Please write something before sending" if is_rtl else "Please write something before sending")
+        else:
+            _sent = _save_feedback(
+                name=_fb_name.strip() or "אנונימי",
+                comment=_fb_comment.strip(),
+                reply_email=_fb_email.strip(),
+            )
+            if _sent:
+                st.success("תודה! הפידבק שלך נשלח בהצלחה 🙏" if is_rtl else "Thank you! Your feedback was sent 🙏")
+            else:
+                st.error("שגיאה בשליחה — אנא נסה שוב מאוחר יותר" if is_rtl else "Failed to send — please try again later")
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "✓"]
