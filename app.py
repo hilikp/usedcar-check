@@ -4045,12 +4045,12 @@ def login_screen():
     st.markdown(f"""
     <div class='login-hero-wrap' style="
         background:
-            linear-gradient(to bottom, rgba(12,12,12,0.15) 0%, rgba(12,12,12,0.65) 50%, rgba(12,12,12,1) 100%),
+            linear-gradient(to bottom, rgba(12,12,12,0.15) 0%, rgba(12,12,12,0.55) 50%, rgba(12,12,12,0.92) 100%),
             url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1600&q=80')
             center 40% / cover no-repeat;
         border-radius: 10px;
-        padding: 4rem 2rem 4.5rem;
-        margin-bottom: 0.5rem;
+        padding: 4rem 2rem 3rem;
+        margin-bottom: 0;
         text-align: center;
     ">
         <div class='login-hero-title' style='font-family:"Manrope","Heebo",sans-serif;font-weight:800;font-size:3.4rem;
@@ -4071,6 +4071,13 @@ def login_screen():
     """, unsafe_allow_html=True)
 
     # ── Top CTA form (right below hero) ──────────────────────────────────────
+    st.markdown("""
+    <div style='background:rgba(18,18,18,0.97);border:1px solid rgba(200,169,106,0.3);
+                border-top:none;border-radius:0 0 12px 12px;
+                padding:1.6rem 2rem 1.2rem;margin-bottom:1.8rem;
+                box-shadow:0 8px 32px rgba(0,0,0,0.5);'>
+    </div>""", unsafe_allow_html=True)
+
     def _submit_login(email_val, err_key):
         import re as _re2
         _pat = _re2.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
@@ -4110,18 +4117,22 @@ def login_screen():
     # ── How it works ─────────────────────────────────────────────────────────
     st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:var(--gold);margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
     _hiw_col1, _hiw_col2, _hiw_col3 = st.columns(3)
-    for _col, _num, _icon, _step_k, _desc_k in [
-        (_hiw_col1, "1", "📸", "hiw_step1", "hiw_step1_desc"),
-        (_hiw_col2, "2", "🎙", "hiw_step2", "hiw_step2_desc"),
-        (_hiw_col3, "3", "✅", "hiw_step3", "hiw_step3_desc"),
+    for _col, _num, _step_k, _desc_k in [
+        (_hiw_col1, "1", "hiw_step1", "hiw_step1_desc"),
+        (_hiw_col2, "2", "hiw_step2", "hiw_step2_desc"),
+        (_hiw_col3, "3", "hiw_step3", "hiw_step3_desc"),
     ]:
         with _col:
             st.markdown(f"""
-            <div style='background:var(--elevated);border-radius:10px;padding:1.2rem 1rem;
-                        text-align:center;height:100%;'>
-                <div style='font-size:2rem;margin-bottom:0.5rem;'>{_icon}</div>
-                <div style='font-size:0.75rem;color:var(--gold);letter-spacing:0.12em;
-                            text-transform:uppercase;margin-bottom:0.3rem;'>
+            <div style='background:var(--elevated);border:1px solid rgba(200,169,106,0.15);
+                        border-radius:12px;padding:1.4rem 1rem;text-align:center;height:100%;'>
+                <div style='width:2.6rem;height:2.6rem;border-radius:50%;
+                            border:2px solid #C8A96A;color:#C8A96A;
+                            font-size:1.1rem;font-weight:700;letter-spacing:0.05em;
+                            display:flex;align-items:center;justify-content:center;
+                            margin:0 auto 0.8rem;'>0{_num}</div>
+                <div style='font-size:0.85rem;color:var(--gold);letter-spacing:0.1em;
+                            text-transform:uppercase;font-weight:600;margin-bottom:0.4rem;'>
                     {t('hiw_step' + _num)}
                 </div>
                 <div style='font-size:0.92rem;color:var(--muted);line-height:1.5;'>
@@ -4129,7 +4140,17 @@ def login_screen():
                 </div>
             </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+    _proof_text = "משתמשים כבר השתמשו בכלי" if st.session_state.lang == "he" else "users have already used this tool"
+    _proof_dir  = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
+    st.markdown(f"""
+    <div style='text-align:center;margin:1.2rem 0 1.5rem;{_proof_dir}'>
+        <span style='display:inline-flex;align-items:center;gap:0.5rem;
+                     background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.2);
+                     border-radius:20px;padding:0.35rem 1.1rem;
+                     font-size:0.92rem;color:var(--gold);'>
+            ✦ 5+ {_proof_text}
+        </span>
+    </div>""", unsafe_allow_html=True)
 
     # ── What you get + Sample result ─────────────────────────────────────────
     _wyg_col, _gap_col, _sample_col = st.columns([4, 1, 5])
