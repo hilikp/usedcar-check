@@ -4026,7 +4026,7 @@ def step_indicator(current: int):
 def login_screen():
     _disc_rtl = "direction:rtl;text-align:right;" if st.session_state.lang == "he" else "direction:ltr;text-align:left;"
 
-    # ── Header: logo + language toggle ───────────────────────────────────────
+    # ── Header: logo (centered) + language toggle (right) ────────────────────
     st.markdown("""<style>
     div[data-testid="stRadio"] label {display:none!important;}
     div[data-testid="stRadio"] div[role="radiogroup"] {gap:4px!important;}
@@ -4042,15 +4042,19 @@ def login_screen():
     div[data-testid="stRadio"] img {width:24px!important; height:16px!important; margin:0!important;}
     </style>""", unsafe_allow_html=True)
 
+    _logo_name = "בדוּק!" if st.session_state.lang == "he" else "Check!"
+    st.markdown(f"""
+    <div style='text-align:center;padding:0.5rem 0 0.2rem;'>
+        <span style='display:inline-flex;align-items:center;gap:0.35rem;'>
+            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
+                         font-size:1.6rem;color:#C8A96A;letter-spacing:-0.01em;'>{_logo_name}</span>
+            <span style='font-size:1.6rem;line-height:1;color:#4CAF50;font-weight:700;'>✓</span>
+        </span>
+    </div>""", unsafe_allow_html=True)
+
     _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
     _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
-    _logo_col, _lang_col = st.columns([7, 2])
-    with _logo_col:
-        st.markdown("""
-        <div style='padding:0.4rem 0 0.6rem;'>
-            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
-                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>בדוּק</span>
-        </div>""", unsafe_allow_html=True)
+    _spacer, _lang_col = st.columns([8, 1])
     with _lang_col:
         _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
                                index=0 if st.session_state.lang == "he" else 1,
