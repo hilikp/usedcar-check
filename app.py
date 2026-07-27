@@ -442,7 +442,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית <span style='background:#C8A96A;color:#0C0C0C;padding:2px 10px;border-radius:4px;font-weight:900;font-size:0.9em;letter-spacing:0.05em;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
+        "app_subtitle":     "בדיקה ראשונית <span style='background:#C8A96A;color:#0C0C0C;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
@@ -4026,11 +4026,36 @@ def step_indicator(current: int):
 def login_screen():
     _disc_rtl = "direction:rtl;text-align:right;" if st.session_state.lang == "he" else "direction:ltr;text-align:left;"
 
-    # ── Language toggle (top right) ───────────────────────────────────────────
+    # ── Header: logo + language toggle ───────────────────────────────────────
+    st.markdown("""<style>
+    div[data-testid="stRadio"] label {display:none!important;}
+    div[data-testid="stRadio"] div[role="radiogroup"] {gap:4px!important;}
+    div[data-testid="stRadio"] div[role="radiogroup"] > label {
+        display:flex!important; align-items:center; justify-content:center;
+        width:36px!important; height:36px!important; border-radius:8px!important;
+        background:rgba(200,169,106,0.08)!important; border:1px solid rgba(200,169,106,0.25)!important;
+        cursor:pointer!important; padding:0!important; margin:0!important;}
+    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {
+        background:rgba(200,169,106,0.25)!important; border-color:#C8A96A!important;}
+    div[data-testid="stRadio"] input[type="radio"] {display:none!important;}
+    div[data-testid="stRadio"] p {margin:0!important; font-size:1.4rem!important; line-height:1!important;}
+    div[data-testid="stRadio"] img {width:24px!important; height:16px!important; margin:0!important;}
+    </style>""", unsafe_allow_html=True)
+
     _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
     _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
-    _tcol1, _tcol2 = st.columns([8, 1])
-    with _tcol2:
+    _logo_col, _lang_col = st.columns([7, 2])
+    with _logo_col:
+        st.markdown("""
+        <div style='padding:0.4rem 0 0.6rem;'>
+            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
+                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>בדוק</span>
+            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:300;
+                         font-size:1.5rem;color:rgba(240,235,224,0.5);margin:0 0.3rem;'>או</span>
+            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
+                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>זרוק</span>
+        </div>""", unsafe_allow_html=True)
+    with _lang_col:
         _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
                                index=0 if st.session_state.lang == "he" else 1,
                                horizontal=True, label_visibility="collapsed",
@@ -4053,8 +4078,9 @@ def login_screen():
         margin-bottom: 0;
         text-align: center;
     ">
-        <div class='login-hero-title' style='font-family:"Manrope","Heebo",sans-serif;font-weight:800;font-size:3.4rem;
-                    letter-spacing:-0.01em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.15;
+        <div class='login-hero-title' style='font-family:"Manrope","Heebo",sans-serif;font-weight:800;
+                    font-size:clamp(1.8rem,4.5vw,3.4rem);
+                    letter-spacing:-0.01em;color:#C8A96A;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.2;
                     text-align:center;{_hero_dir}'>
             {t("app_subtitle")}
         </div>
@@ -4106,7 +4132,7 @@ def login_screen():
             _submit_login(_top_email, "login_err_top")
         if st.session_state.get("login_err_top"):
             st.error(st.session_state["login_err_top"])
-        _trust_short = "בדיקה ראשונית בלבד" if st.session_state.lang == "he" else "Initial screening only"
+        _trust_short = "ללא הרשמה · תוצאה תוך דקות" if st.session_state.lang == "he" else "No sign-up · Results in minutes"
         st.markdown(
             f"<p style='font-size:0.88rem;color:var(--muted);text-align:center;"
             f"margin-top:0.3rem;margin-bottom:0;'>{_trust_short}</p>",
