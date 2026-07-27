@@ -670,7 +670,7 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "Initial screening before paying for an inspection",
+        "app_subtitle":     "<span style='background:#C8A96A;color:#0C0C0C;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
         "app_subtitle_main":"First impression. Smarter decision.",
         "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
         "app_hero_cta":     "Start free check",
@@ -4049,11 +4049,7 @@ def login_screen():
         st.markdown("""
         <div style='padding:0.4rem 0 0.6rem;'>
             <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
-                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>בדוק</span>
-            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:300;
-                         font-size:1.5rem;color:rgba(240,235,224,0.5);margin:0 0.3rem;'>או</span>
-            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
-                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>זרוק</span>
+                         font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>בדוּק</span>
         </div>""", unsafe_allow_html=True)
     with _lang_col:
         _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
@@ -4132,7 +4128,7 @@ def login_screen():
             _submit_login(_top_email, "login_err_top")
         if st.session_state.get("login_err_top"):
             st.error(st.session_state["login_err_top"])
-        _trust_short = "ללא הרשמה · תוצאה תוך דקות" if st.session_state.lang == "he" else "No sign-up · Results in minutes"
+        _trust_short = "רק אימייל · תוצאה תוך דקות" if st.session_state.lang == "he" else "Just your email · Results in minutes"
         st.markdown(
             f"<p style='font-size:0.88rem;color:var(--muted);text-align:center;"
             f"margin-top:0.3rem;margin-bottom:0;'>{_trust_short}</p>",
