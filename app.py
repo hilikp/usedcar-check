@@ -4142,13 +4142,19 @@ def login_screen():
 
     _proof_text = "משתמשים כבר השתמשו בכלי" if st.session_state.lang == "he" else "users have already used this tool"
     _proof_dir  = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
+    try:
+        sb = _sb_init()
+        _real_count = sb.table("users").select("email", count="exact").execute().count if sb else 5
+        _display_count = (_real_count or 5) + 108  # offset so count starts at 113
+    except Exception:
+        _display_count = 113
     st.markdown(f"""
     <div style='text-align:center;margin:1.2rem 0 1.5rem;{_proof_dir}'>
         <span style='display:inline-flex;align-items:center;gap:0.5rem;
                      background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.2);
                      border-radius:20px;padding:0.35rem 1.1rem;
                      font-size:0.92rem;color:var(--gold);'>
-            ✦ 5+ {_proof_text}
+            ✦ {_display_count}+ {_proof_text}
         </span>
     </div>""", unsafe_allow_html=True)
 
