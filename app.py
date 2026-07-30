@@ -446,7 +446,7 @@ TR = {
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
-        "app_hero_trust":   "בדיקה ראשונית בלבד - לא מחליפה מכונאי או מכון בדיקה",
+        "app_hero_trust":   "המטרה שלנו לחסוך לכם זמן, כסף וסתם תסכול לפני שמגיעים למכונאי או בדיקת מכון שהיא חובה.",
         "how_it_works":     "איך זה עובד",
         "hiw_step1":        "מעלים תמונות של הרכב",
         "hiw_step1_desc":   "חוץ, פנים, תא מנוע וגלגלים - כמה שיותר זוויות",
@@ -674,7 +674,7 @@ TR = {
         "app_subtitle_main":"First impression. Smarter decision.",
         "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
         "app_hero_cta":     "Start free check",
-        "app_hero_trust":   "Initial screening only - does not replace a mechanic or inspection centre",
+        "app_hero_trust":   "Our goal is to save you time, money and unnecessary frustration, before you go to a must check-up with a mechanic.",
         "how_it_works":     "How it works",
         "hiw_step1":        "Upload car photos",
         "hiw_step1_desc":   "Exterior, interior, engine bay and wheels - as many angles as possible",
@@ -4072,7 +4072,7 @@ def login_screen():
                     line-height:1.6;text-align:center;{_hero_dir}'>
             {t("app_hero_sub")}
         </div>
-        <div style='font-size:0.95rem;color:rgba(200,169,106,0.75);font-style:italic;text-align:center;{_hero_dir}'>
+        <div style='font-size:1.05rem;font-weight:600;color:rgba(200,169,106,0.85);text-align:center;{_hero_dir}'>
             {t("app_hero_trust")}
         </div>
     </div>
