@@ -4027,43 +4027,25 @@ def login_screen():
     _disc_rtl = "direction:rtl;text-align:right;" if st.session_state.lang == "he" else "direction:ltr;text-align:left;"
 
     # ── Header: logo (centered) + language toggle (right) ────────────────────
-    st.markdown("""<style>
-    div[data-testid="stRadio"] label {display:none!important;}
-    div[data-testid="stRadio"] div[role="radiogroup"] {gap:4px!important;}
-    div[data-testid="stRadio"] div[role="radiogroup"] > label {
-        display:flex!important; align-items:center; justify-content:center;
-        width:36px!important; height:36px!important; border-radius:8px!important;
-        background:rgba(200,169,106,0.08)!important; border:1px solid rgba(200,169,106,0.25)!important;
-        cursor:pointer!important; padding:0!important; margin:0!important;}
-    div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {
-        background:rgba(200,169,106,0.25)!important; border-color:#C8A96A!important;}
-    div[data-testid="stRadio"] input[type="radio"] {display:none!important;}
-    div[data-testid="stRadio"] p {margin:0!important; font-size:1.4rem!important; line-height:1!important;}
-    div[data-testid="stRadio"] img {width:24px!important; height:16px!important; margin:0!important;}
-    </style>""", unsafe_allow_html=True)
-
     _logo_name = "בדוּק!" if st.session_state.lang == "he" else "Check!"
-    st.markdown(f"""
-    <div style='text-align:center;padding:0.5rem 0 0.2rem;'>
-        <span style='display:inline-flex;align-items:center;gap:0.35rem;'>
-            <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
-                         font-size:1.6rem;color:#C8A96A;letter-spacing:-0.01em;'>{_logo_name}</span>
-            <span style='font-size:1.6rem;line-height:1;color:#4CAF50;font-weight:700;'>✓</span>
-        </span>
-    </div>""", unsafe_allow_html=True)
+    _is_he = st.session_state.lang == "he"
 
-    _FLAG_IL = "![IL](https://flagcdn.com/w40/il.png)"
-    _FLAG_US = "![US](https://flagcdn.com/w40/us.png)"
-    _spacer, _lang_col = st.columns([8, 1])
-    with _lang_col:
-        _login_lang = st.radio("", [_FLAG_IL, _FLAG_US],
-                               index=0 if st.session_state.lang == "he" else 1,
-                               horizontal=True, label_visibility="collapsed",
-                               key="login_lang_radio")
-    if _login_lang == _FLAG_IL and st.session_state.lang != "he":
-        st.session_state.lang = "he"; st.rerun()
-    elif _login_lang == _FLAG_US and st.session_state.lang != "en":
-        st.session_state.lang = "en"; st.rerun()
+    _logo_col, _gap_col, _he_col, _en_col = st.columns([5, 2, 1, 1])
+    with _logo_col:
+        st.markdown(f"""
+        <div style='padding:0.3rem 0 0.1rem;'>
+            <span style='display:inline-flex;align-items:center;gap:0.3rem;'>
+                <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
+                             font-size:1.5rem;color:#C8A96A;letter-spacing:-0.01em;'>{_logo_name}</span>
+                <span style='font-size:1.4rem;line-height:1;color:#4CAF50;font-weight:700;'>✓</span>
+            </span>
+        </div>""", unsafe_allow_html=True)
+    with _he_col:
+        if st.button("עב", key="lang_he", type="primary" if _is_he else "secondary", use_container_width=True):
+            st.session_state.lang = "he"; st.rerun()
+    with _en_col:
+        if st.button("EN", key="lang_en", type="primary" if not _is_he else "secondary", use_container_width=True):
+            st.session_state.lang = "en"; st.rerun()
 
     # ── Hero banner ───────────────────────────────────────────────────────────
     _hero_dir = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
