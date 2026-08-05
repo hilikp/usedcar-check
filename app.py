@@ -650,7 +650,7 @@ TR = {
         "refine_banner":        "מצב עדכון | הוסף חומר חדש לניתוח מחודש",
         "prev_photos_kept":     "📂 {n} תמונות מהבדיקה הקודמת שמורות — ניתן להוסיף עוד",
         "img_validation_running": "🔍 בודק תמונות...",
-        "img_warn_unrelated":   "⚠️ אחת או יותר מהתמונות אינה תמונת רכב. נא להעלות תמונות של הרכב בלבד ולנסות שנית.",
+        "img_warn_unrelated":   "⚠️ התמונות שהועלו קרוב לוודאי שאינן תמונות מתאימות או שאינן תמונות שקשורות לרכב.",
         "img_warn_two_vehicles":"⚠️ נראה שהועלו תמונות של שני רכבים שונים! ודא שכל התמונות שייכות לאותו רכב.",
         "img_warn_brand_mismatch": "⚠️ לוגו הרכב בתמונות לא תואם את הדגם שנבחר ({selected}). ייתכן שגיבוב תמונות או לוחית לא תואמת.",
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
@@ -878,7 +878,7 @@ TR = {
         "refine_banner":        "Update Mode | upload new material for a fresh analysis",
         "prev_photos_kept":     "📂 {n} photos from previous check saved — you can add more",
         "img_validation_running": "🔍 Checking photos...",
-        "img_warn_unrelated":   "⚠️ One or more photos are not a car image. Please upload only car photos and try again.",
+        "img_warn_unrelated":   "⚠️ The uploaded photos most likely are not suitable or are not related to a vehicle.",
         "img_warn_two_vehicles":"⚠️ Photos appear to show two different vehicles! Make sure all photos are of the same car.",
         "img_warn_brand_mismatch": "⚠️ The car brand visible in the photos does not match the selected model ({selected}). Possible photo mix-up or plate mismatch.",
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
@@ -5003,11 +5003,8 @@ def step_photos():
                     elif _w.startswith("brand_mismatch:"):
                         _sel = _w.split(":", 1)[1]
                         st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
-                    elif _w.startswith("validation_error:no_api_key"):
-                        st.error("שגיאת הגדרות — לא ניתן לאמת תמונות" if is_rtl else "Config error — cannot validate images")
-                        _block = True
                     elif _w.startswith("validation_error:"):
-                        pass  # don't block on transient API errors
+                        pass  # don't block on API/config errors
                 if not _block:
                     st.session_state.photos          = photos
                     st.session_state.interior_photos = interior_photos or []
