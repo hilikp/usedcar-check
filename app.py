@@ -4791,10 +4791,15 @@ def step_vehicle_details():
 def _validate_photos(photo_files: list, manufacturer: str, model_name: str) -> list[str]:
     """Quick Claude Haiku check: unrelated images, two vehicles, brand mismatch.
     Returns list of warning strings (empty = all clear)."""
-    import base64, json, tempfile
+    import base64, json, os
     try:
-        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-        if not api_key or len(photo_files) == 0:
+        try:
+            api_key = st.secrets["ANTHROPIC_API_KEY"]
+        except Exception:
+            api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return ["validation_error:no_api_key"]
+        if len(photo_files) == 0:
             return []
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
@@ -4998,8 +5003,11 @@ def step_photos():
                     elif _w.startswith("brand_mismatch:"):
                         _sel = _w.split(":", 1)[1]
                         st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
+                    elif _w.startswith("validation_error:no_api_key"):
+                        st.error("שגיאת הגדרות — לא ניתן לאמת תמונות" if is_rtl else "Config error — cannot validate images")
+                        _block = True
                     elif _w.startswith("validation_error:"):
-                        pass  # don't block on API errors
+                        pass  # don't block on transient API errors
                 if not _block:
                     st.session_state.photos          = photos
                     st.session_state.interior_photos = interior_photos or []
