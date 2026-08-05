@@ -650,7 +650,7 @@ TR = {
         "refine_banner":        "מצב עדכון | הוסף חומר חדש לניתוח מחודש",
         "prev_photos_kept":     "📂 {n} תמונות מהבדיקה הקודמת שמורות — ניתן להוסיף עוד",
         "img_validation_running": "🔍 בודק תמונות...",
-        "img_warn_unrelated":   "⚠️ ייתכן שאחת מהתמונות אינה תמונת רכב. בדוק ונסה שנית.",
+        "img_warn_unrelated":   "⚠️ אחת או יותר מהתמונות אינה תמונת רכב. נא להעלות תמונות של הרכב בלבד ולנסות שנית.",
         "img_warn_two_vehicles":"⚠️ נראה שהועלו תמונות של שני רכבים שונים! ודא שכל התמונות שייכות לאותו רכב.",
         "img_warn_brand_mismatch": "⚠️ לוגו הרכב בתמונות לא תואם את הדגם שנבחר ({selected}). ייתכן שגיבוב תמונות או לוחית לא תואמת.",
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
@@ -878,7 +878,7 @@ TR = {
         "refine_banner":        "Update Mode | upload new material for a fresh analysis",
         "prev_photos_kept":     "📂 {n} photos from previous check saved — you can add more",
         "img_validation_running": "🔍 Checking photos...",
-        "img_warn_unrelated":   "⚠️ One or more photos may not be a car image. Please review and re-upload.",
+        "img_warn_unrelated":   "⚠️ One or more photos are not a car image. Please upload only car photos and try again.",
         "img_warn_two_vehicles":"⚠️ Photos appear to show two different vehicles! Make sure all photos are of the same car.",
         "img_warn_brand_mismatch": "⚠️ The car brand visible in the photos does not match the selected model ({selected}). Possible photo mix-up or plate mismatch.",
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
@@ -1212,19 +1212,20 @@ def _sb_init():
     except Exception:
         return None
 
-def _save_feedback(name: str, comment: str, reply_email: str) -> bool:
+def _save_feedback(name: str, comment: str, reply_email: str):
+    """Returns True on success, or an error string on failure."""
     try:
         sb = _sb_init()
         if not sb:
-            return False
+            return "no_client"
         sb.table("feedback").insert({
             "name":        name or "אנונימי",
             "comment":     comment,
             "reply_email": reply_email or None,
         }).execute()
         return True
-    except Exception:
-        return False
+    except Exception as e:
+        return str(e)
 
 
 def _sb_upsert_user(email: str, first_seen: str, check_count: int = 0):
@@ -3988,10 +3989,10 @@ def render_result(result: dict):
                 comment=_fb_comment.strip(),
                 reply_email=_fb_email.strip(),
             )
-            if _sent:
+            if _sent is True:
                 st.success("תודה! הפידבק שלך נשלח בהצלחה 🙏" if is_rtl else "Thank you! Your feedback was sent 🙏")
             else:
-                st.error("שגיאה בשליחה — אנא נסה שוב מאוחר יותר" if is_rtl else "Failed to send — please try again later")
+                st.error(f"שגיאה: {_sent}" if is_rtl else f"Error: {_sent}")
 
 # ─── Step indicator ───────────────────────────────────────────────────────────
 STEP_ICONS = ["🚗", "📸", "✓"]
@@ -4989,7 +4990,8 @@ def step_photos():
                 _block = False
                 for _w in _warnings:
                     if _w == "unrelated":
-                        st.warning(t("img_warn_unrelated"))
+                        st.error(t("img_warn_unrelated"))
+                        _block = True
                     elif _w == "two_vehicles":
                         st.error(t("img_warn_two_vehicles"))
                         _block = True
