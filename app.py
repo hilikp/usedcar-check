@@ -656,7 +656,10 @@ TR = {
         "no_new_audio_err":     "אנא העלה קובץ שמע חדש להפעלת ניתוח מחודש",
         "back_to_result_btn":   "← חזור לתוצאה",
         "data_quality_title":   "⚠️ הדוח מבוסס על נתונים חלקיים",
+        "data_quality_title_severe": "🚨 הדוח חלקי מאוד — אמינותו מוגבלת",
         "data_quality_msg":     "חלק מהנתונים לא סופקו. הוספת מידע נוסף תשפר את דיוק הניתוח.",
+        "data_quality_msg_severe": "הדוח מבוסס על כמות מידע מינימלית בלבד. המסקנות עשויות להיות שגויות — לא להסתמך על דוח זה בלבד לפני רכישה.",
+        "data_missing_audio":   "לא הועלתה הקלטת מנוע",
         "data_missing_interior":"לא הועלו תמונות פנים",
         "data_missing_underbody":"לא הועלה תמונת תחתית הרכב",
         "data_few_exterior":    "מעט תמונות חיצוניות ({n} | מומלץ 6 ומעלה)",
@@ -884,7 +887,10 @@ TR = {
         "no_new_audio_err":     "Please upload new audio to run a refreshed analysis",
         "back_to_result_btn":   "Back to Result →",
         "data_quality_title":   "⚠️ Report is based on incomplete data",
+        "data_quality_title_severe": "🚨 Very partial report — reliability is limited",
         "data_quality_msg":     "Some data was not provided. Adding more material will improve the accuracy of the analysis.",
+        "data_quality_msg_severe": "This report is based on minimal information only. Conclusions may be inaccurate — do not rely on this report alone before purchasing.",
+        "data_missing_audio":   "No engine audio uploaded",
         "data_missing_interior":"No interior photos uploaded",
         "data_missing_underbody":"No underbody photo uploaded",
         "data_few_exterior":    "Few exterior photos ({n} | 6+ recommended)",
@@ -2654,26 +2660,37 @@ def render_result(result: dict):
     _dq_issues = []
     _ext_n = _dq.get("exterior_count", 0)
     _int_n = _dq.get("interior_count", 0)
-    _aud_s = _dq.get("audio_duration", 99)
+    _aud_s = _dq.get("audio_duration", 0)
+    _is_ev = _dq.get("is_ev", False)
     if _ext_n and _ext_n < 6:
         _dq_issues.append(t("data_few_exterior").format(n=_ext_n))
     if not _int_n:
         _dq_issues.append(t("data_missing_interior"))
     if not _dq.get("has_underbody"):
         _dq_issues.append(t("data_missing_underbody"))
-    if _aud_s and _aud_s < 15:
-        _dq_issues.append(t("data_short_audio").format(s=_aud_s))
+    if not _is_ev:
+        if not _aud_s:
+            _dq_issues.append(t("data_missing_audio"))
+        elif _aud_s < 15:
+            _dq_issues.append(t("data_short_audio").format(s=_aud_s))
+    # Severe = 3+ exterior only (minimum) AND missing 2+ other items
+    _severe = (_ext_n <= 3) and (len(_dq_issues) >= 2)
     if _dq_issues:
         _items_html = "".join(
             f"<li style='margin:0.25rem 0;'>{_i}</li>" for _i in _dq_issues
         )
+        _border_color = "rgba(220,53,53,0.7)" if _severe else "rgba(200,169,106,0.45)"
+        _bg_color     = "rgba(220,53,53,0.08)" if _severe else "rgba(200,169,106,0.08)"
+        _title_color  = "#e05555" if _severe else "var(--gold)"
+        _title_key    = "data_quality_title_severe" if _severe else "data_quality_title"
+        _msg_key      = "data_quality_msg_severe" if _severe else "data_quality_msg"
         st.markdown(
-            f"<div style='background:rgba(200,169,106,0.08);border:1px solid rgba(200,169,106,0.45);"
+            f"<div style='background:{_bg_color};border:1px solid {_border_color};"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.6rem 0 1rem;{rtl_css}'>"
-            f"<div style='font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:0.5rem;'>"
-            f"{t('data_quality_title')}</div>"
+            f"<div style='font-size:1.05rem;font-weight:700;color:{_title_color};margin-bottom:0.5rem;'>"
+            f"{t(_title_key)}</div>"
             f"<div style='font-size:1rem;color:var(--muted);margin-bottom:0.5rem;'>"
-            f"{t('data_quality_msg')}</div>"
+            f"{t(_msg_key)}</div>"
             f"<ul style='font-size:0.97rem;color:var(--text);margin:0.3rem 0 0.5rem "
             f"{'1.2rem' if not is_rtl else '0'};padding-{'left' if not is_rtl else 'right'}:1.2rem;'>"
             f"{_items_html}</ul>"
@@ -5128,6 +5145,7 @@ def step_photos():
                                 "has_underbody":  _underbody is not None,
                                 "has_video":      _video is not None,
                                 "audio_duration": audio_dur,
+                                "is_ev":          st.session_state.get("ev_mode", False),
                             },
                         }
                         check_id = save_check(st.session_state.email, result)
