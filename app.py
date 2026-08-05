@@ -4817,7 +4817,7 @@ def _validate_photos(photo_files: list, manufacturer: str, model_name: str) -> l
         if not img_blocks:
             return []
         mfr_hint = f"{manufacturer} {model_name}".strip() or "unknown"
-        prompt = f"""You are a strict photo validator for a used-car inspection app. The user selected vehicle: {mfr_hint}.
+        prompt = f"""You are a STRICT photo validator for a used-car inspection app. The user selected vehicle: {mfr_hint}.
 
 Examine ALL uploaded images carefully. Answer ONLY with a valid JSON object (no markdown, no prose):
 {{
@@ -4828,11 +4828,11 @@ Examine ALL uploaded images carefully. Answer ONLY with a valid JSON object (no 
   "notes": "<brief reason if any field is false, else empty string>"
 }}
 
-Rules:
-- "all_are_cars": false if ANY image is clearly not a vehicle (e.g. a selfie, food, landscape, screenshot, document)
-- "same_vehicle": false if the images show MORE THAN ONE DISTINCT VEHICLE — different colors, body styles, or clearly different cars mixed in the same set. Look carefully at body shape, color, trim, and interior differences across photos.
+Rules — be STRICT and conservative, when in doubt return false:
+- "all_are_cars": set to FALSE if ANY image is not a photograph of a car/vehicle. This includes: selfies, people, animals, food, landscapes, buildings, roads without cars, documents, screenshots, memes, blurry unidentifiable photos, or anything that is NOT a car. If you cannot clearly confirm an image shows a car, set false.
+- "same_vehicle": false if the images appear to show MORE THAN ONE DISTINCT VEHICLE — different colors, body styles, or clearly different cars mixed in the same set. Look carefully at body shape, color, trim, and interior differences across photos.
 - "brand_matches": false ONLY if you can clearly see a brand logo (badge, emblem, steering wheel logo) that contradicts "{manufacturer}". Set to null if no logo is clearly visible.
-- Do NOT be lenient on "same_vehicle" — if something looks like two different cars, flag it."""
+- When uncertain about ANY field, default to false (fail safe)."""
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=200,
@@ -4999,7 +4999,7 @@ def step_photos():
                         _sel = _w.split(":", 1)[1]
                         st.warning(t("img_warn_brand_mismatch").format(selected=_sel))
                     elif _w.startswith("validation_error:"):
-                        pass  # silent
+                        pass  # don't block on API errors
                 if not _block:
                     st.session_state.photos          = photos
                     st.session_state.interior_photos = interior_photos or []
