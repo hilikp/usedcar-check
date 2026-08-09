@@ -442,7 +442,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית <span style='background:#4AD493;color:#171717;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
+        "app_subtitle":     "בדיקה ראשונית <span style='background:#4AD493;color:#242424;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
@@ -673,7 +673,7 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "<span style='background:#4AD493;color:#171717;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
+        "app_subtitle":     "<span style='background:#4AD493;color:#242424;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
         "app_subtitle_main":"First impression. Smarter decision.",
         "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
         "app_hero_cta":     "Start free check",
@@ -1339,8 +1339,8 @@ st.markdown(f"""
 :root {{
     --gold:      #4AD493;
     --gold-dark: #2AAE72;
-    --bg:        #171717;
-    --surface:   #1C1C1C;
+    --bg:        #242424;
+    --surface:   #2E2E2E;
     --elevated:  #1E1E1E;
     --border:    #2C2C2C;
     --text:      #F0EBE0;
@@ -1392,7 +1392,7 @@ section[data-testid="stSidebar"] .stButton > button:hover {{
 /* Keep New Check button styled prominently */
 section[data-testid="stSidebar"] .stButton:first-of-type > button {{
     background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
-    color: #171717 !important;
+    color: #242424 !important;
     font-weight: 600 !important;
     font-size: 0.95rem !important;
     text-transform: uppercase !important;
@@ -1414,7 +1414,7 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 
 .stButton > button {{
     background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
-    color: #171717 !important;
+    color: #242424 !important;
     border: none !important;
     border-radius: 2px !important;
     font-family: 'Manrope', 'Heebo', sans-serif !important;
@@ -2196,7 +2196,7 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 <table width="600" cellpadding="0" cellspacing="0" style="background:#1A1A1A;border-radius:10px;border:1px solid #333;">
 
 <!-- Header -->
-<tr><td style="background:#1C1C1C;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #4AD49344;">
+<tr><td style="background:#2E2E2E;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #4AD49344;">
   <div style="font-size:11px;letter-spacing:4px;color:#4AD493;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
   <div style="font-size:26px;font-weight:700;color:#4AD493;">{_html.escape(car_label)}</div>
   <div style="font-size:12px;color:#666;margin-top:4px;">{date}</div>
@@ -4054,7 +4054,7 @@ def login_screen():
         <div style='padding:0.3rem 0 0.1rem;'>
             <span style='display:inline-flex;align-items:center;gap:0.3rem;'>
                 <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
-                             font-size:1.5rem;color:#4AD493;letter-spacing:-0.01em;'>{_logo_name}</span>
+                             font-size:1.5rem;color:#FFFFFF;letter-spacing:-0.01em;'>{_logo_name}</span>
                 <span style='font-size:1.4rem;line-height:1;color:#4AD493;font-weight:700;'>✓</span>
             </span>
         </div>""", unsafe_allow_html=True)
@@ -4080,7 +4080,7 @@ def login_screen():
     ">
         <div class='login-hero-title' style='font-family:"Manrope","Heebo",sans-serif;font-weight:800;
                     font-size:clamp(1.8rem,4.5vw,3.4rem);
-                    letter-spacing:-0.01em;color:#4AD493;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.2;
+                    letter-spacing:-0.01em;color:#FFFFFF;text-shadow:0 2px 30px rgba(0,0,0,0.9);line-height:1.2;
                     text-align:center;{_hero_dir}'>
             {t("app_subtitle")}
         </div>
@@ -4090,7 +4090,7 @@ def login_screen():
                     line-height:1.6;text-align:center;{_hero_dir}'>
             {t("app_hero_sub")}
         </div>
-        <div style='font-size:1.05rem;font-weight:600;color:rgba(74,212,147,0.85);text-align:center;{_hero_dir}'>
+        <div style='font-size:1.05rem;font-weight:600;color:rgba(240,235,224,0.75);text-align:center;{_hero_dir}'>
             {t("app_hero_trust")}
         </div>
     </div>
@@ -4098,7 +4098,7 @@ def login_screen():
 
     # ── Top CTA form (right below hero) ──────────────────────────────────────
     st.markdown("""
-    <div style='background:rgba(18,18,18,0.97);border:1px solid rgba(74,212,147,0.3);
+    <div style='background:rgba(36,36,36,0.97);border:1px solid rgba(74,212,147,0.3);
                 border-top:none;border-radius:0 0 12px 12px;
                 padding:1.6rem 2rem 1.2rem;margin-bottom:1.8rem;
                 box-shadow:0 8px 32px rgba(0,0,0,0.5);'>
@@ -4141,7 +4141,7 @@ def login_screen():
     st.markdown("<div style='height:0.25rem;'></div>", unsafe_allow_html=True)
 
     # ── How it works ─────────────────────────────────────────────────────────
-    st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:var(--gold);margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:1.5rem;font-weight:600;color:#DBDBDB;margin-bottom:1rem;{_disc_rtl}'>{t('how_it_works')}</div>", unsafe_allow_html=True)
     _hiw_col1, _hiw_col2, _hiw_col3 = st.columns(3)
     for _col, _num, _step_k, _desc_k in [
         (_hiw_col1, "1", "hiw_step1", "hiw_step1_desc"),
