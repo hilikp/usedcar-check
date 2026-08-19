@@ -4399,19 +4399,17 @@ def _fetch_vehicle_by_plate(plate: str) -> dict | None:
     if not plate:
         return None
     try:
+        import json as _json, urllib.parse as _up
+        _filters = _up.quote(_json.dumps({"mispar_rechev": int(plate)}))
         url = (
             "https://data.gov.il/api/3/action/datastore_search"
             "?resource_id=053cea08-09bc-40ec-8f7a-156f0677aff3"
-            f"&q={plate}&limit=5"
+            f"&filters={_filters}&limit=1"
         )
         resp = _req.get(url, timeout=6)
         data = resp.json()
         records = data.get("result", {}).get("records", [])
-        # Find exact plate match (q= does substring; verify exact)
-        match = next(
-            (r for r in records if str(r.get("mispar_rechev", "")).strip() == plate),
-            records[0] if records else None,
-        )
+        match = records[0] if records else None
         if not match:
             return None
 
