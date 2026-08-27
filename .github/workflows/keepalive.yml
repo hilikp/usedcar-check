@@ -1,0 +1,34 @@
+name: Streamlit Keepalive
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+      - name: Wake the app
+        run: |
+          python - <<'EOF'
+          from playwright.sync_api import sync_playwright
+          URL = "https://usedcar-check-if-the-car-is-worth-it.streamlit.app/"
+          with sync_playwright() as p:
+              b = p.chromium.launch()
+              page = b.new_page()
+              page.goto(URL, wait_until="networkidle", timeout=60000)
+              try:
+                  page.get_by_text("get this app back up", exact=False).click(timeout=8000)
+                  page.wait_for_load_state("networkidle", timeout=60000)
+                  print("Woke a sleeping app.")
+              except Exception:
+                  print("App already awake.")
+              b.close()
+          EOF
