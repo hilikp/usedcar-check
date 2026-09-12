@@ -4879,6 +4879,115 @@ Rules — be STRICT and conservative, when in doubt return false:
 
 # ─── Step 2 — Photos ──────────────────────────────────────────────────────────
 def step_photos():
+    # ── Pre-inspection checklist ───────────────────────────────────────────────
+    _is_he = st.session_state.get("lang", "he") == "he"
+    _cl_title = "📋 מה לבדוק לפני שמצלמים?" if _is_he else "📋 What to check before you start?"
+    with st.expander(_cl_title, expanded=False):
+        if _is_he:
+            st.markdown("""
+<div style='direction:rtl;text-align:right;line-height:1.7;font-size:0.95rem;'>
+
+**🚗 חוץ הרכב**
+- בדוק פגמים בפח מזוויות שונות באור שמש ישיר (גלים = תיקון עבר)
+- בדוק את הפערים בין הדלתות - אמורים להיות אחידים
+- השווה גוון צבע בין הפנלים השונים (שינוי צבע = תיקון פח)
+- בדוק שקעי חלודה מתחת לדלתות ובתחתית הרכב
+- בדוק את כל הפנסים — הוא מחיר תיקון: 300-1,500 ₪ לפנס | חלודה: 500-3,000 ₪ | פח + צבע: 800-2,500 ₪ לפנל
+
+---
+
+**🪑 פנים הרכב**
+- בדוק שכל החלונות החשמליים עולים ויורדים
+- הפעל מיזוג ובדוק חימום — כל מצבי המאוורר
+- בדוק אם יש ריח עובש או רטיבות (בעיית הצפה)
+- לחץ על כל הכפתורים בלוח המחוונים
+- בדוק רצפות לרטיבות מתחת לשטיחים
+- מחיר תיקון: מיזוג: 500-2,000 ₪ | חשמל כללי: 300-2,000 ₪
+
+---
+
+**🔧 תא המנוע**
+- בדוק מפלס שמן — צבע כהה מאוד = לא הוחלף, חלבי = מים בשמן (בעיה חמורה)
+- בדוק מפלס קירור ומצב הנוזל — צהוב/חלבי = בעיה
+- חפש כתמי שמן על המנוע ומתחתיו
+- בדוק מצב רצועות (סדקים = החלפה קרובה)
+- מחיר תיקון: החלפת שמן: 250-500 ₪ | דליפת שמן: 500-5,000 ₪ | רצועת תזמון: 1,500-3,500 ₪
+
+---
+
+**🔩 מתחת לרכב**
+- חפש כתמי שמן/נוזל על הקרקע תחת הרכב
+- בדוק חלודה על השלדה
+- בדוק מצב מערכת הפליטה
+- בדוק נראות קפיצים ומוטות הגה
+- מחיר תיקון: טיפול חלודה: 500-3,000 ₪ | קפיצים: 600-2,500 ₪ | פליטה: 500-2,000 ₪
+
+---
+
+**🚦 נסיעת מבחן**
+- הנעה קרה — האזן לנקישות בהתנעה
+- האץ בעוצמה — האזן לחריקות/רעידות
+- בלום חזק — הרכב צריך לעצור ישר, ללא רעד
+- בדוק הגה — גלגל ההגה צריך להיות ישר בנסיעה ישרה
+- עבור מהירות ובדוק רעידות בהגה (גלגל לא מאוזן = 150-300 ₪)
+- האזן לרעשים ממתלים על מהמורות
+- מחיר תיקון: רפידות בלם: 400-800 ₪ לצירה | תיבת הילוכים: 2,000-8,000 ₪ | מתלים: 500-3,000 ₪
+
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+<div style='direction:ltr;text-align:left;line-height:1.7;font-size:0.95rem;'>
+
+**🚗 Exterior**
+- Inspect body panels from a low angle in direct sunlight (waves = past repairs)
+- Check door gaps — they should be even (uneven = accident damage)
+- Compare paint shade across panels (color mismatch = repainted panel)
+- Check for rust spots under doors and at the bottom of the car
+- Test all lights — Repair costs: headlight 300-1,500 ₪ | rust 500-3,000 ₪ | bodywork per panel 800-2,500 ₪
+
+---
+
+**🪑 Interior**
+- Test all electric windows up and down
+- Run the A/C and heat — test all fan speeds
+- Smell for mold or dampness (flood damage sign)
+- Press every button on the dashboard
+- Check floor carpets for moisture underneath
+- Repair costs: A/C 500-2,000 ₪ | general electrical 300-2,000 ₪
+
+---
+
+**🔧 Engine Bay**
+- Check oil level — very dark color = old oil, milky = water in oil (serious problem)
+- Check coolant level and color — yellow/milky = problem
+- Look for oil stains on or under the engine
+- Check belts for cracks (replacement due soon)
+- Repair costs: oil change 250-500 ₪ | oil leak 500-5,000 ₪ | timing belt 1,500-3,500 ₪
+
+---
+
+**🔩 Under the Car**
+- Look for oil/fluid stains on the ground beneath the car
+- Check chassis for rust
+- Inspect exhaust pipe condition
+- Check visible suspension springs and steering rods
+- Repair costs: rust treatment 500-3,000 ₪ | springs 600-2,500 ₪ | exhaust 500-2,000 ₪
+
+---
+
+**🚦 Test Drive**
+- Cold start — listen for knocking sounds
+- Hard acceleration — listen for rattles or vibrations
+- Hard braking — car should stop straight, no pulsing in pedal
+- Steering wheel should be centered on a straight road
+- At highway speed, check for steering vibrations (wheel balance 150-300 ₪)
+- Listen for suspension noise over bumps
+- Repair costs: brake pads 400-800 ₪ per axle | gearbox 2,000-8,000 ₪ | suspension 500-3,000 ₪
+
+</div>
+""", unsafe_allow_html=True)
+
     # ── Refine mode banner ────────────────────────────────────────────────────
     if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
         st.markdown(
@@ -4968,7 +5077,7 @@ def step_photos():
                 unsafe_allow_html=True)
     audio_new = st.file_uploader(
         t("engine_audio"),
-        type=["mp3","wav","m4a","ogg","aac","flac","mp4","mov","avi","mkv","webm","3gp"],
+        type=["mp3","wav","m4a","ogg","opus","aac","flac","mp4","mov","avi","mkv","webm","3gp"],
         label_visibility="collapsed", key="audio_upload",
     )
     audio = audio_new if audio_new else _saved_audio
