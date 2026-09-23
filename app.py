@@ -4184,6 +4184,30 @@ def login_screen():
         </span>
     </div>""", unsafe_allow_html=True)
 
+    # ── Testimonial ───────────────────────────────────────────────────────────
+    _is_he_lp = st.session_state.get("lang", "he") == "he"
+    if _is_he_lp:
+        _testimonial_quote = "היה לי נורא קשה להבין מה לבדוק ברכב משומש כדי לוודא שלא עובדים עליי. עם כמה קריטריונים פשוטים האתר אמר לי בדיוק מה מסוכן, מה קריטי, ומה לא. בזכות התוצאות שאמרו לי ששווה לי לשלוח את הרכב לבדיקה - שלחתי, וכך קניתי את הרכב הראשון שלי ואני מרוצה לגמרי! מבחינתי האתר מציל כסף ומסביר פנים בעולם של אנשים קשים."
+        _testimonial_name = "יעל - רכישת רכב ראשון"
+    else:
+        _testimonial_quote = "I had no idea what to check on a used car. With just a few simple inputs the site told me exactly what was dangerous, what was critical, and what wasn't. The results said it was worth sending the car to a proper inspection — I did, and I bought my first car ever. I'm completely happy! The site saves money and is friendly in a world of tough people."
+        _testimonial_name = "Yael - first-time car buyer"
+    st.markdown(f"""
+    <div style='background:rgba(74,212,147,0.06);border:1px solid rgba(74,212,147,0.18);
+                border-radius:12px;padding:1.4rem 1.8rem;margin:0.4rem 0 1.6rem;
+                position:relative;{_disc_rtl}'>
+        <span style='font-size:2.5rem;line-height:1;color:rgba(74,212,147,0.35);
+                     position:absolute;top:0.5rem;{"right:1rem" if _is_he_lp else "left:1rem"};
+                     font-family:Georgia,serif;'>"</span>
+        <p style='font-size:1.02rem;line-height:1.7;color:#DBDBDB;margin:0 0 0.8rem;
+                  padding-{"right" if _is_he_lp else "left"}:1.5rem;font-style:italic;'>
+            {_testimonial_quote}
+        </p>
+        <div style='font-size:0.88rem;color:var(--gold);font-weight:600;'>
+            — {_testimonial_name}
+        </div>
+    </div>""", unsafe_allow_html=True)
+
     # ── What you get + Sample result ─────────────────────────────────────────
     _wyg_col, _gap_col, _sample_col = st.columns([4, 1, 5])
 
