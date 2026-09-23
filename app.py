@@ -442,7 +442,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית <span style='background:#7DC4A0;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
+        "app_subtitle":     "בדיקה ראשונית <span style='background:#5B8DB8;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
@@ -673,7 +673,7 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "<span style='background:#7DC4A0;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
+        "app_subtitle":     "<span style='background:#5B8DB8;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
         "app_subtitle_main":"First impression. Smarter decision.",
         "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
         "app_hero_cta":     "Start free check",
@@ -1337,8 +1337,8 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;600&display=swap');
 
 :root {{
-    --gold:      #7DC4A0;
-    --gold-dark: #5BA888;
+    --gold:      #5B8DB8;
+    --gold-dark: #3A6A9A;
     --bg:        #242424;
     --surface:   #2E2E2E;
     --elevated:  #1E1E1E;
@@ -1392,7 +1392,7 @@ section[data-testid="stSidebar"] .stButton > button:hover {{
 /* Keep New Check button styled prominently */
 section[data-testid="stSidebar"] .stButton:first-of-type > button {{
     background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
-    color: #242424 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
     font-size: 0.95rem !important;
     text-transform: uppercase !important;
@@ -1415,7 +1415,7 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 .stButton > button[kind="primary"],
 .stButton > button[data-testid="baseButton-primary"] {{
     background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
-    color: #242424 !important;
+    color: #ffffff !important;
     border: none !important;
     border-radius: 2px !important;
     font-family: 'Manrope', 'Heebo', sans-serif !important;
@@ -1430,7 +1430,7 @@ input, textarea, .stTextInput input, .stNumberInput input {{
 .stButton > button[kind="secondary"],
 .stButton > button[data-testid="baseButton-secondary"] {{
     background: transparent !important;
-    border: 1px solid rgba(125,196,160,0.35) !important;
+    border: 1px solid rgba(91,141,184,0.35) !important;
     color: rgba(219,219,219,0.55) !important;
     border-radius: 2px !important;
     font-family: 'Manrope', 'Heebo', sans-serif !important;
@@ -1469,7 +1469,7 @@ div[data-testid="stRadio"] label {{
 }}
 div[data-testid="stRadio"] label:has(input:checked) {{
     border-color: var(--gold) !important;
-    background: rgba(74,212,147,0.12) !important;
+    background: rgba(91,141,184,0.12) !important;
 }}
 div[data-testid="stRadio"] label > div:first-child {{
     display: none !important;
@@ -1561,8 +1561,8 @@ p[data-testid="InputInstructions"],
 
 /* Feature cards on login */
 .feat-card {{
-    background: rgba(74,212,147,0.06);
-    border: 1px solid rgba(74,212,147,0.2);
+    background: rgba(91,141,184,0.06);
+    border: 1px solid rgba(91,141,184,0.2);
     border-radius: 4px;
     padding: 1rem 1.2rem;
     margin: 0.4rem 0;
@@ -1766,13 +1766,13 @@ def verdict_meta(rec: str) -> tuple[str, str, str]:
     return {
         "go":           (label, "#4A7A4A", "rgba(74,122,74,0.12)"),
         "no_go":        (label, "#B04040", "rgba(176,64,64,0.12)"),
-        "inconclusive": (label, "#4AD493", "rgba(74,212,147,0.12)"),
+        "inconclusive": (label, "#5B8DB8", "rgba(91,141,184,0.12)"),
     }.get(rec, (label, "#9A9080", "rgba(154,144,128,0.12)"))
 
 def badge(text: str, level: str):
     colors = {
         "high":   ("#4A7A4A", "rgba(74,122,74,0.15)"),
-        "medium": ("#4AD493", "rgba(74,212,147,0.15)"),
+        "medium": ("#5B8DB8", "rgba(91,141,184,0.15)"),
         "low":    ("#B04040", "rgba(176,64,64,0.15)"),
     }
     fg, bg = colors.get(level, ("#9A9080", "rgba(154,144,128,0.15)"))
@@ -2151,7 +2151,7 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
     rec_labels = {
         "go":           ("מתאים",       "GO",               "#4A7A4A"),
         "no_go":        ("זוהו בעיות",  "RISK DETECTED",    "#B04040"),
-        "inconclusive": ("מידע חסר",    "INSUFFICIENT DATA","#4AD493"),
+        "inconclusive": ("מידע חסר",    "INSUFFICIENT DATA","#5B8DB8"),
     }
     rec_he, rec_en, rec_color = rec_labels.get(rec, ("?", "?", "#9A9080"))
     rec_label = rec_he if is_he else rec_en
@@ -2192,9 +2192,9 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 
     score_row = ""
     if ext_score is not None:
-        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#4AD493;'>{ext_score}/10</div><div style='font-size:11px;color:#888;'>{'חיצוני' if is_he else 'Exterior'}</div></td>"
+        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#5B8DB8;'>{ext_score}/10</div><div style='font-size:11px;color:#888;'>{'חיצוני' if is_he else 'Exterior'}</div></td>"
     if int_score is not None:
-        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#4AD493;'>{int_score}/10</div><div style='font-size:11px;color:#888;'>{'פנים' if is_he else 'Interior'}</div></td>"
+        score_row += f"<td style='padding:8px 16px;text-align:center;'><div style='font-size:22px;font-weight:700;color:#5B8DB8;'>{int_score}/10</div><div style='font-size:11px;color:#888;'>{'פנים' if is_he else 'Interior'}</div></td>"
 
     conc_ext  = _html.escape(result.get("conclusion_external",""))
     conc_int  = _html.escape(result.get("conclusion_internal",""))
@@ -2212,8 +2212,8 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 <table width="600" cellpadding="0" cellspacing="0" style="background:#1A1A1A;border-radius:10px;border:1px solid #333;">
 
 <!-- Header -->
-<tr><td style="background:#2E2E2E;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #4AD49344;">
-  <div style="font-size:11px;letter-spacing:4px;color:#7DC4A0;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
+<tr><td style="background:#2E2E2E;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #5B8DB844;">
+  <div style="font-size:11px;letter-spacing:4px;color:#5B8DB8;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
   <div style="font-size:26px;font-weight:700;color:#DBDBDB;">{_html.escape(car_label)}</div>
   <div style="font-size:12px;color:#666;margin-top:4px;">{date}</div>
 </td></tr>
@@ -2233,9 +2233,9 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 {"" if not (conc_ext or conc_int or conc_mech) else f"""
 <tr><td style='padding:20px 32px;border-bottom:1px solid #2A2A2A;'>
   <div style='font-size:11px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:10px;'>{'סיכום' if is_he else 'Summary'}</div>
-  {"" if not conc_ext else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#7DC4A0;'>{'חיצוני' if is_he else 'Exterior'}: </span><span style='font-size:14px;'>{conc_ext}</span></div>"}
-  {"" if not conc_int else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#7DC4A0;'>{'פנים' if is_he else 'Interior'}: </span><span style='font-size:14px;'>{conc_int}</span></div>"}
-  {"" if not conc_mech else f"<div><span style='font-size:12px;color:#7DC4A0;'>{'מכאני' if is_he else 'Mechanical'}: </span><span style='font-size:14px;'>{conc_mech}</span></div>"}
+  {"" if not conc_ext else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#5B8DB8;'>{'חיצוני' if is_he else 'Exterior'}: </span><span style='font-size:14px;'>{conc_ext}</span></div>"}
+  {"" if not conc_int else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#5B8DB8;'>{'פנים' if is_he else 'Interior'}: </span><span style='font-size:14px;'>{conc_int}</span></div>"}
+  {"" if not conc_mech else f"<div><span style='font-size:12px;color:#5B8DB8;'>{'מכאני' if is_he else 'Mechanical'}: </span><span style='font-size:14px;'>{conc_mech}</span></div>"}
 </td></tr>"""}
 
 <!-- Footer -->
@@ -2630,7 +2630,7 @@ def render_result(result: dict):
         _lang_now = st.session_state.get("lang", "he")
         _severity_colors = {
             "hard": ("#B04040", "rgba(176,64,64,0.13)"),
-            "soft": ("#4AD493", "rgba(74,212,147,0.10)"),
+            "soft": ("#5B8DB8", "rgba(91,141,184,0.10)"),
             "tech": ("#6A8FAA", "rgba(106,143,170,0.10)"),
         }
         _severity_labels = {
@@ -2695,8 +2695,8 @@ def render_result(result: dict):
         _items_html = "".join(
             f"<li style='margin:0.25rem 0;'>{_i}</li>" for _i in _dq_issues
         )
-        _border_color = "rgba(220,53,53,0.7)" if _severe else "rgba(74,212,147,0.45)"
-        _bg_color     = "rgba(220,53,53,0.08)" if _severe else "rgba(74,212,147,0.08)"
+        _border_color = "rgba(220,53,53,0.7)" if _severe else "rgba(91,141,184,0.45)"
+        _bg_color     = "rgba(220,53,53,0.08)" if _severe else "rgba(91,141,184,0.08)"
         _title_color  = "#e05555" if _severe else "var(--gold)"
         _title_key    = "data_quality_title_severe" if _severe else "data_quality_title"
         _msg_key      = "data_quality_msg_severe" if _severe else "data_quality_msg"
@@ -2772,8 +2772,8 @@ def render_result(result: dict):
     elif _has_any_audio and not _has_paint_issue:
         # Engine risk only — caution, must test
         _action_key  = "action_yellow"
-        _action_bg   = "rgba(74,212,147,0.12)"
-        _action_border = "#4AD493"
+        _action_bg   = "rgba(91,141,184,0.12)"
+        _action_border = "#5B8DB8"
         _action_icon = "⚠️"
     else:
         # All clear visually — potential good buy, still must test
@@ -2837,14 +2837,14 @@ def render_result(result: dict):
         }
         _own_colors = {
             "private": ("#4A7A4A", "rgba(74,122,74,0.12)"),
-            "lease":   ("#4AD493", "rgba(74,212,147,0.12)"),
+            "lease":   ("#5B8DB8", "rgba(91,141,184,0.12)"),
             "rental":  ("#B04040", "rgba(176,64,64,0.12)"),
-            "govt":    ("#4AD493", "rgba(74,212,147,0.12)"),
-            "company": ("#4AD493", "rgba(74,212,147,0.12)"),
-            "other":   ("#4AD493", "rgba(74,212,147,0.12)"),
+            "govt":    ("#5B8DB8", "rgba(91,141,184,0.12)"),
+            "company": ("#5B8DB8", "rgba(91,141,184,0.12)"),
+            "other":   ("#5B8DB8", "rgba(91,141,184,0.12)"),
         }
         _own_text  = _own_labels.get(_own_key, _baalut or "—")
-        _own_fc, _own_bg = _own_colors.get(_own_key, ("#4AD493", "rgba(74,212,147,0.12)"))
+        _own_fc, _own_bg = _own_colors.get(_own_key, ("#5B8DB8", "rgba(91,141,184,0.12)"))
 
         # Warning if not private
         _own_warn_html = ""
@@ -2921,7 +2921,7 @@ def render_result(result: dict):
             )
 
         st.markdown(
-            f"<div class='mobile-card' style='background:rgba(74,212,147,0.05);border:1px solid rgba(74,212,147,0.22);"
+            f"<div class='mobile-card' style='background:rgba(91,141,184,0.05);border:1px solid rgba(91,141,184,0.22);"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
             f"margin-bottom:0.6rem;'>🏛 {t('registry_title')}</div>"
@@ -2934,7 +2934,7 @@ def render_result(result: dict):
         )
     else:
         st.markdown(
-            f"<div style='background:rgba(44,44,44,0.25);border:1px dashed rgba(74,212,147,0.2);"
+            f"<div style='background:rgba(44,44,44,0.25);border:1px dashed rgba(91,141,184,0.2);"
             f"border-radius:8px;padding:0.8rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<span style='font-size:0.97rem;color:var(--muted);'>🏛 {t('no_plate_data')}</span>"
             f"</div>",
@@ -2967,7 +2967,7 @@ def render_result(result: dict):
                 if score is None:
                     return
                 pct   = int(score) * 10
-                s_col = "#4A7A4A" if score >= 7 else ("#4AD493" if score >= 5 else "#B04040")
+                s_col = "#4A7A4A" if score >= 7 else ("#5B8DB8" if score >= 5 else "#B04040")
                 col.markdown(f"""
                 <div style='{rtl_css}margin-bottom:0.4rem;'>
                     <span style='font-size:1.07rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;'>{t(label_key)}</span>
@@ -2990,7 +2990,7 @@ def render_result(result: dict):
         leak_label, leak_color = t("leak_oil"),   "#B04040"
         leak_icon = "🔴"
     elif "water" in leak_raw or "coolant" in leak_raw:
-        leak_label, leak_color = t("leak_water"), "#4AD493"
+        leak_label, leak_color = t("leak_water"), "#5B8DB8"
         leak_icon = "🟡"
     elif "multiple" in leak_raw:
         leak_label, leak_color = t("leak_oil") + " + " + t("leak_water"), "#B04040"
@@ -3017,7 +3017,7 @@ def render_result(result: dict):
     if suspicion == "high":
         sev_label, sev_color = t("paint_severity_high"),   "#B04040"
     elif suspicion in ("medium", "low"):
-        sev_label, sev_color = t("paint_severity_medium"), "#4AD493"
+        sev_label, sev_color = t("paint_severity_medium"), "#5B8DB8"
     else:
         sev_label, sev_color = t("paint_severity_low"),    "#4A7A4A"
 
@@ -3035,7 +3035,7 @@ def render_result(result: dict):
     cv_anomalies = paint_data.get("anomalies", [])
     if cv_anomalies:
         for a in cv_anomalies[:5]:
-            a_color = "#B04040" if a["severity"] == "high" else "#4AD493"
+            a_color = "#B04040" if a["severity"] == "high" else "#5B8DB8"
             st.markdown(
                 f"<div style='background:var(--elevated);border-left:3px solid {a_color};"
                 f"padding:0.5rem 1rem;margin:0.25rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
@@ -3049,7 +3049,7 @@ def render_result(result: dict):
     if paint_findings:
         for pf in paint_findings:
             sev = pf.get("severity", "low")
-            fc  = {"high": "#B04040", "medium": "#4AD493", "low": "#9A9080"}.get(sev, "#9A9080")
+            fc  = {"high": "#B04040", "medium": "#5B8DB8", "low": "#9A9080"}.get(sev, "#9A9080")
             st.markdown(
                 f"<div style='background:var(--elevated);border-left:3px solid {fc};"
                 f"padding:0.5rem 1rem;margin:0.25rem 0;border-radius:0 4px 4px 0;{rtl_css}'>"
@@ -3072,7 +3072,7 @@ def render_result(result: dict):
     _section_header("🔧", "sec_mechanical")
 
     # ── Mechanical findings from top_reasons (audio / underbody / dashboard) ──
-    sev_colors = {"high": "#B04040", "medium": "#4AD493", "low": "#4A7A4A"}
+    sev_colors = {"high": "#B04040", "medium": "#5B8DB8", "low": "#4A7A4A"}
     sev_icons  = {"high": "⚠", "medium": "◉", "low": "◎"}
     mech_evidence_types = {"audio", "underbody", "dashboard"}
     reasons = result.get("top_reasons", [])
@@ -3109,7 +3109,7 @@ def render_result(result: dict):
             "valve_tick_suspected":          ("🟠", "#C8803A"),
             "belt_squeal_suspected":         ("🟠", "#C8803A"),
             "exhaust_leak_suspected":        ("🟠", "#C8803A"),
-            "rough_idle_suspected":          ("🟡", "#4AD493"),
+            "rough_idle_suspected":          ("🟡", "#5B8DB8"),
             "misfire_suspected":             ("🔴", "#B04040"),
             "bearing_wear_suspected":        ("🟠", "#C8803A"),
             "timing_chain_rattle_suspected": ("🟠", "#C8803A"),
@@ -3196,8 +3196,8 @@ def render_result(result: dict):
     conc_int  = result.get("conclusion_internal", "")
     conc_mech = result.get("conclusion_mechanical", "")
 
-    _conclusion_row("🏠", "conc_external_label",   conc_ext,  "#4A7A4A" if ext_score and ext_score >= 7 else "#4AD493")
-    _conclusion_row("🪑", "conc_internal_label",   conc_int,  "#4A7A4A" if int_score and int_score >= 7 else "#4AD493")
+    _conclusion_row("🏠", "conc_external_label",   conc_ext,  "#4A7A4A" if ext_score and ext_score >= 7 else "#5B8DB8")
+    _conclusion_row("🪑", "conc_internal_label",   conc_int,  "#4A7A4A" if int_score and int_score >= 7 else "#5B8DB8")
     _conclusion_row("⚙️", "conc_mechanical_label", conc_mech, color)  # color = verdict color
 
     # Fallback: show detailed report in expander if no conclusions
@@ -3208,7 +3208,7 @@ def render_result(result: dict):
             sentences = [s.strip() for s in _re.split(r'(?<=[.!?])\s+', report_text) if s.strip()]
             for sentence in sentences:
                 st.markdown(
-                    f"<div style='border-left:2px solid rgba(74,212,147,0.3);padding:0.4rem 0.9rem;margin:0.3rem 0;{rtl_css}'>"
+                    f"<div style='border-left:2px solid rgba(91,141,184,0.3);padding:0.4rem 0.9rem;margin:0.3rem 0;{rtl_css}'>"
                     f"<span style='font-size:1.1rem;line-height:1.6;'>{sentence}</span></div>",
                     unsafe_allow_html=True,
                 )
@@ -3221,7 +3221,7 @@ def render_result(result: dict):
         for i, s in enumerate(steps, 1):
             st.markdown(f"""
             <div style='display:flex;align-items:flex-start;gap:0.75rem;margin:0.5rem 0;{rtl_css}'>
-                <div style='min-width:24px;height:24px;border-radius:50%;background:rgba(74,212,147,0.15);
+                <div style='min-width:24px;height:24px;border-radius:50%;background:rgba(91,141,184,0.15);
                             border:1px solid var(--gold-dark);display:flex;align-items:center;
                             justify-content:center;font-size:0.85rem;color:var(--gold);flex-shrink:0;'>{i}</div>
                 <div style='font-size:1.24rem;color:var(--text);padding-top:0.2rem;'>{_tr_for_display(s.get("text",""))}</div>
@@ -3898,7 +3898,7 @@ def render_result(result: dict):
         _exact   = _yad2pd.get("exact_match", False)
         _match_label = ("✓ " if _exact else "~") + _matched
         st.markdown(
-            f"<div class='mobile-card' style='background:rgba(74,212,147,0.08);border:1px solid rgba(74,212,147,0.35);"
+            f"<div class='mobile-card' style='background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.35);"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
             f"margin-bottom:0.6rem;'>💰 {t('yad2_price_label')}</div>"
@@ -3909,7 +3909,7 @@ def render_result(result: dict):
             f"<div style='font-size:0.88rem;color:var(--muted);margin-top:0.25rem;'>{t('yad2_price_note')}</div>"
             f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.8rem;'>"
             f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
-            f"style='display:inline-block;background:rgba(74,212,147,0.12);color:var(--gold);"
+            f"style='display:inline-block;background:rgba(91,141,184,0.12);color:var(--gold);"
             f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.4rem 1rem;"
             f"font-size:0.97rem;text-decoration:none;'>🔍 {t('yad2_ref_btn')}</a>"
             f"</div></div>",
@@ -3917,7 +3917,7 @@ def render_result(result: dict):
         )
     else:
         st.markdown(
-            f"<div style='background:rgba(74,212,147,0.06);border:1px solid rgba(74,212,147,0.25);"
+            f"<div style='background:rgba(91,141,184,0.06);border:1px solid rgba(91,141,184,0.25);"
             f"border-radius:8px;padding:1rem 1.4rem;margin:0.4rem 0;{rtl_css}'>"
             f"<div style='font-size:1rem;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;"
             f"margin-bottom:0.5rem;'>💰 {t('yad2_ref_label')}</div>"
@@ -3927,7 +3927,7 @@ def render_result(result: dict):
             f"<strong style='color:var(--text);'>{_search}</strong></div>"
             f"<div style='display:flex;gap:0.8rem;flex-wrap:wrap;'>"
             f"<a href='{_yad2_url}' target='_blank' rel='noopener' "
-            f"style='display:inline-block;background:rgba(74,212,147,0.12);color:var(--gold);"
+            f"style='display:inline-block;background:rgba(91,141,184,0.12);color:var(--gold);"
             f"border:1px solid var(--gold-dark);border-radius:5px;padding:0.45rem 1.1rem;"
             f"font-size:1rem;text-decoration:none;letter-spacing:0.05em;'>"
             f"🔍 {t('yad2_ref_btn')}</a>"
@@ -4037,7 +4037,7 @@ def step_indicator(current: int):
     for i, (name, icon) in enumerate(zip(labels, STEP_ICONS), 1):
         active = i == current
         done   = i < current
-        bg_c   = "rgba(74,212,147,0.15)" if active else ("rgba(74,122,74,0.1)" if done else "rgba(44,44,44,0.4)")
+        bg_c   = "rgba(91,141,184,0.15)" if active else ("rgba(74,122,74,0.1)" if done else "rgba(44,44,44,0.4)")
         border = "var(--gold)" if active else ("#4A7A4A" if done else "var(--border)")
         txt    = "var(--gold)" if active else ("#4A7A4A" if done else "var(--muted)")
         items += (
@@ -4071,7 +4071,7 @@ def login_screen():
             <span style='display:inline-flex;align-items:center;gap:0.3rem;'>
                 <span style='font-family:"Heebo","Arial",sans-serif;font-weight:800;
                              font-size:1.5rem;color:#FFFFFF;letter-spacing:-0.01em;'>{_logo_name}</span>
-                <span style='font-size:1.4rem;line-height:1;color:#4AD493;font-weight:700;'>✓</span>
+                <span style='font-size:1.4rem;line-height:1;color:#5B8DB8;font-weight:700;'>✓</span>
             </span>
         </div>""", unsafe_allow_html=True)
     with _he_col:
@@ -4100,7 +4100,7 @@ def login_screen():
                     text-align:center;{_hero_dir}'>
             {t("app_subtitle")}
         </div>
-        <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#4AD493,transparent);
+        <div style='height:1px;width:80px;background:linear-gradient(90deg,transparent,#5B8DB8,transparent);
                     margin:1.2rem auto;'></div>
         <div style='font-size:1.15rem;color:rgba(240,235,224,0.82);max-width:580px;margin:0 auto 1.8rem;
                     line-height:1.6;text-align:center;{_hero_dir}'>
@@ -4114,7 +4114,7 @@ def login_screen():
 
     # ── Top CTA form (right below hero) ──────────────────────────────────────
     st.markdown("""
-    <div style='background:rgba(36,36,36,0.97);border:1px solid rgba(74,212,147,0.3);
+    <div style='background:rgba(36,36,36,0.97);border:1px solid rgba(91,141,184,0.3);
                 border-top:none;border-radius:0 0 12px 12px;
                 padding:1.6rem 2rem 1.2rem;margin-bottom:1.8rem;
                 box-shadow:0 8px 32px rgba(0,0,0,0.5);'>
@@ -4166,10 +4166,10 @@ def login_screen():
     ]:
         with _col:
             st.markdown(f"""
-            <div style='background:var(--elevated);border:1px solid rgba(74,212,147,0.15);
+            <div style='background:var(--elevated);border:1px solid rgba(91,141,184,0.15);
                         border-radius:12px;padding:1.4rem 1rem;text-align:center;height:100%;'>
                 <div style='width:2.6rem;height:2.6rem;border-radius:50%;
-                            border:2px solid #4AD493;color:#4AD493;
+                            border:2px solid #5B8DB8;color:#5B8DB8;
                             font-size:1.1rem;font-weight:700;letter-spacing:0.05em;
                             display:flex;align-items:center;justify-content:center;
                             margin:0 auto 0.8rem;'>0{_num}</div>
@@ -4193,7 +4193,7 @@ def login_screen():
     st.markdown(f"""
     <div style='text-align:center;margin:1.2rem 0 1.5rem;{_proof_dir}'>
         <span style='display:inline-flex;align-items:center;gap:0.5rem;
-                     background:rgba(74,212,147,0.08);border:1px solid rgba(74,212,147,0.2);
+                     background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.2);
                      border-radius:20px;padding:0.35rem 1.1rem;
                      font-size:0.92rem;color:var(--gold);'>
             ✦ {_display_count}+ {_proof_text}
@@ -4209,10 +4209,10 @@ def login_screen():
         _testimonial_quote = "I had no idea what to check on a used car. With just a few simple inputs the site told me exactly what was dangerous, what was critical, and what wasn't. The results said it was worth sending the car to a proper inspection — I did, and I bought my first car ever. I'm completely happy! The site saves money and is friendly in a world of tough people."
         _testimonial_name = "Yael - first-time car buyer"
     st.markdown(f"""
-    <div style='background:rgba(74,212,147,0.06);border:1px solid rgba(74,212,147,0.18);
+    <div style='background:rgba(91,141,184,0.06);border:1px solid rgba(91,141,184,0.18);
                 border-radius:12px;padding:1.4rem 1.8rem;margin:0.4rem 0 1.6rem;
                 position:relative;{_disc_rtl}'>
-        <span style='font-size:2.5rem;line-height:1;color:rgba(74,212,147,0.35);
+        <span style='font-size:2.5rem;line-height:1;color:rgba(91,141,184,0.35);
                      position:absolute;top:0.5rem;{"right:1rem" if _is_he_lp else "left:1rem"};
                      font-family:Georgia,serif;'>"</span>
         <p style='font-size:1.02rem;line-height:1.7;color:#DBDBDB;margin:0 0 0.8rem;
@@ -4244,8 +4244,8 @@ def login_screen():
         _wyg_dir = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
         st.markdown(f"""
         <div style='margin-top:0.9rem;padding:0.85rem 1rem;
-                    background:rgba(74,212,147,0.08);border-radius:8px;
-                    border-right:3px solid #4AD493;text-align:center;{_wyg_dir}'>
+                    background:rgba(91,141,184,0.08);border-radius:8px;
+                    border-right:3px solid #5B8DB8;text-align:center;{_wyg_dir}'>
             <span style='font-size:1.15rem;color:var(--gold);font-weight:600;line-height:1.7;'>
                 {_wyg_tagline}
             </span>
@@ -4255,8 +4255,8 @@ def login_screen():
         st.markdown(f"<div style='font-size:1.4rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;{_disc_rtl}'>{t('sample_title')}</div>", unsafe_allow_html=True)
         st.markdown(f"""
         <div style='background:var(--elevated);border-radius:10px;padding:1.2rem 1.4rem;
-                    border-left:4px solid #4AD493;{_disc_rtl}'>
-            <div style='display:inline-block;background:rgba(74,212,147,0.18);color:#4AD493;
+                    border-left:4px solid #5B8DB8;{_disc_rtl}'>
+            <div style='display:inline-block;background:rgba(91,141,184,0.18);color:#5B8DB8;
                         font-weight:700;font-size:1rem;padding:0.3rem 0.9rem;
                         border-radius:20px;margin-bottom:0.8rem;'>
                 🟡 {t('sample_badge')}
@@ -4280,7 +4280,7 @@ def login_screen():
 
     # ── Trust section ─────────────────────────────────────────────────────────
     st.markdown(f"""
-    <div style='background:rgba(74,212,147,0.06);border:1px solid rgba(74,212,147,0.2);
+    <div style='background:rgba(91,141,184,0.06);border:1px solid rgba(91,141,184,0.2);
                 border-radius:10px;padding:1.2rem 1.6rem;margin-bottom:1.5rem;{_disc_rtl}'>
         <div style='font-size:1.2rem;font-weight:600;color:var(--gold);margin-bottom:0.8rem;'>
             {t('trust_title')}
@@ -5031,7 +5031,7 @@ def step_photos():
     # ── Refine mode banner ────────────────────────────────────────────────────
     if st.session_state.get("refine_mode") and st.session_state.get("original_result"):
         st.markdown(
-            f"<div style='background:rgba(74,212,147,0.10);border:1px solid rgba(74,212,147,0.4);"
+            f"<div style='background:rgba(91,141,184,0.10);border:1px solid rgba(91,141,184,0.4);"
             f"border-radius:6px;padding:0.7rem 1rem;margin-bottom:0.8rem;{rtl_css}'>"
             f"🔄 {t('refine_banner')}</div>",
             unsafe_allow_html=True,
@@ -5085,7 +5085,7 @@ def step_photos():
                                        key="interior_upload")
     interior_photos = interior_photos_new if interior_photos_new else _saved_interior
     if interior_photos:
-        color = "#4A7A4A" if 1 <= len(interior_photos) <= 6 else "#4AD493"
+        color = "#4A7A4A" if 1 <= len(interior_photos) <= 6 else "#5B8DB8"
         st.markdown(f"<p style='font-size:1.01rem;color:{color};margin-top:0.4rem;'>🪑 {len(interior_photos)} {t('interior_photos_count')}</p>", unsafe_allow_html=True)
 
     gold_divider()
@@ -5130,9 +5130,9 @@ def step_photos():
                            value=st.session_state.get("ev_mode", False))
     if _ev_mode:
         st.markdown(
-            f"<div style='background:rgba(74,212,147,0.08);border:1px solid rgba(74,212,147,0.35);"
+            f"<div style='background:rgba(91,141,184,0.08);border:1px solid rgba(91,141,184,0.35);"
             f"border-radius:6px;padding:0.55rem 1rem;margin-top:0.3rem;font-size:0.97rem;"
-            f"color:#7DC4A0;{rtl_css}'>{t('ev_partial_notice')}</div>",
+            f"color:#5B8DB8;{rtl_css}'>{t('ev_partial_notice')}</div>",
             unsafe_allow_html=True)
 
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
@@ -5180,9 +5180,9 @@ def step_photos():
                     if _is_busy():
                         _rtl_q = "direction:rtl;text-align:right;" if st.session_state.get("lang","he") == "he" else ""
                         _queue_placeholder.markdown(
-                            f"<div style='background:rgba(74,212,147,0.10);border:1px solid #4AD493;"
+                            f"<div style='background:rgba(91,141,184,0.10);border:1px solid #5B8DB8;"
                             f"border-radius:8px;padding:0.85rem 1.2rem;margin-bottom:0.8rem;{_rtl_q}'>"
-                            f"<span style='color:#7DC4A0;font-size:1.05rem;font-weight:600;'>"
+                            f"<span style='color:#5B8DB8;font-size:1.05rem;font-weight:600;'>"
                             f"{t('queue_notice')}</span></div>",
                             unsafe_allow_html=True,
                         )
@@ -5317,7 +5317,7 @@ def main_app():
     <div style='text-align:center;padding:1.2rem 0 0.2rem;overflow:hidden;'>
         <div class='car-animated' style='margin-bottom:0.4rem;'>
             <img class='hero-img' src='data:image/png;base64,{_PORSCHE_B64}'
-                 style='height:110px;width:auto;filter:drop-shadow(0 4px 14px rgba(74,212,147,0.45));'/>
+                 style='height:110px;width:auto;filter:drop-shadow(0 4px 14px rgba(91,141,184,0.45));'/>
         </div>
         <div class='hero-title' style='font-family:Cormorant Garamond,serif;font-weight:300;font-size:2.9rem;
                     letter-spacing:0.18em;color:var(--gold);text-transform:uppercase;line-height:1.1;'>
