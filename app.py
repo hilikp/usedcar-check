@@ -442,7 +442,7 @@ def _fetch_nhtsa_data(make: str, model: str, year: int) -> dict:
 TR = {
     "he": {
         "app_title":        "בדיקת רכב",
-        "app_subtitle":     "בדיקה ראשונית <span style='background:#4AD493;color:#242424;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
+        "app_subtitle":     "בדיקה ראשונית <span style='background:#7DC4A0;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>חינם</span> לפני שמוציאים כסף<br>על מכון בדיקה או בדיקת מוסך",
         "app_subtitle_main":"אינדיקציה ראשונית. החלטה מושכלת.",
         "app_hero_sub":     "מעלים תמונות והקלטת מנוע, ומקבלים אינדיקציה ראשונית אם יש סימנים שדורשים בדיקה נוספת לפני שמתקדמים.",
         "app_hero_cta":     "התחל בדיקה חינמית",
@@ -673,7 +673,7 @@ TR = {
     },
     "en": {
         "app_title":        "UsedCar Check",
-        "app_subtitle":     "<span style='background:#4AD493;color:#242424;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
+        "app_subtitle":     "<span style='background:#7DC4A0;color:#1a1a1a;padding:1px 8px;border-radius:4px;font-weight:900;font-size:0.75em;letter-spacing:0.05em;vertical-align:middle;'>FREE</span> Initial screening before paying for an inspection",
         "app_subtitle_main":"First impression. Smarter decision.",
         "app_hero_sub":     "Upload photos and an engine recording and get an initial indication of any warning signs worth checking before moving forward.",
         "app_hero_cta":     "Start free check",
@@ -1412,13 +1412,29 @@ input, textarea, .stTextInput input, .stNumberInput input {{
     {"text-align:right !important;" if is_rtl else ""}
 }}
 
-.stButton > button {{
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="baseButton-primary"] {{
     background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
     color: #242424 !important;
     border: none !important;
     border-radius: 2px !important;
     font-family: 'Manrope', 'Heebo', sans-serif !important;
     font-weight: 500 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    font-size: 1.14rem !important;
+    padding: 0.6rem 1.6rem !important;
+    white-space: nowrap !important;
+    transition: opacity 0.2s ease !important;
+}}
+.stButton > button[kind="secondary"],
+.stButton > button[data-testid="baseButton-secondary"] {{
+    background: transparent !important;
+    border: 1px solid rgba(125,196,160,0.35) !important;
+    color: rgba(219,219,219,0.55) !important;
+    border-radius: 2px !important;
+    font-family: 'Manrope', 'Heebo', sans-serif !important;
+    font-weight: 400 !important;
     letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
     font-size: 1.14rem !important;
