@@ -1337,8 +1337,8 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;600&display=swap');
 
 :root {{
-    --gold:      #4AD493;
-    --gold-dark: #2AAE72;
+    --gold:      #7DC4A0;
+    --gold-dark: #5BA888;
     --bg:        #242424;
     --surface:   #2E2E2E;
     --elevated:  #1E1E1E;
@@ -2197,8 +2197,8 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 
 <!-- Header -->
 <tr><td style="background:#2E2E2E;border-radius:10px 10px 0 0;padding:28px 32px;text-align:center;border-bottom:1px solid #4AD49344;">
-  <div style="font-size:11px;letter-spacing:4px;color:#4AD493;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
-  <div style="font-size:26px;font-weight:700;color:#4AD493;">{_html.escape(car_label)}</div>
+  <div style="font-size:11px;letter-spacing:4px;color:#7DC4A0;text-transform:uppercase;margin-bottom:6px;">{'בדיקת רכב' if is_he else 'UsedCar Check'}</div>
+  <div style="font-size:26px;font-weight:700;color:#DBDBDB;">{_html.escape(car_label)}</div>
   <div style="font-size:12px;color:#666;margin-top:4px;">{date}</div>
 </td></tr>
 
@@ -2217,9 +2217,9 @@ def _send_result_email(to_email: str, result: dict, lang: str) -> bool:
 {"" if not (conc_ext or conc_int or conc_mech) else f"""
 <tr><td style='padding:20px 32px;border-bottom:1px solid #2A2A2A;'>
   <div style='font-size:11px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-bottom:10px;'>{'סיכום' if is_he else 'Summary'}</div>
-  {"" if not conc_ext else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#4AD493;'>{'חיצוני' if is_he else 'Exterior'}: </span><span style='font-size:14px;'>{conc_ext}</span></div>"}
-  {"" if not conc_int else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#4AD493;'>{'פנים' if is_he else 'Interior'}: </span><span style='font-size:14px;'>{conc_int}</span></div>"}
-  {"" if not conc_mech else f"<div><span style='font-size:12px;color:#4AD493;'>{'מכאני' if is_he else 'Mechanical'}: </span><span style='font-size:14px;'>{conc_mech}</span></div>"}
+  {"" if not conc_ext else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#7DC4A0;'>{'חיצוני' if is_he else 'Exterior'}: </span><span style='font-size:14px;'>{conc_ext}</span></div>"}
+  {"" if not conc_int else f"<div style='margin-bottom:10px;'><span style='font-size:12px;color:#7DC4A0;'>{'פנים' if is_he else 'Interior'}: </span><span style='font-size:14px;'>{conc_int}</span></div>"}
+  {"" if not conc_mech else f"<div><span style='font-size:12px;color:#7DC4A0;'>{'מכאני' if is_he else 'Mechanical'}: </span><span style='font-size:14px;'>{conc_mech}</span></div>"}
 </td></tr>"""}
 
 <!-- Footer -->
@@ -5116,7 +5116,7 @@ def step_photos():
         st.markdown(
             f"<div style='background:rgba(74,212,147,0.08);border:1px solid rgba(74,212,147,0.35);"
             f"border-radius:6px;padding:0.55rem 1rem;margin-top:0.3rem;font-size:0.97rem;"
-            f"color:#4AD493;{rtl_css}'>{t('ev_partial_notice')}</div>",
+            f"color:#7DC4A0;{rtl_css}'>{t('ev_partial_notice')}</div>",
             unsafe_allow_html=True)
 
     st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
@@ -5166,7 +5166,7 @@ def step_photos():
                         _queue_placeholder.markdown(
                             f"<div style='background:rgba(74,212,147,0.10);border:1px solid #4AD493;"
                             f"border-radius:8px;padding:0.85rem 1.2rem;margin-bottom:0.8rem;{_rtl_q}'>"
-                            f"<span style='color:#4AD493;font-size:1.05rem;font-weight:600;'>"
+                            f"<span style='color:#7DC4A0;font-size:1.05rem;font-weight:600;'>"
                             f"{t('queue_notice')}</span></div>",
                             unsafe_allow_html=True,
                         )
