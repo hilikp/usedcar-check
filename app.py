@@ -4186,10 +4186,10 @@ def login_screen():
     _proof_dir  = "direction:rtl;" if st.session_state.lang == "he" else "direction:ltr;"
     try:
         sb = _sb_init()
-        _real_count = sb.table("users").select("email", count="exact").execute().count if sb else 5
-        _display_count = (_real_count or 5) + 108  # offset so count starts at 113
+        _real_count = sb.table("users").select("email", count="exact").execute().count if sb else 0
+        _display_count = max((_real_count or 0), 177)
     except Exception:
-        _display_count = 113
+        _display_count = 177
     st.markdown(f"""
     <div style='text-align:center;margin:1.2rem 0 1.5rem;{_proof_dir}'>
         <span style='display:inline-flex;align-items:center;gap:0.5rem;
