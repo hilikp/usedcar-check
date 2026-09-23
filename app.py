@@ -1672,6 +1672,69 @@ p[data-testid="InputInstructions"],
         padding: 0.5rem 0.7rem !important;
     }}
 }}
+
+/* ─── Accessibility (WCAG 2.0 AA / IL-5568) ─────────────────── */
+
+/* 1. Skip-to-content link */
+.a11y-skip {{
+    position: fixed;
+    top: -80px;
+    {"right" if is_rtl else "left"}: 1rem;
+    background: var(--gold);
+    color: #fff !important;
+    padding: 0.55rem 1.2rem;
+    border-radius: 0 0 8px 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    z-index: 99999;
+    transition: top 0.15s;
+    text-decoration: none;
+    direction: rtl;
+    border: none;
+}}
+.a11y-skip:focus {{ top: 0; outline: 3px solid #fff; outline-offset: 2px; }}
+
+/* 2. Visible focus rings for keyboard users */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {{
+    outline: 3px solid var(--gold) !important;
+    outline-offset: 3px !important;
+    border-radius: 2px !important;
+    box-shadow: 0 0 0 5px rgba(91,141,184,0.25) !important;
+}}
+
+/* 3. High contrast mode */
+body.a11y-hc {{
+    --bg:       #000 !important;
+    --surface:  #111 !important;
+    --elevated: #000 !important;
+    --text:     #fff !important;
+    --muted:    #ddd !important;
+    --gold:     #ffff55 !important;
+    --gold-dark:#cccc00 !important;
+    --border:   #666 !important;
+}}
+body.a11y-hc .stApp,
+body.a11y-hc [data-testid="stAppViewContainer"] {{
+    background: #000 !important;
+}}
+body.a11y-hc section[data-testid="stSidebar"] {{
+    background: #111 !important;
+}}
+
+/* 4. Large text mode */
+body.a11y-lg  * {{ font-size: 118% !important; line-height: 1.6 !important; }}
+body.a11y-xl  * {{ font-size: 138% !important; line-height: 1.7 !important; }}
+
+/* 5. Secondary button contrast fix */
+.stButton > button[kind="secondary"],
+.stButton > button[data-testid="baseButton-secondary"] {{
+    color: rgba(219,219,219,0.75) !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5339,7 +5402,174 @@ def main_app():
     elif step == 3 and st.session_state.result:
         render_result(st.session_state.result)
 
+# ─── Accessibility widget (injected on every page via parent-frame script) ────
+def _inject_a11y_widget():
+    import streamlit.components.v1 as _comp
+    _comp.html("""
+<script>
+(function(){
+  var pd = window.parent.document;
+  if(pd.getElementById('a11y-fab')) return;   // guard against double-inject
+
+  /* ── restore saved prefs ── */
+  var ls = window.parent.localStorage;
+  function lsGet(k){ try{return ls.getItem(k);}catch(e){return null;} }
+  function lsSet(k,v){ try{ls.setItem(k,v);}catch(e){} }
+
+  var hc = lsGet('a11y_hc')==='1';
+  var sz = lsGet('a11y_sz')||'0';
+  if(hc)   pd.body.classList.add('a11y-hc');
+  if(sz==='1') pd.body.classList.add('a11y-lg');
+  if(sz==='2') pd.body.classList.add('a11y-xl');
+
+  /* ── inject styles ── */
+  var sty = pd.createElement('style');
+  sty.textContent = [
+    '#a11y-fab{position:fixed;bottom:1.4rem;left:1.2rem;z-index:99990;',
+      'background:#3A6A9A;color:#fff;border:none;border-radius:50%;',
+      'width:52px;height:52px;font-size:1.5rem;cursor:pointer;',
+      'box-shadow:0 4px 16px rgba(0,0,0,0.5);display:flex;align-items:center;',
+      'justify-content:center;transition:background 0.2s;}',
+    '#a11y-fab:hover,#a11y-fab:focus{background:#5B8DB8;outline:3px solid #fff;}',
+    '#a11y-panel{position:fixed;bottom:5rem;left:1.2rem;z-index:99991;',
+      'background:#1e1e1e;border:1px solid #3A6A9A;border-radius:10px;',
+      'padding:1.1rem 1.3rem;min-width:230px;color:#f0ebe0;',
+      'font-family:Heebo,sans-serif;direction:rtl;text-align:right;',
+      'box-shadow:0 8px 30px rgba(0,0,0,0.6);display:none;}',
+    '#a11y-panel h3{margin:0 0 0.9rem;font-size:0.95rem;color:#5B8DB8;',
+      'border-bottom:1px solid #3A6A9A;padding-bottom:0.5rem;}',
+    '#a11y-panel .a11y-row{margin:0.55rem 0;}',
+    '#a11y-panel button{background:transparent;border:1px solid rgba(91,141,184,0.5);',
+      'color:#f0ebe0;border-radius:4px;padding:0.3rem 0.7rem;cursor:pointer;',
+      'font-size:0.82rem;margin-left:0.3rem;transition:background 0.15s;}',
+    '#a11y-panel button:hover,#a11y-panel button.active{background:#3A6A9A;color:#fff;}',
+    '#a11y-panel .a11y-sep{border:none;border-top:1px solid #333;margin:0.7rem 0;}',
+    '#a11y-panel a{color:#5B8DB8;font-size:0.82rem;text-decoration:underline;cursor:pointer;}',
+    '#a11y-decl{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);',
+      'z-index:99995;background:#1e1e1e;border:1px solid #3A6A9A;border-radius:12px;',
+      'padding:1.6rem 1.8rem;max-width:480px;width:90%;color:#f0ebe0;',
+      'font-family:Heebo,sans-serif;direction:rtl;text-align:right;',
+      'box-shadow:0 8px 40px rgba(0,0,0,0.8);display:none;max-height:80vh;overflow-y:auto;}',
+    '#a11y-decl h2{margin:0 0 1rem;color:#5B8DB8;font-size:1.05rem;}',
+    '#a11y-decl p,#a11y-decl li{font-size:0.85rem;line-height:1.7;color:#d0c8bc;}',
+    '#a11y-decl ul{padding-right:1.2rem;margin:0.4rem 0;}',
+    '#a11y-decl .close-btn{float:left;background:transparent;border:none;',
+      'color:#888;font-size:1.2rem;cursor:pointer;padding:0;}',
+    '#a11y-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99994;display:none;}'
+  ].join('');
+  pd.head.appendChild(sty);
+
+  /* ── inject HTML ── */
+  var wrap = pd.createElement('div');
+  wrap.innerHTML = [
+    '<a href="#main" class="a11y-skip" id="a11y-skip-link">דלג לתוכן הראשי</a>',
+    '<button id="a11y-fab" aria-label="תפריט נגישות" aria-expanded="false">&#9855;</button>',
+    '<div id="a11y-panel" role="dialog" aria-label="אפשרויות נגישות">',
+      '<h3>אפשרויות נגישות</h3>',
+      '<div class="a11y-row">',
+        '<span style="font-size:0.82rem">גודל טקסט: </span>',
+        '<button id="sz0">רגיל</button>',
+        '<button id="sz1">גדול</button>',
+        '<button id="sz2">גדול מאוד</button>',
+      '</div>',
+      '<div class="a11y-row">',
+        '<button id="hc-btn">ניגודיות גבוהה</button>',
+      '</div>',
+      '<hr class="a11y-sep">',
+      '<div class="a11y-row">',
+        '<a id="decl-link" role="button" tabindex="0">הצהרת נגישות</a>',
+      '</div>',
+    '</div>',
+    '<div id="a11y-overlay"></div>',
+    '<div id="a11y-decl" role="dialog" aria-modal="true" aria-label="הצהרת נגישות">',
+      '<button class="close-btn" id="decl-close" aria-label="סגור">&#10005;</button>',
+      '<h2>הצהרת נגישות</h2>',
+      '<p>האתר <strong>בדוּק!</strong> שואף לאפשר שימוש נוח ונגיש לכל אדם, לרבות אנשים עם מוגבלויות, בהתאם לתקן הישראלי 5568 ולהנחיות WCAG 2.0 ברמה AA.</p>',
+      '<p><strong>רמת הנגישות הנוכחית:</strong> עמידה חלקית ברמה AA.</p>',
+      '<p><strong>מה בוצע:</strong></p>',
+      '<ul>',
+        '<li>ניגודיות צבעים מספקת בין טקסט ורקע</li>',
+        '<li>ניווט מלא במקלדת עם אינדיקטור פוקוס גלוי</li>',
+        '<li>קישור "דלג לתוכן" בתחילת הדף</li>',
+        '<li>אפשרויות הגדלת טקסט וניגודיות גבוהה</li>',
+        '<li>תמיכה בדפדפן בעברית RTL</li>',
+      '</ul>',
+      '<p><strong>בעיות ידועות:</strong> חלק מהרכיבים הדינמיים של Streamlit עשויים שלא להיות נגישים לחלוטין לקוראי מסך.</p>',
+      '<p><strong>דיווח על בעיית נגישות:</strong><br>',
+        'דוא"ל: <a href="mailto:accessibility@badook.co.il" style="color:#5B8DB8">accessibility@badook.co.il</a><br>',
+        'תוקף הבדיקה האחרונה: ספטמבר 2026',
+      '</p>',
+    '</div>'
+  ].join('');
+  pd.body.appendChild(wrap);
+
+  /* ── wire up events ── */
+  var fab   = pd.getElementById('a11y-fab');
+  var panel = pd.getElementById('a11y-panel');
+  var decl  = pd.getElementById('a11y-decl');
+  var overlay = pd.getElementById('a11y-overlay');
+
+  fab.addEventListener('click', function(){
+    var open = panel.style.display==='block';
+    panel.style.display = open ? 'none' : 'block';
+    fab.setAttribute('aria-expanded', String(!open));
+  });
+
+  function setSize(n){
+    pd.body.classList.remove('a11y-lg','a11y-xl');
+    if(n===1) pd.body.classList.add('a11y-lg');
+    if(n===2) pd.body.classList.add('a11y-xl');
+    lsSet('a11y_sz', String(n));
+    ['sz0','sz1','sz2'].forEach(function(id,i){
+      pd.getElementById(id).classList.toggle('active', i===n);
+    });
+  }
+  setSize(parseInt(sz)||0);
+
+  pd.getElementById('sz0').addEventListener('click', function(){ setSize(0); });
+  pd.getElementById('sz1').addEventListener('click', function(){ setSize(1); });
+  pd.getElementById('sz2').addEventListener('click', function(){ setSize(2); });
+
+  var hcBtn = pd.getElementById('hc-btn');
+  function applyHC(on){
+    pd.body.classList.toggle('a11y-hc', on);
+    hcBtn.classList.toggle('active', on);
+    lsSet('a11y_hc', on?'1':'0');
+  }
+  applyHC(hc);
+  hcBtn.addEventListener('click', function(){
+    applyHC(!pd.body.classList.contains('a11y-hc'));
+  });
+
+  function showDecl(){
+    decl.style.display='block';
+    overlay.style.display='block';
+    panel.style.display='none';
+    decl.querySelector('#decl-close').focus();
+  }
+  function hideDecl(){
+    decl.style.display='none';
+    overlay.style.display='none';
+  }
+  pd.getElementById('decl-link').addEventListener('click', showDecl);
+  pd.getElementById('decl-link').addEventListener('keydown', function(e){ if(e.key==='Enter') showDecl(); });
+  pd.getElementById('decl-close').addEventListener('click', hideDecl);
+  overlay.addEventListener('click', hideDecl);
+
+  /* close panel on outside click */
+  pd.addEventListener('click', function(e){
+    if(!fab.contains(e.target) && !panel.contains(e.target)){
+      panel.style.display='none';
+      fab.setAttribute('aria-expanded','false');
+    }
+  });
+})();
+</script>
+""", height=0)
+
 # ─── Entry point ──────────────────────────────────────────────────────────────
+_inject_a11y_widget()
+
 if not st.session_state.authenticated:
     login_screen()
 else:
